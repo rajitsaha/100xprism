@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.0.4] — 2026-05-15
+
+Update UX improvement — no breaking changes.
+
+### Changed
+- **`update.sh`** — plugin updates now always run regardless of whether the repo itself has new commits. Previously, `update.sh` exited early with "Already up to date" when the local repo matched `origin/main`, silently skipping plugin updates and leaving newly listed plugins (e.g. `ui-ux-pro-max`) unenabled for existing users.
+- **`update.sh`** — added `--plugins-only` flag: refreshes all Claude plugins + syncs `settings.json` without touching the repo. Useful when the repo is current but plugins may have independent updates.
+- **`docs/USAGE.md`** — documented `--plugins-only` in both the Installation "Keep up to date" section and the "Keeping Workflows Updated" section.
+- **`README.md`** — added `update --plugins-only` to the install quick-reference block.
+
+### Architecture
+- Plugin list extracted into `run_plugin_updates()` — defined once, called from both "already current" and "fresh pull" paths
+- Settings sync (adding newly listed plugins to `enabledPlugins`) now runs on every `update.sh` invocation, not just when there are repo changes
+
+---
+
 ## [2.0.3] — 2026-05-15
 
 Lifecycle skill improvements — no breaking changes.
