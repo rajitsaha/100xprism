@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.0.2] — 2026-05-15
+
+Plugin expansion — no breaking changes.
+
+### Added
+- **`understand-anything` plugin** (lum1104/Understand-Anything) — AI-powered codebase understanding: knowledge graphs, architecture layers, domain analysis, onboarding tours, and interactive dashboard. Positioned as `/understand` step before `/context` in the pipeline.
+- **`ui-ux-pro-max` plugin** (nextlevelbuilder/ui-ux-pro-max-skill) — UI/UX design intelligence: 67 styles, 161 palettes, 57 font pairings, 25 chart types, 15 stacks (React, Next.js, Vue, Svelte, Tailwind, shadcn/ui, Flutter, SwiftUI, and more).
+- Both marketplace sources added to `plugins/plugins.json` so fresh installs register them automatically.
+
+### Changed
+- `update.sh` — added plugin update loop covering all 12 plugins; runs `claude plugin update` for each on every `update.sh` execution.
+- Pipeline in README updated: `/understand → /context → /issue → /spec → /fix → /commit → …`
+- Plugin count updated: 10 → 12 across README and banner.
+- `assets/postcard-stack.png` — re-rendered banner with new plugins tagged `v2.0.2`.
+
+---
+
 ## [2.0.1] — 2026-05-02
 
 Documentation patch — no code changes.

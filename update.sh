@@ -140,6 +140,32 @@ PYEOF
 
 echo -e "  ${CYAN}→ Shell aliases auto-updated (sourced file)${NC}"
 
+# ── Update Claude plugins ─────────────────────────────────────────────────────
+_plugins=(
+  "frontend-design"
+  "superpowers"
+  "playwright"
+  "github"
+  "security-guidance"
+  "skill-creator"
+  "code-simplifier"
+  "pr-review-toolkit"
+  "hookify"
+  "claude-mem"
+  "understand-anything"
+  "ui-ux-pro-max"
+)
+_ok=0; _err=0
+for _p in "${_plugins[@]}"; do
+  if claude plugin update "$_p" >/dev/null 2>&1; then
+    (( _ok++ )) || true
+  else
+    (( _err++ )) || true
+  fi
+done
+echo -e "  ${GREEN}→ Plugins: $_ok updated, $_err skipped ✓${NC}"
+unset _plugins _ok _err _p
+
 # ── Regenerate tracked project instruction files ────────────────────────────
 
 regenerate_tracked_projects() {
