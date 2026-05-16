@@ -16,7 +16,49 @@ Quality gate re-runs before pushing. **Do NOT push if any gate fails.**
 
 ## Phase 0 — Quality Gate (MANDATORY)
 
-Run the **gate** workflow. Do NOT push until it reports `✅ ALL GATES PASSED`. If any gate fails → STOP, fix the issue, create a new commit, then re-run gate.
+Check gate cache first — skip if already passed for this exact HEAD:
+
+```bash
+HEAD=$(git rev-parse HEAD)
+CACHED=$(cat ~/.100x-dev/gate-cache 2>/dev/null)
+[ "$CACHED" = "$HEAD" ] && echo "Gate: skipped (already passed for $HEAD)" && GATE_DONE=true || GATE_DONE=false
+```
+
+If `GATE_DONE=false`: run the **gate** workflow. On pass, write cache:
+```bash
+echo "$HEAD" > ~/.100x-dev/gate-cache
+```
+
+Do NOT push until gate passes. If gate fails → STOP, fix, clear cache, new commit, re-run.
+
+---
+
+## Phase 0b — Code Review (pre-push)
+
+Check review cache — skip if HEAD already reviewed by a prior `/commit` run:
+
+```bash
+HEAD=$(git rev-parse HEAD)
+REVIEWED=$(cat ~/.100x-dev/review-cache 2>/dev/null)
+[ "$REVIEWED" = "$HEAD" ] && echo "Review: skipped (already done for $HEAD)" && REVIEW_DONE=true || REVIEW_DONE=false
+```
+
+If `REVIEW_DONE=false`, review unpushed commits now:
+
+```bash
+PR=$(gh pr list --head "$(git branch --show-current)" --json number -q '.[0].number' 2>/dev/null)
+```
+
+- **PR exists** → run the **code-review** skill: `/review $PR`
+- **No PR** → spawn **one** review Agent on `git diff origin/main..HEAD` covering the five dimensions defined in the **commit** skill Phase 5 (bugs, security, architecture, design, CLAUDE.md). Single-pass — no separate agents per dimension.
+
+On clean review:
+```bash
+echo "$HEAD" > ~/.100x-dev/review-cache
+```
+
+**Critical or High issues** → fix, new commit, clear cache, re-run gate. Do NOT push.
+**Minor issues** → logged, non-blocking.
 
 ---
 

@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.0.3] — 2026-05-15
+
+Lifecycle skill improvements — no breaking changes.
+
+### Changed
+- **`modules/commit/SKILL.md`** — added 5-dimension code review step (Phase 5): bugs, security, architecture, design, CLAUDE.md compliance. Gate and review results cached to `~/.100x-dev/gate-cache` and `~/.100x-dev/review-cache` to prevent redundant re-runs when called from `/launch`.
+- **`modules/push/SKILL.md`** — added pre-push code review step (Phase 0b) with cache-aware skip logic. Gate cache check added to Phase 0. Review dimensions reference `commit` Phase 5 — no duplication.
+- **`modules/launch/SKILL.md`** — writes gate cache after Phase 4 so downstream `/commit` and `/push` skip redundant gate runs. Removed duplicated Phase 5b review (commit already handles it). Eliminated 2× redundant gate + 1× redundant review per launch.
+
+### Architecture
+- Review checklist (5 dimensions) is defined once in `commit/SKILL.md` — push and launch reference it
+- Gate cache: `~/.100x-dev/gate-cache` — stores last-passing HEAD SHA
+- Review cache: `~/.100x-dev/review-cache` — stores last-reviewed HEAD SHA
+- Both caches invalidate automatically on any new commit
+
+---
+
 ## [2.0.2] — 2026-05-15
 
 Plugin expansion — no breaking changes.

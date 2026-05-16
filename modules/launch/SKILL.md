@@ -111,6 +111,11 @@ Fix any compiler errors. Re-build only the failing target.
 
 **GATE: All applicable builds succeed with zero errors.**
 
+Phases 1–4 constitute a full gate pass. Write the gate cache so commit and push skip re-running it:
+```bash
+echo "$(git rev-parse HEAD)" > ~/.100x-dev/gate-cache
+```
+
 ---
 
 ## Phase 5 — Commit
@@ -285,7 +290,7 @@ Phase 1 test:       ✅ COVERAGE MET (XX%)
 Phase 2 lint:       ✅ PASSED
 Phase 3 security:   ✅ PASSED
 Phase 4 Build:      ✅ CLEAN
-Phase 5 commit:     <short-hash> <message>
+Phase 5 commit:     <short-hash> <message> | Review ✅ no critical issues | ⚠️ N minor notes
 Phase 6 Push:       ✅ CI/CD passed | Health ✅ | Smoke ✅ | Metrics ✅
 Phase 7 Cleanup:    Issues closed: #N, #M ✅ | Docs updated ✅ | no changes
 Status:             LAUNCHED ✅

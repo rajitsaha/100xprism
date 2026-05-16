@@ -16,7 +16,20 @@ Quality gate runs FIRST. **Do NOT commit if any gate fails.**
 
 ## Phase 0 — Quality Gate (MANDATORY)
 
-Run the **gate** workflow. Do NOT proceed until it reports `✅ ALL GATES PASSED`. If any gate fails → STOP, fix the issue, re-run gate.
+Check gate cache first — skip if already passed for this exact HEAD:
+
+```bash
+HEAD=$(git rev-parse HEAD)
+CACHED=$(cat ~/.100x-dev/gate-cache 2>/dev/null)
+[ "$CACHED" = "$HEAD" ] && echo "Gate: skipped (already passed for $HEAD)" && GATE_DONE=true || GATE_DONE=false
+```
+
+If `GATE_DONE=false`: run the **gate** workflow. On pass, cache the result:
+```bash
+echo "$HEAD" > ~/.100x-dev/gate-cache
+```
+
+Do NOT proceed until gate reports `✅ ALL GATES PASSED`. If any gate fails → STOP, fix, clear cache, re-run gate.
 
 ---
 
@@ -90,7 +103,76 @@ EOF
 
 ---
 
-## Phase 5 — Verify
+## Phase 5 — Code Review
+
+Check review cache — skip if this HEAD was already reviewed:
+
+```bash
+HEAD=$(git rev-parse HEAD)
+REVIEWED=$(cat ~/.100x-dev/review-cache 2>/dev/null)
+[ "$REVIEWED" = "$HEAD" ] && echo "Review: skipped (already done for $HEAD)" && exit 0
+```
+
+Otherwise, run a full review:
+
+```bash
+git diff HEAD~1 --stat
+PR=$(gh pr list --head "$(git branch --show-current)" --json number -q '.[0].number' 2>/dev/null)
+[ -n "$PR" ] && echo "PR #$PR found" || echo "No PR — running diff review"
+```
+
+**If a PR exists** → run the **code-review** skill: `/review $PR`
+
+**If no PR** → spawn **one** review Agent on `git diff HEAD~1`. The Agent reads the full diff and scans surrounding codebase for context. Cover all five dimensions in a single pass:
+
+### Review dimensions (all required)
+
+**1. Bug review**
+- Null/undefined dereferences, off-by-one errors, wrong conditions
+- Unhandled error paths, missing awaits, silent catch blocks
+- Race conditions, state mutation side effects
+
+**2. Security review**
+- Injection vectors (SQL, shell, XSS), auth bypass, missing input validation
+- Exposed secrets or tokens, insecure defaults, overly permissive CORS/headers
+- Privilege escalation risks in new routes or handlers
+
+**3. Architecture review**
+- Does the change respect existing layer boundaries (e.g. routes → services → DB, not routes → DB directly)?
+- Does it introduce patterns inconsistent with the rest of the codebase?
+- Are new abstractions justified, or is this premature generalization?
+- Does it create circular dependencies or tight coupling between modules?
+- Does it belong in the right layer/module — or is it a responsibility leak?
+
+**4. Design review**
+- Are names (variables, functions, files) clear and consistent with existing conventions?
+- Is the interface (function signatures, return types, API shape) clean and minimal?
+- Is there unnecessary duplication that should be extracted — or over-extracted abstraction that should be inlined?
+- Do new data structures match the project's existing patterns (shape, naming, serialization)?
+- Are SOLID principles respected — single responsibility, open/closed, dependency inversion?
+
+**5. CLAUDE.md / project rules compliance**
+- Read the project instruction file and verify all new code follows its conventions
+- Flag any deviation from documented patterns, naming rules, or architectural decisions
+
+### Severity
+
+| Level | Action |
+|---|---|
+| **Critical** | Bug, security hole, or architectural violation that breaks correctness or safety → fix before push |
+| **High** | Design smell or pattern inconsistency that will compound over time → fix before push |
+| **Minor** | Style, naming preference, small improvement → log, non-blocking |
+
+**Critical or High issues found** → fix now, create a new commit, re-run gate. Do NOT push.
+
+On clean review, cache the result so push skips re-reviewing the same HEAD:
+```bash
+echo "$(git rev-parse HEAD)" > ~/.100x-dev/review-cache
+```
+
+---
+
+## Phase 6 — Verify
 
 ```bash
 git log --oneline -3
@@ -105,5 +187,6 @@ git log --oneline -3
 Gate:         ✅ ALL GATES PASSED
 Staged files: N
 Commit:       <short-hash> <message>
+Review:       ✅ No critical issues | ⚠️ N minor notes
 Status:       COMMITTED ✅
 ```
