@@ -33,7 +33,9 @@ npm install -g 100x-dev && 100x-dev install
 ```
 
 ```bash
-cd your-project && 100x-dev init    # set up each project once
+cd your-project && 100x-dev init           # set up each project once
+100x-dev update                            # pull latest modules + sync plugins
+100x-dev update --plugins-only             # refresh plugins only (repo already current)
 ```
 
 > **Cloned to a custom path?** The default install lives at `~/100x-dev`. If you cloned elsewhere (e.g. `~/work/git_udemy/100x-dev`), update your shell + Claude Code config to match — see [Custom install location →](docs/USAGE.md#custom-install-location).

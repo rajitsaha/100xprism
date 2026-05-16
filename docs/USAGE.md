@@ -44,9 +44,12 @@ This writes the right instruction file for each enabled tool (`.cursorrules`, `A
 ### Keep up to date
 
 ```bash
-100x-dev update   # pull latest + regenerate all tracked projects
-100x-dev check    # check for a newer version without applying it
+100x-dev update                 # pull latest + sync plugins + regenerate all tracked projects
+100x-dev update --plugins-only  # refresh plugins only (use when repo is already current)
+100x-dev check                  # check for a newer version without applying it
 ```
+
+> **Tip:** Even when your repo is already at the latest version, plugins (superpowers, claude-mem, hookify, etc.) can receive independent updates. Running `update --plugins-only` keeps them current without re-pulling the repo. After either command, run `/reload-plugins` inside Claude Code.
 
 ### Custom install location
 
@@ -237,11 +240,12 @@ For per-project tools (Cursor, Codex, etc.) add the same config to the generated
 ## Keeping Workflows Updated
 
 ```bash
-100x-dev check    # check if an update is available
-100x-dev update   # pull latest and regenerate all tracked projects
+100x-dev check                  # check if an update is available
+100x-dev update                 # pull latest and regenerate all tracked projects
+100x-dev update --plugins-only  # refresh plugins only (when repo is already current)
 ```
 
-Claude Code shows an update banner at session start when a new version is available. After updating, instruction files in all tracked projects are regenerated automatically.
+Claude Code shows an update banner at session start when a new version is available. After updating, instruction files in all tracked projects are regenerated automatically. Plugin updates are now always applied regardless of whether the repo itself has changed — so plugins like `superpowers`, `claude-mem`, and `hookify` stay current without waiting for a repo release.
 
 ---
 

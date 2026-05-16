@@ -7,6 +7,7 @@ COMMANDS_DIR="$CLAUDE_DIR/commands"
 SKILLS_DIR="$CLAUDE_DIR/skills"
 SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 CHECK_ONLY=false
+PLUGINS_ONLY=false
 
 # Colors
 GREEN='\033[0;32m'
@@ -14,7 +15,47 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-[ "${1:-}" = "--check-only" ] && CHECK_ONLY=true
+for _arg in "$@"; do
+  [ "$_arg" = "--check-only"   ] && CHECK_ONLY=true
+  [ "$_arg" = "--plugins-only" ] && PLUGINS_ONLY=true
+done
+
+# ── Plugin update function (always available) ─────────────────────────────────
+run_plugin_updates() {
+  local _plugins=(
+    "frontend-design"
+    "superpowers"
+    "playwright"
+    "github"
+    "security-guidance"
+    "skill-creator"
+    "code-simplifier"
+    "pr-review-toolkit"
+    "hookify"
+    "claude-mem"
+    "understand-anything"
+    "ui-ux-pro-max"
+  )
+  local _ok=0 _err=0
+  for _p in "${_plugins[@]}"; do
+    if claude plugin update "$_p" >/dev/null 2>&1; then
+      (( _ok++ )) || true
+    else
+      (( _err++ )) || true
+    fi
+  done
+  echo -e "  ${GREEN}→ Plugins: $_ok updated, $_err skipped ✓${NC}"
+}
+
+if [ "$PLUGINS_ONLY" = true ]; then
+  echo ""
+  echo "Updating Claude plugins..."
+  run_plugin_updates
+  echo ""
+  echo -e "${GREEN}✓ Done. Run /reload-plugins in Claude Code to activate changes.${NC}"
+  echo ""
+  exit 0
+fi
 
 echo ""
 echo "Checking for updates..."
@@ -27,7 +68,45 @@ LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 
 if [ "$LOCAL" = "$REMOTE" ]; then
-  echo -e "${GREEN}✓ Already up to date.${NC}"
+  echo -e "${GREEN}✓ Repo already up to date.${NC}"
+  echo ""
+  echo "Syncing plugins and settings..."
+  REPO_DIR="$REPO_DIR" SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PYEOF'
+import json, os
+
+plugins_file = os.path.join(os.environ['REPO_DIR'], 'plugins', 'plugins.json')
+settings_file = os.environ['SETTINGS_FILE']
+
+with open(plugins_file) as f:
+    repo_data = json.load(f)
+
+with open(settings_file) as f:
+    settings = json.load(f)
+
+new_plugins = repo_data.get('plugins', [])
+enabled = settings.get('enabledPlugins', {})
+added = 0
+for p in new_plugins:
+    if p not in enabled:
+        enabled[p] = True
+        added += 1
+
+settings['enabledPlugins'] = enabled
+
+extra = repo_data.get('extraKnownMarketplaces', {})
+settings.setdefault('extraKnownMarketplaces', {}).update(extra)
+
+with open(settings_file, 'w') as f:
+    json.dump(settings, f, indent=2)
+
+if added > 0:
+    print(f'  Added {added} new plugin(s) to settings.json ✓')
+else:
+    print('  Plugins: settings already up to date ✓')
+PYEOF
+  run_plugin_updates
+  echo ""
+  echo -e "${CYAN}Tip: Run /reload-plugins in Claude Code to activate any plugin changes.${NC}"
   echo ""
   exit 0
 fi
@@ -141,30 +220,7 @@ PYEOF
 echo -e "  ${CYAN}→ Shell aliases auto-updated (sourced file)${NC}"
 
 # ── Update Claude plugins ─────────────────────────────────────────────────────
-_plugins=(
-  "frontend-design"
-  "superpowers"
-  "playwright"
-  "github"
-  "security-guidance"
-  "skill-creator"
-  "code-simplifier"
-  "pr-review-toolkit"
-  "hookify"
-  "claude-mem"
-  "understand-anything"
-  "ui-ux-pro-max"
-)
-_ok=0; _err=0
-for _p in "${_plugins[@]}"; do
-  if claude plugin update "$_p" >/dev/null 2>&1; then
-    (( _ok++ )) || true
-  else
-    (( _err++ )) || true
-  fi
-done
-echo -e "  ${GREEN}→ Plugins: $_ok updated, $_err skipped ✓${NC}"
-unset _plugins _ok _err _p
+run_plugin_updates
 
 # ── Regenerate tracked project instruction files ────────────────────────────
 
