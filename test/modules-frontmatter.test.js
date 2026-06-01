@@ -21,10 +21,10 @@ const EXPECTED_MODELS = {
   'enterprise-design': 'opus',
   connect: 'haiku',
   'context-dump': 'haiku',
-  'data-query': 'haiku',
+  'data-query': 'sonnet',
   lint: 'haiku',
-  security: 'haiku',
-  techdebt: 'haiku',
+  security: 'sonnet',
+  techdebt: 'sonnet',
   'update-claude-md': 'haiku',
 }
 // Concrete Claude model IDs must never leak into non-Claude adapter output. We canary
@@ -76,6 +76,10 @@ test('concat output surfaces the tier hint for a routed core module', () => {
   py('emit-concat', out)
   const text = fs.readFileSync(out, 'utf8')
   assert.match(text, /Suggested model tier:/, 'concat should carry tier hints')
+  // Both the fast (haiku) and the balanced (sonnet) tiers must be represented,
+  // proving the middle tier introduced by the P1 re-tier actually emits.
+  assert.match(text, /fast \/ low-cost/, 'concat should carry the haiku tier hint')
+  assert.match(text, /balanced \(moderate reasoning\)/, 'concat should carry the sonnet tier hint')
   for (const name of CLAUDE_MODEL_IDS) {
     assert.ok(!text.includes(name), `concat must not leak Claude model name "${name}"`)
   }

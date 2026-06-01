@@ -4,7 +4,7 @@ description: You are a security engineer. Auto-detect package managers, scan for
 category: quality
 tier: on-demand
 slash_command: /security
-model: haiku
+model: sonnet
 ---
 
 # Security — Vulnerability Scanner & Secret Audit

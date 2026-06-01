@@ -5,7 +5,7 @@ category: data
 tier: on-demand
 slash_command: /query
 allowed-tools: Bash Read
-model: haiku
+model: sonnet
 ---
 
 # Query — Plain-English Database Analytics

@@ -5,7 +5,7 @@ category: engineering
 tier: on-demand
 slash_command: /techdebt
 allowed-tools: Bash Read Grep Glob Edit
-model: haiku
+model: sonnet
 ---
 
 # Techdebt — Technical Debt Scanner

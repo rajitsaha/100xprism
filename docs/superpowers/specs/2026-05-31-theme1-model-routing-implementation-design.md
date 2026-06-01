@@ -1,9 +1,9 @@
 # Theme 1 — Model-routing modernization (generator layer) — Implementation Design
 
 **Date:** 2026-05-31
-**Scope:** P0 item only ("Parse and emit model routing in `modules.py`") from
-`2026-05-31-100x-powerup-review-design.md` → Theme 1.
-**Deferred (out of scope):** P1 re-tiering, P2 slash-command metadata, P2 Cursor ruletype/globs.
+**Scope:** P0 ("Parse and emit model routing in `modules.py`") + P1 ("Re-tier the 9
+routed skills by reasoning load") from `2026-05-31-100x-powerup-review-design.md` → Theme 1.
+**Deferred (out of scope):** P2 slash-command metadata, P2 Cursor ruletype/globs.
 
 ## Problem
 
@@ -110,10 +110,28 @@ New `node:test` file (matches existing `test/*.test.js`, no new deps), runnable 
    `Suggested model tier:` annotation appears for a known-routed module (e.g. `lint`)
    and that no Claude model name leaks into the non-Claude output.
 
+## P1 — Re-tiering by reasoning load
+
+Introduces the `sonnet` middle tier. Re-tiering is a cost-affecting judgment call;
+the appendix of the source review flags it as unfalsifiable without eval evidence
+(Theme 4). We adopt the spec's recommended split and will let the eval harness
+validate quality-per-dollar later.
+
+| Skill | Tier | Why |
+| --- | --- | --- |
+| `lint`, `update-claude-md`, `context-dump`, `connect` | `haiku` | mechanical: tool-driven fixes, rule formatting, activity aggregation, CLI auth |
+| `security`, `techdebt`, `data-query` | `sonnet` | judgment: vuln/secret triage, semantic dedup, multi-join SQL authoring (Theme 10 notes haiku fails multi-join) |
+| `architect`, `enterprise-design` | `opus` | deep architectural reasoning / full blueprints |
+
+Net change vs P0: `security`, `techdebt`, `data-query` moved `haiku → sonnet`. The
+test's `EXPECTED_MODELS` is updated to match, and the concat test now asserts both the
+`haiku` and `sonnet` tier hints emit. `effort: high` on the opus skills was considered
+and deferred (separate behavior change, out of this slice).
+
 ## Non-goals / blast-radius notes
 
 - Non-Claude adapter routing is documentation-only — the annotation is a hint, not
   functional routing. Scoped accordingly.
 - All adapter emitters consume `body` (frontmatter stripped), so adding `model:` to
   frontmatter cannot leak the key into prose blobs.
-- Re-tiering, slash-command frontmatter, and Cursor ruletype/globs remain deferred.
+- Slash-command frontmatter and Cursor ruletype/globs remain deferred (P2).
