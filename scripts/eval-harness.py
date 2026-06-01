@@ -112,7 +112,10 @@ def load_evals(slug: str) -> tuple[dict | None, list[str]]:
 def cmd_validate(args) -> int:
     slugs = select(args)
     if not slugs:
-        print("validate: no modules selected (nothing changed?) — ok")
+        if args.changed is not None:
+            print("validate: no changed module ships evals — nothing to grade ✓")
+        else:
+            print("validate: no modules selected — ok")
         return 0
     all_errors: list[str] = []
     total_cases = total_assertions = 0
