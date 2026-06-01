@@ -21,6 +21,11 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+      - name: Assert version triple (VERSION == package.json == tag)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: python3 scripts/meta-check.py --tag "$TAG"
+
       - name: Extract CHANGELOG section
         id: notes
         run: |

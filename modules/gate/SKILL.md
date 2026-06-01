@@ -1,6 +1,6 @@
 ---
 name: gate
-description: **MANDATORY before every commit and push.** All four gates must pass. Do NOT proceed if any gate fails — fix the issue first.
+description: **MANDATORY before every commit and push.** All gates must pass — Gates 1–3 always run; Gates 4 (Docker) and 5 (Cloud) run only when applicable. Do NOT proceed if any gate fails — fix the issue first.
 category: quality
 tier: core
 slash_command: /gate
@@ -8,7 +8,7 @@ slash_command: /gate
 
 # Gate — Pre-Commit Quality Gate
 
-**MANDATORY before every commit and push.** All four gates must pass. Do NOT proceed if any gate fails — fix the issue first.
+**MANDATORY before every commit and push.** All gates must pass — Gates 1–3 always run; Gates 4 (Docker) and 5 (Cloud) run only when applicable. Do NOT proceed if any gate fails — fix the issue first.
 
 ## Do NOT ask for permission. Do NOT skip gates. Do NOT continue past a failing gate.
 
