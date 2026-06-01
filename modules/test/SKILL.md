@@ -156,6 +156,13 @@ Determine which layers apply:
 
 Run smallest-scope tests first to get fast feedback.
 
+The detected unit layers (**Frontend Vitest / Backend Jest / Python pytest**) are
+independent — they run in separate processes and share no state — so **fan them out** per
+the `subagents` skill ladder (Workflow tool → parallel subagents → serial fallback)
+instead of running them one after another. Each layer returns
+`{ layer, status, passed, failed, coverage }`; the parent collects them. This is safe
+*before* Phase 2 only — the integration phase shares one Docker DB and stays serial.
+
 ### Frontend unit (Vitest):
 ```bash
 cd "$PROJECT_ROOT"

@@ -16,17 +16,20 @@ Quality gate re-runs before pushing. **Do NOT push if any gate fails.**
 
 ## Phase 0 — Quality Gate (MANDATORY)
 
-Check gate cache first — skip if already passed for this exact HEAD:
+Check gate cache first — skip if it already passed for this exact tree state. The cache
+is keyed on a tree token (HEAD + tracked diff + untracked files), not a bare HEAD, so a
+dirty or rebased tree never reuses a stale pass — the same token `/commit` writes and the
+`gate-on-commit` hook checks:
 
 ```bash
-HEAD=$(git rev-parse HEAD)
+TOKEN=$(python3 ~/100x-dev/hooks/gate-pass.py --print 2>/dev/null)
 CACHED=$(cat ~/.100x-dev/gate-cache 2>/dev/null)
-[ "$CACHED" = "$HEAD" ] && echo "Gate: skipped (already passed for $HEAD)" && GATE_DONE=true || GATE_DONE=false
+[ -n "$TOKEN" ] && [ "$CACHED" = "$TOKEN" ] && echo "Gate: skipped (already passed for this tree)" && GATE_DONE=true || GATE_DONE=false
 ```
 
-If `GATE_DONE=false`: run the **gate** workflow. On pass, write cache:
+If `GATE_DONE=false`: run the **gate** workflow. On pass, record it:
 ```bash
-echo "$HEAD" > ~/.100x-dev/gate-cache
+python3 ~/100x-dev/hooks/gate-pass.py
 ```
 
 Do NOT push until gate passes. If gate fails → STOP, fix, clear cache, new commit, re-run.

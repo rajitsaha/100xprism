@@ -14,6 +14,29 @@ slash_command: /gate
 
 ---
 
+## How to run the gates (fan out the independent ones)
+
+Gate 1 (the coverage loop) is the long pole — run it first and let it finish. Gates 2–5
+(**security, build, docker, cloud-security**) are mutually independent: they read the
+tree but never depend on each other's results, so **run them in parallel**, not as serial
+ASCII boxes.
+
+Use the fan-out ladder from the `subagents` skill: prefer the `Workflow` tool (one stage
+per gate, `schema`-validated return), else dispatch parallel `Agent`/`Task` subagents,
+else fall back to running them serially. Each gate subagent returns a structured verdict:
+
+```json
+{ "gate": "security", "status": "passed|failed|skipped", "severity": "critical|high|none", "findings": ["..."] }
+```
+
+The parent **reduces** the verdicts into the summary box below: any `failed` with
+critical/high severity ⇒ overall FAILED. Cache each verdict keyed on the **tree hash**
+(`git write-tree` + clean-tree check) so a re-run on an unchanged tree reuses the verdict
+instead of recomputing — the same key the `gate-pass.py` token uses (see *Record the
+pass* below). Never reuse a verdict across a changed tree.
+
+---
+
 ## Gate 1 — Test Coverage (≥ 95%)
 
 Run the **test** workflow. Run ALL test layers (unit, integration, E2E if configured).
@@ -156,6 +179,10 @@ Gate 5: Cloud Security ✅ PASSED | ❌ FAILED — do not proceed | skipped (loc
 ---
 
 ## Gate summary output
+
+This box is the **reduce step**: collect the structured verdict from each gate (Gate 1
+plus the parallel Gates 2–5) and aggregate. STATUS is PASSED only when every applicable
+gate reports `passed` with no critical/high severity.
 
 ```
 ╔══════════════════════════════════════════════════════╗
