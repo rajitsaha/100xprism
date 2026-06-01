@@ -44,14 +44,27 @@ You are a senior test engineer. Auto-detect all test layers (unit, integration, 
 
 ## Coverage thresholds (unit + integration — not E2E)
 
-| Metric | Threshold |
+These are **defaults, used only when the project does not declare its own.** Check first
+and honor a project-declared threshold:
+
+```bash
+# Project-declared thresholds win over the defaults below. Look, in order, at:
+#   - the instruction file (CLAUDE.md/AGENTS.md/…): a line like "coverage: lines 80, branches 70"
+#   - jest/vitest config: coverageThreshold.global.{lines,functions,statements,branches}
+#   - pyproject.toml / .coveragerc: [tool.coverage.report] fail_under
+grep -hiE "coverage(Threshold)?|fail_under" CLAUDE.md AGENTS.md GEMINI.md jest.config.* vitest.config.* vite.config.* pyproject.toml .coveragerc 2>/dev/null | head
+```
+
+| Metric | Default threshold (override if the project declares one) |
 |---|---|
 | Lines | ≥ 95% |
 | Functions | ≥ 95% |
 | Statements | ≥ 95% |
 | Branches | ≥ 90% |
 
-**The coverage loop does not exit until ALL thresholds are met AND zero unit/integration tests fail.**
+**The coverage loop does not exit until ALL thresholds (project-declared or the defaults
+above) are met AND zero unit/integration tests fail — or the iteration cap is reached
+(see Phase 3).**
 
 ---
 
@@ -95,11 +108,16 @@ NEEDS_SERVICES=$(grep -qE "postgres|redis|mysql|mongodb|elasticsearch" \
 if [ -n "$TEST_COMPOSE" ]; then
   docker compose -f "$TEST_COMPOSE" up -d --wait 2>/dev/null || true
 elif $NEEDS_SERVICES; then
+  # Match the version the project already declares — don't pin a version it doesn't use.
+  # Look in any compose file for the image tag; fall back to a current LTS only if absent.
+  PG_IMAGE=$(grep -hoE "postgres:[0-9.]+(-[a-z0-9]+)?" "$PROJECT_ROOT"/docker-compose*.y*ml "$PROJECT_ROOT"/compose*.y*ml 2>/dev/null | head -1)
+  REDIS_IMAGE=$(grep -hoE "redis:[0-9.]+(-[a-z0-9]+)?" "$PROJECT_ROOT"/docker-compose*.y*ml "$PROJECT_ROOT"/compose*.y*ml 2>/dev/null | head -1)
+  : "${PG_IMAGE:=postgres:16}"; : "${REDIS_IMAGE:=redis:7}"   # defaults only when undeclared
   docker run -d --name test-postgres \
     -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=test \
-    -p 5432:5432 postgres:16 2>/dev/null || true
+    -p 5432:5432 "$PG_IMAGE" 2>/dev/null || true
   grep -qE "redis" "$PROJECT_ROOT/package.json" "$PROJECT_ROOT/pyproject.toml" 2>/dev/null && \
-    docker run -d --name test-redis -p 6379:6379 redis:7 2>/dev/null || true
+    docker run -d --name test-redis -p 6379:6379 "$REDIS_IMAGE" 2>/dev/null || true
   sleep 3 && docker exec test-postgres pg_isready -U test 2>/dev/null || sleep 3
 fi
 ```
@@ -250,13 +268,17 @@ DATABASE_URL="${TEST_DATABASE_URL:-postgresql+asyncpg://test:test@localhost:5432
 ./venv/bin/python -m pytest tests/unit/ tests/integration/ --cov=. --cov-report=term-missing -q
 ```
 
-**Loop logic:**
+**Loop logic (bounded — never spin forever):**
 1. Parse coverage output — find files below threshold, find failing tests
 2. If all thresholds met AND zero failures → **exit loop ✅**
-3. Otherwise:
+3. Otherwise, if fewer than **MAX_ITERATIONS (default 6)** iterations have run:
    - For each uncovered file: read it, write tests targeting uncovered lines/branches
    - For each failing test: fix the test or the underlying code
    - Re-run from top of loop
+4. **If the cap is reached without converging → STOP and escalate.** Report the remaining
+   gap (which files/metrics are short, which tests still fail) and ask the user whether to
+   keep going, lower a threshold, or investigate a stuck test. Do not loop indefinitely on
+   an unreachable target (e.g. coverage blocked by an untestable external dependency).
 
 **Rules inside the loop:**
 - Read the source file before writing tests — understand all code paths
@@ -352,7 +374,7 @@ services:
       - "3000:3000"
 
   db:
-    image: postgres:16
+    image: postgres:16          # match your base docker-compose.yml version — don't drift the test DB
     environment:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
@@ -363,7 +385,7 @@ services:
       - /var/lib/postgresql/data   # ephemeral — fast, discarded after tests
 
   redis:
-    image: redis:7
+    image: redis:7               # match your base docker-compose.yml version
     ports:
       - "6379:6379"
 ```
@@ -388,7 +410,7 @@ $COMPOSE_CMD ps
 
 ### 4c–4g. Fixtures, smoke tests, auth E2E, CRUD E2E, running
 
-See **[E2E Patterns reference](../docs/e2e-patterns.md)** for complete templates:
+See **[references/e2e-patterns.md](references/e2e-patterns.md)** for complete templates:
 - API helper + real auth fixture
 - Docker Compose E2E override file
 - Smoke / health tests
