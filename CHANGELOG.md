@@ -5,7 +5,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-## [Unreleased]
+## [2.1.1] — 2026-05-31
 
 ### Fixed
 - **`update.sh`** — `run_plugin_updates()` is now scope-aware. `claude plugin update` defaults to **user** scope and exits non-zero with *"not installed at scope user"* for plugins installed at **project**/**local** scope — which surfaced as spurious update failures (e.g. `ui-ux-pro-max@ui-ux-pro-max-skill`, `understand-anything@understand-anything`). Each plugin is now retried across `user → project → local` and only reported failed when it is absent from every scope. The plugin **name was never wrong** — the id form `name@marketplace` is correct; the bug was scope handling.
