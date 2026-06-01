@@ -1,9 +1,9 @@
 # Theme 1 — Model-routing modernization (generator layer) — Implementation Design
 
 **Date:** 2026-05-31
-**Scope:** P0 ("Parse and emit model routing in `modules.py`") + P1 ("Re-tier the 9
-routed skills by reasoning load") from `2026-05-31-100x-powerup-review-design.md` → Theme 1.
-**Deferred (out of scope):** P2 slash-command metadata, P2 Cursor ruletype/globs.
+**Scope:** All of Theme 1 from `2026-05-31-100x-powerup-review-design.md` — P0
+(generator wiring) + P1 (re-tier the 9 routed skills) + P2 (slash-command metadata,
+Cursor ruletype/globs).
 
 ## Problem
 
@@ -128,10 +128,42 @@ test's `EXPECTED_MODELS` is updated to match, and the concat test now asserts bo
 `haiku` and `sonnet` tier hints emit. `effort: high` on the opus skills was considered
 and deferred (separate behavior change, out of this slice).
 
+## P2 — Slash-command metadata + Cursor rule types
+
+### P2a — slash-command aliases carry metadata (`cmd_emit_claude_code`)
+
+The alias was a flat `Use the <name> skill.` body that dropped all metadata. Commands
+share the skill frontmatter schema, so `render_command_alias(fm, slug, body)` now emits:
+
+- `description` — first sentence (`short_description`)
+- `model` — the bare routing alias, when set
+- `allowed-tools` — when declared
+- `argument-hint: [arguments]` — generic, emitted **only** when the body consumes
+  `$ARGUMENTS`/`$1` (5 of the 25 slash modules). No frontmatter declares an explicit
+  hint today and deriving specifics from prose is unreliable, so we emit an honest
+  generic marker rather than fabricate.
+
+### P2b — Cursor `.mdc` tier → rule type (`cmd_emit_cursor`)
+
+Was `globs:` empty + `alwaysApply: false` for every module (dead unless manually
+invoked). Now tier-mapped: core → `alwaysApply: true` (always in context); on-demand →
+`alwaysApply: false` + a `short_description` (Cursor agent-requested auto-attach, tighter
+triggering). `globs:` stays empty — modules are task-triggered, not file-type-triggered.
+
+`short_description()` (first sentence, ≤140 chars) is extracted as a shared helper and
+reused by `emit_index` and both emitters above.
+
+### Tests
+
+Two added: (1) `/query` alias carries `model: sonnet` + `allowed-tools` with no arg-hint,
+`/architect` carries `model: opus` + arg-hint, `/lint` carries `model: haiku` with no
+tools line; (2) core `.mdc` is `alwaysApply: true`, on-demand is `false`.
+
 ## Non-goals / blast-radius notes
 
 - Non-Claude adapter routing is documentation-only — the annotation is a hint, not
   functional routing. Scoped accordingly.
 - All adapter emitters consume `body` (frontmatter stripped), so adding `model:` to
   frontmatter cannot leak the key into prose blobs.
-- Slash-command frontmatter and Cursor ruletype/globs remain deferred (P2).
+- All four Theme 1 items (P0/P1/P2/P2) are now implemented. Cross-stack routing for
+  non-Claude adapters remains documentation-only by design (a tier hint, not enforcement).

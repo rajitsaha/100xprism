@@ -37,6 +37,17 @@ function py(...args) {
   return execFileSync('python3', [MODULES_PY, ...args], { cwd: REPO, encoding: 'utf8' })
 }
 
+// emit-claude-code writes to $HOME/.claude/{skills,commands}; run it against a temp HOME.
+function emitClaudeCode() {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), '100x-home-'))
+  execFileSync('python3', [MODULES_PY, 'emit-claude-code'], {
+    cwd: REPO,
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+  })
+  return home
+}
+
 function listModules() {
   return JSON.parse(py('list'))
 }
@@ -83,4 +94,35 @@ test('concat output surfaces the tier hint for a routed core module', () => {
   for (const name of CLAUDE_MODEL_IDS) {
     assert.ok(!text.includes(name), `concat must not leak Claude model name "${name}"`)
   }
+})
+
+test('slash-command aliases carry routing + guardrail frontmatter', () => {
+  const home = emitClaudeCode()
+  const cmd = (name) => fs.readFileSync(path.join(home, '.claude', 'commands', `${name}.md`), 'utf8')
+
+  // data-query (/query): routed to sonnet, declares allowed-tools, no $ARGUMENTS → no arg hint.
+  const query = cmd('query')
+  assert.ok(query.startsWith('---'), 'command alias should have frontmatter')
+  assert.match(query, /^model: sonnet$/m)
+  assert.match(query, /^allowed-tools: Bash Read$/m)
+  assert.ok(!/argument-hint:/.test(query), 'query takes no positional args → no hint')
+  assert.match(query, /Use the `data-query` skill\./)
+
+  // architect (/architect): routed to opus AND consumes $ARGUMENTS → gets a generic arg hint.
+  const architect = cmd('architect')
+  assert.match(architect, /^model: opus$/m)
+  assert.match(architect, /^argument-hint: \[arguments\]$/m)
+
+  // lint (/lint): haiku, no allowed-tools declared, no args.
+  const lint = cmd('lint')
+  assert.match(lint, /^model: haiku$/m)
+  assert.ok(!/allowed-tools:/.test(lint), 'lint declares no tools → no allowed-tools line')
+})
+
+test('cursor .mdc maps tier to alwaysApply', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), '100x-cursor-tier-'))
+  py('emit-cursor', tmp)
+  const mdc = (slug) => fs.readFileSync(path.join(tmp, '.cursor', 'rules', `${slug}.mdc`), 'utf8')
+  assert.match(mdc('lint'), /^alwaysApply: true$/m, 'core module should always apply')
+  assert.match(mdc('connect'), /^alwaysApply: false$/m, 'on-demand module should not always apply')
 })
