@@ -1,6 +1,6 @@
 ---
 name: architect
-description: > **Scope:** `/architect` answers architectural questions and produces decision matrices.
+description: Architectural decision advisor for cloud, data, and SaaS distributed systems. Use when the user asks "should we use X or Y", weighs a tradeoff, or needs a decision matrix, scaling analysis, cost-at-scale review, data-tier design, multi-tenancy model, or API/resilience guidance. For full technical blueprints, use enterprise-design.
 category: docs
 tier: on-demand
 slash_command: /architect
@@ -26,28 +26,53 @@ You are a principal architect with deep expertise in cloud infrastructure (GCP/A
 
 ## Step 1 — Load project context
 
-Read the project instruction file and relevant source files to understand:
+Detect the stack first (canonical block — source: `_lib/reference.md`), then read the
+instruction file. **Do not assume GCP/Firebase/npm** — branch on what is detected.
 
 ```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-# Detect project instruction file
+PROJECT_ROOT=$(git rev-parse --show-toplevel); cd "$PROJECT_ROOT"
 INSTRUCTION_FILE=$(for f in CLAUDE.md AGENTS.md .cursorrules .windsurfrules .github/copilot-instructions.md GEMINI.md; do [ -f "$PROJECT_ROOT/$f" ] && echo "$PROJECT_ROOT/$f" && break; done)
-[ -n "$INSTRUCTION_FILE" ] && cat "$INSTRUCTION_FILE" 2>/dev/null | head -100
+
+# Cloud provider: gcp | aws | azure | vercel | "" (config / IaC / instruction-file grep — no network)
+CLOUD=""
+if command -v gcloud >/dev/null 2>&1 && gcloud config get-value project >/dev/null 2>&1; then CLOUD=gcp; fi
+[ -z "$CLOUD" ] && ls "$PROJECT_ROOT"/.vercel >/dev/null 2>&1 && CLOUD=vercel
+[ -z "$CLOUD" ] && grep -rqiE "aws_|amazonaws|cdk\.json|::aws" "$PROJECT_ROOT"/terraform "$PROJECT_ROOT"/infra "$PROJECT_ROOT"/cdk.json 2>/dev/null && CLOUD=aws
+[ -z "$CLOUD" ] && grep -rqiE "azurerm|azure-|microsoft\.web" "$PROJECT_ROOT"/terraform "$PROJECT_ROOT"/infra 2>/dev/null && CLOUD=azure
+if [ -z "$CLOUD" ] && [ -n "$INSTRUCTION_FILE" ]; then
+  grep -qiE "gcloud|Cloud Run|Cloud SQL|Firebase|GCP_PROJECT" "$INSTRUCTION_FILE" && CLOUD=gcp
+  [ -z "$CLOUD" ] && grep -qiE "\baws\b|lambda|dynamodb|ecs|fargate" "$INSTRUCTION_FILE" && CLOUD=aws
+fi
+echo "cloud=${CLOUD:-unknown}"
+[ -n "$INSTRUCTION_FILE" ] && head -100 "$INSTRUCTION_FILE" 2>/dev/null
 ```
 
-Identify:
-- Current cloud stack (GCP services, regions, deployment model)
-- Data storage tier (Cloud SQL schema, Redis usage, BigQuery, GCS)
-- API and service topology (Cloud Run services, async workers, webhooks)
-- Authentication model (Firebase Auth, JWT, OAuth)
-- Current scale characteristics (users, RPM, data volume — from the project instruction file or codebase)
+Identify (map each to the **detected** provider's equivalents — the parenthetical names a
+GCP example and its AWS analog; substitute for whatever `$CLOUD` is):
+- Compute & deployment model (Cloud Run / ECS-Fargate-Lambda / Vercel functions), regions
+- Data storage tiers (Cloud SQL / RDS-Aurora; Memorystore / ElastiCache; BigQuery / Redshift; GCS / S3)
+- API and service topology (managed-container services, async workers, webhooks)
+- Authentication model (Firebase Auth / Cognito / Auth0, JWT, OAuth)
+- Current scale characteristics (users, RPM, data volume — from the instruction file or codebase)
 - Known bottlenecks or constraints
+
+If `$CLOUD` is unknown, ask the user which provider they target before giving
+provider-specific advice.
 
 ---
 
 ## Step 2 — Cloud Architecture Analysis
 
 Examine the topic through the cloud infrastructure lens.
+
+> The bullets below name **GCP services as concrete examples**. Map each to the detected
+> `$CLOUD` provider's equivalent and use that vocabulary in your analysis:
+> Cloud Run → ECS/Fargate, Lambda, App Runner (AWS) · Container Apps, App Service (Azure) · Vercel/Netlify functions ·
+> Cloud SQL → RDS/Aurora · Azure SQL · Neon/PlanetScale ·
+> Memorystore → ElastiCache · Azure Cache ·
+> Pub/Sub → SNS+SQS, EventBridge · Service Bus ·
+> Secret Manager → Secrets Manager/SSM · Key Vault.
+> If `$CLOUD` is unknown, present the analysis provider-neutrally.
 
 ### Compute & Deployment
 - Is Cloud Run the right compute model? Consider: request duration, CPU burstiness, cold start sensitivity, concurrency limits
@@ -82,13 +107,14 @@ Examine the topic through the data lens.
 
 ### Storage Tier Design
 ```
-Hot tier:   Redis (Memorystore)      — sessions, rate limits, LLM cache, real-time
-Warm tier:  Cloud SQL (PostgreSQL)   — transactional data, user records, audit log
-Cold tier:  BigQuery                 — analytics, exports, ML features
-Archive:    GCS                      — reports, backups, blobs
+Hot tier:   in-memory cache   — sessions, rate limits, LLM cache, real-time   (Memorystore / ElastiCache / Azure Cache)
+Warm tier:  relational DB     — transactional data, user records, audit log   (Cloud SQL / RDS-Aurora / Azure SQL / Neon)
+Cold tier:  analytics warehouse — analytics, exports, ML features             (BigQuery / Redshift / Snowflake)
+Archive:    object store      — reports, backups, blobs                        (GCS / S3 / Azure Blob)
 ```
 
-For the topic: which tier(s) are involved? Is data in the right tier?
+For the topic: which tier(s) are involved? Is data in the right tier? (Names in parens are
+per-provider examples — use the `$CLOUD` column.)
 
 ### Schema & Query Design
 - Table design: normalization level appropriate for access patterns?
@@ -144,7 +170,7 @@ Current model assessment and recommendation for the topic.
 - Dead letter queue: maximum retries, alerting on DLQ messages
 
 ### Resilience Patterns
-- Bulkhead: isolate failures (LLM slowness should not block property lookups)
+- Bulkhead: isolate failures (slowness in one dependency should not block unrelated requests)
 - Circuit breaker: open after N failures, half-open probe, close on success
 - Graceful degradation: what is the fallback when AI agents are slow/down?
 - Chaos engineering: have you tested: Cloud SQL restart, Redis flush, Pub/Sub delay?
@@ -184,21 +210,23 @@ When comparing options:
 
 ## Step 7 — Architecture Diagram
 
-For significant proposals, produce a text-based topology diagram:
+For significant proposals, produce a text-based topology diagram using the detected
+`$CLOUD` provider's service names. Example shape (GCP names shown — substitute the AWS /
+Azure / Vercel equivalents for the actual stack):
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                    CLOUD TOPOLOGY                   │
 ├─────────────────────────────────────────────────────┤
-│  [Firebase Hosting]  ──→  [Cloud Run: API]          │
+│  [Static hosting]  ──→  [API service]               │
 │                               │                     │
 │              ┌────────────────┼──────────────┐      │
 │              ↓                ↓              ↓      │
-│  [Cloud SQL: Primary]  [Redis Cache]  [Pub/Sub]     │
+│  [Relational DB: Primary] [Cache]    [Message bus]  │
 │              │                              │       │
-│   [Cloud SQL: Replica]              [Cloud Run: Worker] │
+│   [DB: Replica]                     [Worker service]│
 │                                             │       │
-│                                    [BigQuery Export]│
+│                                  [Analytics warehouse]│
 └─────────────────────────────────────────────────────┘
 ```
 

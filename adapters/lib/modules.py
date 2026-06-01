@@ -255,6 +255,10 @@ def cmd_emit_claude_code():
     for module_dir in sorted(MODULES_DIR.glob("*")):
         if not module_dir.is_dir():
             continue
+        # A module is a dir with a SKILL.md. Shared-reference dirs (e.g. `_lib/`, which
+        # holds maintainer conventions in reference.md) have none — skip, don't emit them.
+        if not (module_dir / "SKILL.md").is_file():
+            continue
         slug = module_dir.name
         target = skills_dir / slug
         if target.exists():

@@ -19,10 +19,18 @@ You are a senior engineering lead and product architect. Given an observation, b
 Understand the problem in full context before forming any opinion.
 
 ```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-cd "$PROJECT_ROOT"
+PROJECT_ROOT=$(git rev-parse --show-toplevel); cd "$PROJECT_ROOT"
 git log --oneline -20
 git status
+
+# Detect the stack so later steps don't assume GCP/npm (canonical block — source: _lib/reference.md)
+INSTRUCTION_FILE=$(for f in CLAUDE.md AGENTS.md .cursorrules .windsurfrules .github/copilot-instructions.md GEMINI.md; do [ -f "$PROJECT_ROOT/$f" ] && echo "$PROJECT_ROOT/$f" && break; done)
+CLOUD=""
+if command -v gcloud >/dev/null 2>&1 && gcloud config get-value project >/dev/null 2>&1; then CLOUD=gcp; fi
+[ -z "$CLOUD" ] && grep -rqiE "aws_|amazonaws|::aws" "$PROJECT_ROOT"/terraform "$PROJECT_ROOT"/infra "$PROJECT_ROOT"/cdk.json 2>/dev/null && CLOUD=aws
+[ -z "$CLOUD" ] && [ -n "$INSTRUCTION_FILE" ] && grep -qiE "gcloud|Cloud Run|Firebase" "$INSTRUCTION_FILE" && CLOUD=gcp
+CI_SYSTEM=""; ls "$PROJECT_ROOT"/.github/workflows/*.y*ml >/dev/null 2>&1 && CI_SYSTEM=github-actions
+echo "stack: cloud=${CLOUD:-none} ci=${CI_SYSTEM:-none}"
 ```
 
 1. Search for all code relevant to the observation (routes, components, services, DB queries, migrations, tests)
@@ -31,16 +39,28 @@ git status
    ```bash
    git log --oneline --since="60 days ago" -- <relevant-paths>
    ```
-4. Check for existing related issues:
+4. Check for existing related issues (only if `gh` is available). Pull titles **and
+   bodies**, then match on *meaning*, not just a keyword grep — a dupe often uses
+   different words for the same root cause:
    ```bash
-   gh issue list --state open | grep -i "<keywords from observation>"
+   command -v gh >/dev/null 2>&1 && gh issue list --state all --limit 100 \
+     --json number,title,body -q '.[] | "#\(.number) \(.title)\n\(.body)\n---"' 2>/dev/null
    ```
+   Read the results and judge whether any existing issue describes the same underlying
+   problem; if so, reference or update it instead of filing a duplicate.
 5. Check current test coverage for the affected code paths
-6. Check Cloud Run logs if this is a production issue:
+6. **If this is a production issue and `CLOUD=gcp`**, check Cloud Run logs (resolve the
+   project from gcloud config — never pass a literal placeholder):
    ```bash
-   gcloud logging read "resource.type=cloud_run_revision AND severity>=ERROR" \
-     --project=<project> --limit=20 --format="value(textPayload)" 2>/dev/null || true
+   if [ "$CLOUD" = gcp ]; then
+     PROJECT=$(gcloud config get-value project 2>/dev/null)
+     gcloud logging read "resource.type=cloud_run_revision AND severity>=ERROR" \
+       --project="$PROJECT" --limit=20 --format="value(textPayload)" 2>/dev/null || true
+   fi
    ```
+   For other providers, read logs the platform-appropriate way (AWS: `aws logs tail`;
+   Vercel: `vercel logs`; or the project's configured log viewer). Skip if not a
+   production issue.
 
 ---
 
@@ -57,8 +77,9 @@ Analyze from ALL FIVE perspectives before forming a resolution plan.
 - What does the user actually see? Exact errors or broken states?
 - Data loss, incorrect data, or silent failure? Accessibility / performance impact?
 
-### 2.3 Cloud Architecture
-- Which GCP services involved (Cloud Run, Cloud SQL, GCS, Pub/Sub, Redis, Firebase)?
+### 2.3 Cloud / Infrastructure
+- Which `$CLOUD` services are involved? (GCP: Cloud Run/Cloud SQL/GCS/Pub-Sub/Memorystore/Firebase ·
+  AWS: ECS-Lambda/RDS/S3/SNS-SQS/ElastiCache/Cognito · Azure / Vercel equivalents.) Map to the detected stack.
 - Scaling, concurrency, IAM, networking, or cold-start related?
 
 ### 2.4 Data Architecture
@@ -67,7 +88,8 @@ Analyze from ALL FIVE perspectives before forming a resolution plan.
 
 ### 2.5 SaaS / Distributed Systems
 - Race condition, multi-tenancy isolation risk, or async/webhook issue?
-- Third-party dependency (Stripe, Firebase Auth, Resend)? Retry/idempotency gap?
+- Third-party dependency — payment / auth / email / SMS provider (e.g. Stripe, the auth
+  provider, the email sender)? Retry/idempotency gap?
 
 ---
 
@@ -190,14 +212,14 @@ gh issue create \
 ### User Experience
 <!-- what the user sees, data loss risk, accessibility/perf impact -->
 
-### Cloud Architecture
-<!-- which GCP services involved, scaling/infra implications -->
+### Cloud / Infrastructure
+<!-- which cloud services involved (map to the project's provider), scaling/infra implications -->
 
 ### Data Architecture
 <!-- tables/queries affected, migration needed, data integrity risk -->
 
 ### SaaS / Distributed Systems
-<!-- race conditions, multi-tenancy, async/webhook, third-party deps -->
+<!-- race conditions, multi-tenancy, async/webhook, third-party deps (payment/auth/email) -->
 
 ## Resolution Plan
 
