@@ -5,10 +5,10 @@ category: docs
 tier: on-demand
 slash_command: /context
 allowed-tools: Bash(git:*) Bash(gh:*) Read Grep Glob WebFetch
+model: haiku
 ---
 
 # Context — Session Orientation Dump
-<!-- model: haiku -->
 
 Pull 7 days of git and GitHub activity into a structured summary. Run at the start of a session before making changes.
 

@@ -5,10 +5,10 @@ category: engineering
 tier: core
 slash_command: /update-claude
 allowed-tools: Read Edit Write
+model: haiku
 ---
 
 # Update-Claude — CLAUDE.md Rule Writer
-<!-- model: haiku -->
 
 After any correction, update CLAUDE.md with a rule to prevent the same mistake recurring.
 

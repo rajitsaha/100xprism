@@ -4,10 +4,10 @@ description: Connect, authenticate, and verify any SaaS CLI tool. Reads credenti
 category: data
 tier: on-demand
 slash_command: /connect
+model: haiku
 ---
 
 # Connect — SaaS CLI Connection Manager
-<!-- model: haiku -->
 
 Connect, authenticate, and verify any SaaS CLI tool. Reads credentials from `.env`. Never prints secrets.
 
