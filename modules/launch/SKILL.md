@@ -79,6 +79,19 @@ Thresholds: Lines ≥ 95% | Functions ≥ 95% | Statements ≥ 95% | Branches �
 
 ---
 
+## Phases 2–4 — Lint ‖ Security ‖ Build (fan out)
+
+Phase 1 (tests) is the long pole and must pass first. **Phases 2, 3, and 4 — lint,
+security, and build — are mutually independent** (they read the tree, not each other's
+results), so run them in parallel rather than serially. Use the fan-out ladder from the
+`subagents` skill: prefer the `Workflow` tool (one stage per phase, `schema`-validated
+return), else parallel `Agent`/`Task` subagents, else run them serially.
+
+Each returns `{ phase, status, findings[] }`; **all three must report `passed`** before
+the gate-cache write below. The phase descriptions that follow define what each one does.
+
+---
+
 ## Phase 2 — Lint
 
 Run the **lint** workflow. Fix all errors across frontend, backend, and type checks.
@@ -111,10 +124,13 @@ Fix any compiler errors. Re-build only the failing target.
 
 **GATE: All applicable builds succeed with zero errors.**
 
-Phases 1–4 constitute a full gate pass. Write the gate cache so commit and push skip re-running it:
+Phases 1–4 constitute a full gate pass. Record it so the `gate-on-commit` hook and the
+commit/push workflows skip re-running the gate:
 ```bash
-echo "$(git rev-parse HEAD)" > ~/.100x-dev/gate-cache
+python3 ~/100x-dev/hooks/gate-pass.py 2>/dev/null || true
 ```
+This writes a token for the **current tree state** (HEAD + tracked diff + untracked
+files), so any later edit re-arms the gate. Only run it when all of Phases 1–4 passed.
 
 ---
 
@@ -151,9 +167,26 @@ Read health endpoint URLs from the project instruction file, README, or use comm
 # /health, /healthz, /api/health, /status
 ```
 
-Hit each endpoint. Retry up to 5 times with 10-second intervals (deployment may still be rolling out). Confirm HTTP 200 and a healthy response body.
+Hit each endpoint with a **bounded exponential backoff** loop — a fresh deploy may still
+be rolling out, so don't hammer it at a fixed interval or wait forever:
 
-**If health checks fail after 5 retries → trigger rollback (Step 4).**
+```bash
+HEALTH_URL="$1"   # resolved above
+attempt=0; max_attempts=6; delay=2
+until curl -fsS --max-time 5 "$HEALTH_URL" >/dev/null 2>&1; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge "$max_attempts" ]; then
+    echo "Health check failed after $max_attempts attempts (~$((2 ** max_attempts))s)"; exit 1
+  fi
+  echo "Health not ready (attempt $attempt/$max_attempts) — retrying in ${delay}s"
+  sleep "$delay"; delay=$((delay * 2))   # 2,4,8,16,32s — caps total wait, backs off cleanly
+done
+echo "Health OK after $attempt retr$([ "$attempt" = 1 ] && echo y || echo ies)"
+```
+
+Confirm HTTP 200 and a healthy response body.
+
+**If the loop exhausts `max_attempts` → trigger rollback (Step 4).**
 
 ### Step 2 — Smoke tests
 
