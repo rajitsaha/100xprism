@@ -8,6 +8,8 @@ SKILLS_DIR="$CLAUDE_DIR/skills"
 SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 CHECK_ONLY=false
 PLUGINS_ONLY=false
+# Overridable so tests can stub the CLI (see test/update-plugins.test.js).
+CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
 # Colors
 GREEN='\033[0;32m'
@@ -38,7 +40,19 @@ run_plugin_updates() {
 
   local _ok=0 _failed=()
   for _p in "${_plugins[@]}"; do
-    if claude plugin update "$_p" >/dev/null 2>&1; then
+    # A plugin can be installed at user, project, or local scope. `claude plugin
+    # update` defaults to user scope and exits non-zero with "not installed at
+    # scope <s>" when the plugin lives at a different scope — which previously
+    # surfaced as a spurious failure for project/local-scoped plugins. Try each
+    # scope until one updates; only mark failed if it's absent from all of them.
+    local _updated=false _scope
+    for _scope in user project local; do
+      if "$CLAUDE_BIN" plugin update "$_p" --scope "$_scope" >/dev/null 2>&1; then
+        _updated=true
+        break
+      fi
+    done
+    if $_updated; then
       (( _ok++ )) || true
     else
       _failed+=("$_p")
@@ -62,6 +76,13 @@ sync_hooks() {
   [ -f "$SETTINGS_FILE" ] || return 0
   python3 "$REPO_DIR/adapters/lib/modules.py" emit-hooks --sync 2>/dev/null || true
 }
+
+# Test seam: when sourced with UPDATE_SH_SOURCE_ONLY=1, load the functions above
+# without running the update flow, so tests can exercise them against a stubbed
+# CLAUDE_BIN. No effect when the script is executed normally.
+if [ -n "${UPDATE_SH_SOURCE_ONLY:-}" ]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 if [ "$PLUGINS_ONLY" = true ]; then
   echo ""
