@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **`update.sh`** — `run_plugin_updates()` is now scope-aware. `claude plugin update` defaults to **user** scope and exits non-zero with *"not installed at scope user"* for plugins installed at **project**/**local** scope — which surfaced as spurious update failures (e.g. `ui-ux-pro-max@ui-ux-pro-max-skill`, `understand-anything@understand-anything`). Each plugin is now retried across `user → project → local` and only reported failed when it is absent from every scope. The plugin **name was never wrong** — the id form `name@marketplace` is correct; the bug was scope handling.
+- **`update.sh`** — added a `CLAUDE_BIN` override and a `UPDATE_SH_SOURCE_ONLY` source-only guard so the plugin-update logic is unit-testable; **`test/update-plugins.test.js`** covers the project-scope, user-scope, and absent-from-all-scopes paths against a stubbed CLI.
+
+---
+
 ## [2.1.0] — 2026-05-31
 
 Frontier-model modernization (issues #21–#27) — generator-layer model routing, enforcing hooks, an eval/meta safety net, Workflow/subagent fan-out, and stack-detection de-hardcoding. Backward compatible; new behavior is opt-in.
