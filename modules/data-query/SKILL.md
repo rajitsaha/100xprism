@@ -5,10 +5,10 @@ category: data
 tier: on-demand
 slash_command: /query
 allowed-tools: Bash Read
+model: haiku
 ---
 
 # Query — Plain-English Database Analytics
-<!-- model: haiku -->
 
 Describe what you want to know — Claude writes and runs the query.
 

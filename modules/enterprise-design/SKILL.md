@@ -4,10 +4,10 @@ description: Produce a comprehensive technical blueprint for a web product or Sa
 category: design
 tier: on-demand
 slash_command: /enterprise-design
+model: opus
 ---
 
 # Enterprise Design — Technical Blueprint Generator
-<!-- model: opus -->
 
 Produce a comprehensive technical blueprint for a web product or SaaS, suitable for implementation in Figma Make, engineering sprints, and cloud deployment.
 

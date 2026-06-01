@@ -5,10 +5,10 @@ category: engineering
 tier: on-demand
 slash_command: /techdebt
 allowed-tools: Bash Read Grep Glob Edit
+model: haiku
 ---
 
 # Techdebt — Technical Debt Scanner
-<!-- model: haiku -->
 
 Scan the codebase for technical debt and eliminate it. Run at end of session or when the codebase feels bloated.
 

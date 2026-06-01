@@ -4,10 +4,10 @@ description: You are a security engineer. Auto-detect package managers, scan for
 category: quality
 tier: on-demand
 slash_command: /security
+model: haiku
 ---
 
 # Security — Vulnerability Scanner & Secret Audit
-<!-- model: haiku -->
 
 You are a security engineer. Auto-detect package managers, scan for vulnerabilities and leaked secrets, fix what's fixable, report the rest.
 

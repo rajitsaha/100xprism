@@ -4,10 +4,10 @@ description: > **Scope:** `/architect` answers architectural questions and produ
 category: docs
 tier: on-demand
 slash_command: /architect
+model: opus
 ---
 
 # Architect — Cloud, Data & SaaS Distributed Architecture Advisor
-<!-- model: opus -->
 
 > **Scope:** `/architect` answers architectural questions and produces decision matrices.
 > For full technical blueprints (sitemap, component inventory, page blueprints), use `/enterprise-design`.
