@@ -5,7 +5,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
-## [Unreleased]
+## [2.1.0] — 2026-05-31
+
+Frontier-model modernization (issues #21–#27) — generator-layer model routing, enforcing hooks, an eval/meta safety net, Workflow/subagent fan-out, and stack-detection de-hardcoding. Backward compatible; new behavior is opt-in.
+
+Model routing through the generator (issue #21 / Theme 1).
+
+### Added
+- **`adapters/lib/modules.py`** — the 9 `<!-- model: X -->` comments are now parsed and routed instead of being dead prose. `MODEL_ALIASES` maps bare tiers (`haiku`/`sonnet`/`opus`) to current IDs, a `sonnet` middle tier is introduced, and all 7 emitters tolerate/strip the key. Non-Claude adapters get a documentation-only `_Runs best on:_` hint, not functional routing.
+
+Workflow/subagent fan-out (issue #25).
+
+### Added
+- **`modules/subagents/SKILL.md`** — capability-gated fan-out ladder (Workflow → parallel Agent/Task → serial fallback), the standard structured return contract (`{summary,findings[],files[],risks[],confidence}`), and a Haiku-breadth / Opus-depth routing note; context isolation reframed for the 1M era (parallelism + adversarial independence, not token savings).
+- **`modules/orchestrate`, `gate`, `test`, `launch`** — fan out independent work: orchestrate gains a plan → parallel-impl → structured-diff → independent review → merge-gate block; gate runs independent Gates 2–5 in parallel; the serial lifecycle skills degrade gracefully on non-Claude-Code platforms.
+
+Shared stack-detection; de-hardcode GCP/npm (issue #26).
+
+### Added
+- **`modules/_lib/reference.md`** — reference-only maintainer doc (never globbed/emitted/counted) holding the canonical, network-free stack-detection block (cloud provider / test runner / CI system / JS package manager).
+
+### Changed
+- **`architect`, `issue`, `fix-bugs`** — branch on detected stack instead of assuming GCP+Firebase+Stripe+npm; GCP/Cloud Run paths gate behind `CLOUD=gcp` and resolve the project from `gcloud config`. Fixed `architect`'s malformed `description: >` block-scalar that had stripped all natural-language triggers.
+
+Test skill reference + configurability (issue #27).
+
+### Changed
+- **`modules/test/SKILL.md`** — fixed the broken `../docs/e2e-patterns.md` reference (doc relocated to `modules/test/references/e2e-patterns.md`); coverage thresholds (95%/90%) are now defaults that a project can override (CLAUDE.md/AGENTS.md, jest/vitest config, `pyproject.toml`/`.coveragerc`); the coverage loop is bounded by `MAX_ITERATIONS` (default 6) with escalation; Postgres/Redis image versions are detected from the project's compose files instead of hardcoding `postgres:16`/`redis:7`.
+
+---
 
 Correctness & drift hardening (issue #23) — no breaking changes.
 
