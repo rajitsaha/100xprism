@@ -33,11 +33,23 @@ Offload heavy research or analysis to a subagent so the main agent's context sta
 - Main agent uses the summary, never sees the raw noise
 
 ### C. Permission Routing via Hook
-Route permission requests to a smarter model via a hook:
-- Hook intercepts permission requests
-- Sends to a model (e.g., Opus) to scan for attacks and auto-approve safe ones
-- Dangerous or ambiguous requests get flagged for human review
-- See: code.claude.com/docs for hook configuration
+Auto-approve obviously-safe tool calls so they don't interrupt with a prompt, while
+anything risky still falls through to human review. 100x-dev ships this as a real,
+installable artifact — not just advice:
+
+- **Artifact:** `~/100x-dev/hooks/permission-router.py` (a `PreToolUse` Bash hook).
+- **Tier 1 (offline):** a deterministic allowlist auto-approves read-only commands
+  (`ls`, `cat`, `git status`, `grep`, …); destructive/network/credential commands are
+  never auto-approved.
+- **Tier 2 (optional):** set `HOOK_ROUTER_MODEL=claude-haiku-4-5` (needs the `claude`
+  CLI) to route ambiguous commands to a cheap model; only a confident "safe" verdict
+  grants permission, so escalation to a deeper model (e.g. Opus 4.8) or a human is the
+  default for anything uncertain. The router **never blocks** — it only grants.
+- **Enable it:** re-run the installer and turn on the *permission-router* hook (it ships
+  off by default), or run `python3 ~/100x-dev/adapters/lib/modules.py emit-hooks` with
+  `HOOK_ROUTER=1`.
+- See `~/100x-dev/hooks/README.md` and the hooks docs:
+  <https://docs.claude.com/en/docs/claude-code/hooks>
 
 ## Usage Patterns
 
@@ -48,7 +60,7 @@ Route permission requests to a smarter model via a hook:
 # Parallel exploration
 "Use 5 subagents to map out every API endpoint and their dependencies"
 
-# Background agent
+# Background agent (Claude Code only)
 ctrl+b  →  runs current task in background agent
 ```
 
@@ -56,5 +68,5 @@ ctrl+b  →  runs current task in background agent
 
 - One focused task per subagent
 - Subagents return summaries, not raw data dumps
-- Use background agents (ctrl+b) for long-running tasks so you can keep working
+- Use background agents (ctrl+b, Claude Code only) for long-running tasks so you can keep working
 - Subagents are especially valuable for: codebase mapping, test generation, doc writing, and competitive analysis

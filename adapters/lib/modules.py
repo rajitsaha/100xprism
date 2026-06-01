@@ -9,6 +9,11 @@ Used by all adapters. Outputs JSON to stdout with one of these subcommands:
                                when over budget.
   emit-cursor <project_dir>  — write .cursor/rules/<slug>.mdc per module
   emit-claude-code           — write ~/.claude/skills/<slug>/* + ~/.claude/commands/<slug>.md
+  emit-hooks [--sync]        — idempotently merge first-party hooks into
+                               ~/.claude/settings.json from hooks/hooks.manifest.json.
+                               Each hook is enabled per its manifest `default`, overridable
+                               by its `toggle_env` env var (1/true=on, 0/false=off).
+                               --sync only refreshes hooks already present (used on update).
 """
 from __future__ import annotations
 
@@ -268,6 +273,101 @@ def cmd_emit_claude_code():
     print(f"wrote {skill_count} skills + {cmd_count} slash command aliases")
 
 
+HOOKS_DIR = REPO / "hooks"
+
+
+def _hook_command(script: str) -> str:
+    return f'python3 "{HOOKS_DIR / script}"'
+
+
+def _hook_enabled(hook: dict) -> bool:
+    """manifest `default`, overridden by the hook's `toggle_env` env var if set."""
+    env = hook.get("toggle_env")
+    if env and env in os.environ:
+        val = os.environ[env].strip().lower()
+        if val in ("1", "true", "yes", "on"):
+            return True
+        if val in ("0", "false", "no", "off", ""):
+            return False
+    return bool(hook.get("default"))
+
+
+def _command_present(entries: list, command: str) -> bool:
+    return any(
+        h.get("command") == command
+        for e in entries
+        for h in e.get("hooks", [])
+    )
+
+
+def _strip_command(entries: list, command: str) -> list:
+    """Remove our command from every entry; drop entries left with no hooks."""
+    out = []
+    for e in entries:
+        kept = [h for h in e.get("hooks", []) if h.get("command") != command]
+        if kept:
+            out.append({**e, "hooks": kept})
+    return out
+
+
+def cmd_emit_hooks(sync: bool = False):
+    """Idempotently merge first-party hooks into settings.json (declarative).
+
+    For each manifest hook we strip any existing copy of its command, then re-add a
+    single entry when it should be enabled — so re-running never duplicates entries and
+    flipping a toggle off removes the hook. `sync` keeps only hooks already present
+    (used on update, so we never silently enable a hook the user opted out of).
+    """
+    manifest = json.loads((HOOKS_DIR / "hooks.manifest.json").read_text())
+    hooks_spec = manifest.get("hooks", [])
+
+    settings_file = Path(
+        os.environ.get("SETTINGS_FILE")
+        or os.path.expanduser("~/.claude/settings.json")
+    )
+    settings_file.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        settings = json.loads(settings_file.read_text())
+    except (OSError, json.JSONDecodeError):
+        settings = {}
+
+    settings_hooks = settings.setdefault("hooks", {})
+    added, kept, removed = [], [], []
+
+    for hook in hooks_spec:
+        command = _hook_command(hook["script"])
+        event = hook["event"]
+        entries = settings_hooks.get(event, [])
+        was_present = _command_present(entries, command)
+        entries = _strip_command(entries, command)  # dedupe / declarative reset
+
+        keep = was_present if sync else _hook_enabled(hook)
+        if keep:
+            entries.append({
+                "matcher": hook["matcher"],
+                "hooks": [{"type": "command", "command": command}],
+            })
+            (kept if was_present else added).append(hook["id"])
+        elif was_present:
+            removed.append(hook["id"])
+
+        if entries:
+            settings_hooks[event] = entries
+        elif event in settings_hooks:
+            del settings_hooks[event]
+
+    settings_file.write_text(json.dumps(settings, indent=2))
+
+    parts = []
+    if added:
+        parts.append(f"added {len(added)} ({', '.join(added)})")
+    if kept:
+        parts.append(f"refreshed {len(kept)}")
+    if removed:
+        parts.append(f"removed {len(removed)} ({', '.join(removed)})")
+    print(f"hooks: {'; '.join(parts) if parts else 'no changes'} → {settings_file}")
+
+
 def main(argv: list[str]):
     if len(argv) < 2:
         print(__doc__, file=sys.stderr)
@@ -281,6 +381,8 @@ def main(argv: list[str]):
         cmd_emit_cursor(argv[2])
     elif cmd == "emit-claude-code":
         cmd_emit_claude_code()
+    elif cmd == "emit-hooks":
+        cmd_emit_hooks(sync="--sync" in argv[2:])
     else:
         print(f"unknown command: {cmd}", file=sys.stderr)
         return 2

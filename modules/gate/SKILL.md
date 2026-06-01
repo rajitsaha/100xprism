@@ -187,3 +187,19 @@ If ANY gate fails:
 ```
 
 **Do NOT commit or push until the gate summary shows ALL GATES PASSED.**
+
+---
+
+## Record the pass (enables the gate-on-commit hook)
+
+**Only when the summary shows ALL GATES PASSED**, record the pass so the optional
+`gate-on-commit` hook will allow the next commit/push:
+
+```bash
+python3 ~/100x-dev/hooks/gate-pass.py 2>/dev/null || true
+```
+
+This writes a token for the **current tree state** (HEAD + tracked diff + untracked
+files) to `~/.100x-dev/gate-cache`. The token is invalidated the moment anything in the
+tree changes, so a later edit always re-arms the gate. If a gate **failed**, do NOT run
+this — leave the cache stale so the commit stays blocked.
