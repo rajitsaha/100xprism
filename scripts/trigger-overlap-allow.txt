@@ -50,3 +50,8 @@ seo-audit <-> site-architecture
 competitor-alternatives <-> programmatic-seo
 copy-editing <-> copywriting
 conversion-copy <-> copywriting
+# architect's keyword-packed description (#26) raised two benign overlaps:
+# - enterprise-design: intentional, architect's description cross-references it ("for full blueprints, use enterprise-design")
+# - pr: generic-token overlap (~0.17), same class as the accepted issue<->pr / context-dump<->pr
+architect <-> enterprise-design
+architect <-> pr
