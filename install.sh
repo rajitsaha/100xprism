@@ -44,6 +44,7 @@ INSTALL_MODULES=true
 INSTALL_PLUGINS=true
 INSTALL_SHELL=true
 INSTALL_TEMPLATES=true
+INSTALL_HOOKS=false   # enforcing hooks are opt-in (they change commit behavior)
 
 select_components() {
   echo ""
@@ -58,14 +59,18 @@ select_components() {
     fi
     echo "  [$([ "$INSTALL_SHELL" = true ] && echo "x" || echo " ")] 3) Shell        — aliases + shortcuts (cc, ccc, 100x-update, ...)"
     echo "  [$([ "$INSTALL_TEMPLATES" = true ] && echo "x" || echo " ")] 4) Templates   — project starters (node, python, docker)"
+    if [ "$TOOL_CLAUDE" = true ]; then
+      echo "  [$([ "$INSTALL_HOOKS" = true ] && echo "x" || echo " ")] 5) Hooks        — Claude Code only: enforce the gate on commit + secret-scan (opt-in)"
+    fi
     echo ""
-    read -rp "  Toggle (1-4) or press Enter to confirm: " choice || true
+    read -rp "  Toggle (1-5) or press Enter to confirm: " choice || true
 
     case "$choice" in
       1) INSTALL_MODULES=$([ "$INSTALL_MODULES" = true ] && echo false || echo true) ;;
       2) [ "$TOOL_CLAUDE" = true ] && INSTALL_PLUGINS=$([ "$INSTALL_PLUGINS" = true ] && echo false || echo true) ;;
       3) INSTALL_SHELL=$([ "$INSTALL_SHELL" = true ] && echo false || echo true) ;;
       4) INSTALL_TEMPLATES=$([ "$INSTALL_TEMPLATES" = true ] && echo false || echo true) ;;
+      5) [ "$TOOL_CLAUDE" = true ] && INSTALL_HOOKS=$([ "$INSTALL_HOOKS" = true ] && echo false || echo true) ;;
       "") break ;;
       *) echo "  Invalid choice." ;;
     esac
@@ -126,6 +131,42 @@ else:
 with open(settings_file, 'w') as f:
     json.dump(settings, f, indent=2)
 PYEOF
+}
+
+# ── Install enforcing hooks (Claude Code only) ──────────────────────────────
+
+install_hooks() {
+  [ "$TOOL_CLAUDE" = true ] || return 0
+  echo ""
+  echo "Installing enforcing hooks for Claude Code..."
+  echo "  These run via ~/.claude/settings.json. Pick which to enable:"
+  echo ""
+
+  # Defaults mirror hooks/hooks.manifest.json: gate + secret on, lint + router off.
+  local H_GATE=true H_SECRET=true H_LINT=false H_ROUTER=false
+  while true; do
+    echo "  [$([ "$H_GATE" = true ] && echo "x" || echo " ")] 1) gate-on-commit   — block git commit/push unless /gate passed for the tree"
+    echo "  [$([ "$H_SECRET" = true ] && echo "x" || echo " ")] 2) secret-scan      — block writes containing obvious credentials"
+    echo "  [$([ "$H_LINT" = true ] && echo "x" || echo " ")] 3) lint-on-save     — advisory lint after each edit (never blocks)"
+    echo "  [$([ "$H_ROUTER" = true ] && echo "x" || echo " ")] 4) permission-router — auto-approve known read-only Bash commands"
+    echo ""
+    read -rp "  Toggle (1-4) or press Enter to confirm: " hchoice || true
+    case "$hchoice" in
+      1) H_GATE=$([ "$H_GATE" = true ] && echo false || echo true) ;;
+      2) H_SECRET=$([ "$H_SECRET" = true ] && echo false || echo true) ;;
+      3) H_LINT=$([ "$H_LINT" = true ] && echo false || echo true) ;;
+      4) H_ROUTER=$([ "$H_ROUTER" = true ] && echo false || echo true) ;;
+      "") break ;;
+      *) echo "  Invalid choice." ;;
+    esac
+    echo ""
+  done
+
+  HOOK_GATE="$H_GATE" HOOK_SECRET="$H_SECRET" HOOK_LINT="$H_LINT" HOOK_ROUTER="$H_ROUTER" \
+    python3 "$REPO_DIR/adapters/lib/modules.py" emit-hooks
+
+  echo -e "  ${GREEN}→ Hooks merged into ~/.claude/settings.json ✓${NC}"
+  echo -e "  ${CYAN}→ Restart Claude Code to load hooks${NC}"
 }
 
 # ── Install shell aliases ───────────────────────────────────────────────────
@@ -198,6 +239,7 @@ echo "────────────────────────�
 
 [ "$INSTALL_MODULES" = true ] && install_modules
 [ "$INSTALL_PLUGINS" = true ] && [ "$TOOL_CLAUDE" = true ] && do_install_plugins
+[ "$INSTALL_HOOKS" = true ] && [ "$TOOL_CLAUDE" = true ] && install_hooks
 [ "$INSTALL_SHELL" = true ] && install_shell
 [ "$INSTALL_TEMPLATES" = true ] && install_templates
 

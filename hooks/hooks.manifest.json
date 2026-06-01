@@ -1,0 +1,41 @@
+{
+  "_comment": "Single source of truth for 100x-dev first-party hooks. `emit-hooks` (adapters/lib/modules.py) reads this to idempotently merge hook entries into ~/.claude/settings.json. `default` sets whether a hook is enabled unless its `toggle_env` env var overrides (1/true = on, 0/false = off). install.sh sets these toggles from its hooks menu.",
+  "hooks": [
+    {
+      "id": "gate-on-commit",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "script": "pretooluse-gate.py",
+      "default": true,
+      "toggle_env": "HOOK_GATE",
+      "description": "Block git commit/push unless /gate passed for the current tree."
+    },
+    {
+      "id": "secret-scan",
+      "event": "PreToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "script": "pretooluse-secret-scan.py",
+      "default": true,
+      "toggle_env": "HOOK_SECRET",
+      "description": "Block writes that contain obvious hard-coded credentials."
+    },
+    {
+      "id": "lint-on-save",
+      "event": "PostToolUse",
+      "matcher": "Write|Edit|MultiEdit",
+      "script": "posttooluse-lint.py",
+      "default": false,
+      "toggle_env": "HOOK_LINT",
+      "description": "Advisory: run the project linter on saved files (never blocks)."
+    },
+    {
+      "id": "permission-router",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "script": "permission-router.py",
+      "default": false,
+      "toggle_env": "HOOK_ROUTER",
+      "description": "Auto-approve known read-only commands; optionally route ambiguous ones to a model."
+    }
+  ]
+}

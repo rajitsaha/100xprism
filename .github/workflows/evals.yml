@@ -1,0 +1,111 @@
+# 100x Dev — repo self-CI (skill evals + trigger-overlap).
+# Distinct from .github/workflows/meta.yml (drift/consistency) and from
+# github-actions/ci.yml (a TEMPLATE users copy into their own projects).
+#
+# Grading itself is done by the /eval skill (Haiku 4.5 over parallel subagents), which
+# needs a model and so runs interactively — not here. CI does the deterministic half:
+# fail on NEW trigger overlaps, and validate + inventory the evals of changed modules
+# (per-PR) or all modules (nightly), posting the result.
+name: Evals
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "modules/**"
+      - "scripts/eval-harness.py"
+      - "scripts/trigger-overlap.py"
+      - "scripts/trigger-overlap-allow.txt"
+      - ".github/workflows/evals.yml"
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "0 7 * * *" # nightly full sweep (07:00 UTC)
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  trigger-overlap:
+    name: Trigger-overlap lint
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Fail on new (non-allow-listed) trigger overlaps
+        run: python3 scripts/trigger-overlap.py --strict
+
+  changed-evals:
+    name: Validate + inventory changed-module evals
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0 # need the base branch for `git diff base...HEAD`
+
+      - name: Validate changed-module evals
+        id: validate
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/eval-harness.py validate --changed "origin/${BASE_REF}"
+
+      - name: Build eval inventory report
+        if: always()
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          BASE="origin/${BASE_REF}"
+          {
+            echo "## 🧪 Skill evals — changed modules"
+            echo
+            echo "Structural validation + the case/assertion inventory for modules touched"
+            echo "on this branch. Run \`/eval --changed $BASE\` locally to grade them"
+            echo "(Haiku 4.5 over parallel subagents) and get a pass/fail scorecard."
+            echo
+            echo '```'
+            python3 scripts/eval-harness.py validate --changed "$BASE" 2>&1 || true
+            echo '```'
+            echo
+            echo '<details><summary>Case / assertion work-list</summary>'
+            echo
+            echo '```'
+            python3 scripts/eval-harness.py plan --changed "$BASE" 2>&1 || true
+            echo '```'
+            echo
+            echo '</details>'
+          } | tee eval-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post report to PR
+        # Same-repo PRs only — forked PRs get a read-only token and can't comment.
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" \
+            --body-file eval-report.md --edit-last --create-if-none \
+          || gh pr comment "$PR_NUMBER" --body-file eval-report.md
+
+  nightly:
+    name: Nightly full eval sweep
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Validate all eval files
+        run: python3 scripts/eval-harness.py validate --all
+      - name: Inventory all evals to the run summary
+        if: always()
+        run: |
+          {
+            echo "## 🧪 Nightly skill-eval sweep"
+            echo
+            echo '```'
+            python3 scripts/eval-harness.py validate --all 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Trigger-overlap report
+        if: always()
+        run: python3 scripts/trigger-overlap.py >> "$GITHUB_STEP_SUMMARY"

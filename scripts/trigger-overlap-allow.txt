@@ -1,0 +1,52 @@
+# Known + accepted trigger-overlap pairs (issue #24).
+# Format: slugA <-> slugB  (one pair per line; '#' starts a comment).
+# These overlaps are intentional and already disambiguated via cross-references
+# in each skill's description. The lint still REPORTS them; --strict only fails
+# on pairs NOT listed here (a genuinely new overlap). Regenerate the baseline with:
+#   python3 scripts/trigger-overlap.py --json | python3 -c "import json,sys;[print(a+' <-> '+b) for a,b in (f['pair'] for f in json.load(sys.stdin)['flagged'])]"
+#
+# --- lifecycle / quality clusters (shared gate→commit→push→launch vocabulary) ---
+launch <-> release
+commit <-> gate
+enterprise-design <-> systems-architect
+commit <-> push
+gate <-> push
+page-cro <-> signup-flow-cro
+form-cro <-> signup-flow-cro
+form-cro <-> page-cro
+ad-creative <-> paid-ads
+onboarding-cro <-> signup-flow-cro
+paywall-upgrade-cro <-> pricing-strategy
+grill-me <-> pr
+schema-markup <-> seo-audit
+data-query <-> db
+docs <-> lint
+lint <-> security
+onboarding-cro <-> page-cro
+branch <-> paywall-upgrade-cro
+email-sequence <-> revops
+competitor-alternatives <-> sales-enablement
+paid-ads <-> social-content
+ai-seo <-> schema-markup
+page-cro <-> popup-cro
+cold-email <-> revops
+conversion-copy <-> figma-translator
+copywriting <-> page-cro
+ai-seo <-> site-architecture
+popup-cro <-> signup-flow-cro
+ab-test-setup <-> analytics-tracking
+context-dump <-> pr
+issue <-> pr
+cold-email <-> email-sequence
+conversion-copy <-> enterprise-design
+form-cro <-> onboarding-cro
+form-cro <-> popup-cro
+ai-seo <-> seo-audit
+interaction-engineer <-> systems-architect
+content-strategy <-> social-content
+db <-> revops
+lint <-> test
+seo-audit <-> site-architecture
+competitor-alternatives <-> programmatic-seo
+copy-editing <-> copywriting
+conversion-copy <-> copywriting

@@ -21,6 +21,27 @@ Correctness & drift hardening (issue #23) — no breaking changes.
 - **`.github/workflows/release.yml`** — added a pre-release version-triple guard that fails the release if `VERSION`, `package.json`, and the tag disagree.
 - **`test/meta-check.test.js`** — tests for the drift gate.
 
+Enforcing hooks (issue #22) — opt-in; no behavior change unless enabled.
+
+### Added
+- **`hooks/`** — first-party hook pack (plain `python3`, no deps): `pretooluse-gate.py` blocks `git commit`/`git push` unless `/gate` recorded a pass for the current tree; `pretooluse-secret-scan.py` blocks writes containing obvious credentials; `posttooluse-lint.py` (advisory lint-on-save) and `permission-router.py` (auto-approve read-only Bash, optional model escalation) ship off by default. `gate-pass.py` records the pass; `hooks/hooks.manifest.json` is the single source of truth.
+- **`adapters/lib/modules.py emit-hooks [--sync]`** — idempotent, declarative merge of the hook pack into `~/.claude/settings.json` (same pattern as the plugin merge); per-hook toggles via `HOOK_GATE`/`HOOK_SECRET`/`HOOK_LINT`/`HOOK_ROUTER`. `--sync` only refreshes hooks already present.
+- **`install.sh`** — new opt-in *Hooks* component with a per-hook selection menu; **`update.sh`** refreshes installed hooks on update.
+- **`test/hooks.test.js`** — covers secret-scan, the gate→commit contract, the router, and idempotent merges.
+
+### Changed
+- **Gate cache is now keyed on a tree token** (HEAD + tracked diff + untracked status) instead of a bare HEAD, closing the stale-cache-for-a-dirty-tree / post-rebase hole. `modules/gate/SKILL.md` records the pass via `gate-pass.py`; `modules/commit/SKILL.md` Phase 0 checks the same token.
+- **`modules/subagents/SKILL.md`** — the permission-routing section now references the real `hooks/permission-router.py` artifact (was prose), fixes the stale `code.claude.com/docs` URL, and marks `ctrl+b` as Claude-Code-specific.
+
+Eval harness (issue #24) — wires up the 32 dormant `evals.json`.
+
+### Added
+- **`scripts/eval-harness.py`** — discovers, validates, and inventories the per-module `evals.json`; emits the case/assertion work-list the `/eval` skill grades; renders a per-assertion pass/fail scorecard from graded results (`validate` / `plan` / `score`, with `--module` / `--all` / `--changed` selectors). No model calls — runs anywhere.
+- **`scripts/trigger-overlap.py` + `scripts/trigger-overlap-allow.txt`** — deterministic trigger-overlap lint (overlap-coefficient over description trigger tokens); flags the known overlapping pairs (CRO family, conversion-copy⇄copywriting, systems-architect⇄enterprise-design), `--strict` fails only on new (non-allow-listed) overlaps.
+- **`modules/eval/`** — new `/eval` skill: fans eval cases out to parallel subagents and has Haiku 4.5 grade each assertion into a scorecard. (Counts: 65 modules / 26 slash commands / 39 auto-trigger skills.)
+- **`.github/workflows/evals.yml`** — repo self-CI (distinct from `meta.yml` and the `github-actions/ci.yml` template): trigger-overlap `--strict` on every PR, changed-module eval validation + inventory posted to the PR, nightly full sweep.
+- **`test/eval-harness.test.js`, `test/trigger-overlap.test.js`** — cover validation, planning, scoring, and overlap detection.
+
 ---
 
 ## [2.0.4] — 2026-05-15

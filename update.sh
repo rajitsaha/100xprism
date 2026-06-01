@@ -55,6 +55,14 @@ run_plugin_updates() {
   fi
 }
 
+# ── Hook sync (only refreshes hooks already installed; never enables new ones) ─
+# Keeps the wired-in hook commands current after a pull without re-prompting or
+# silently opting users into hooks they declined at install time.
+sync_hooks() {
+  [ -f "$SETTINGS_FILE" ] || return 0
+  python3 "$REPO_DIR/adapters/lib/modules.py" emit-hooks --sync 2>/dev/null || true
+}
+
 if [ "$PLUGINS_ONLY" = true ]; then
   echo ""
   echo "Updating Claude plugins..."
@@ -112,6 +120,7 @@ if added > 0:
 else:
     print('  Plugins: settings already up to date ✓')
 PYEOF
+  sync_hooks
   run_plugin_updates
   echo ""
   echo -e "${CYAN}Tip: Run /reload-plugins in Claude Code to activate any plugin changes.${NC}"
@@ -226,6 +235,9 @@ else:
 PYEOF
 
 echo -e "  ${CYAN}→ Shell aliases auto-updated (sourced file)${NC}"
+
+# Refresh any installed hooks so their wired commands stay current.
+sync_hooks
 
 # ── Update Claude plugins ─────────────────────────────────────────────────────
 run_plugin_updates
