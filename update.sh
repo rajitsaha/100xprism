@@ -21,30 +21,38 @@ for _arg in "$@"; do
 done
 
 # ── Plugin update function (always available) ─────────────────────────────────
+# Reads the plugin list from plugins/plugins.json (single source of truth). Each
+# entry is the fully-qualified `name@marketplace` id — the only form
+# `claude plugin update` accepts (bare names fail with "not found").
 run_plugin_updates() {
-  local _plugins=(
-    "frontend-design"
-    "superpowers"
-    "playwright"
-    "github"
-    "security-guidance"
-    "skill-creator"
-    "code-simplifier"
-    "pr-review-toolkit"
-    "hookify"
-    "claude-mem"
-    "understand-anything"
-    "ui-ux-pro-max"
-  )
-  local _ok=0 _err=0
+  local _plugins_file="$REPO_DIR/plugins/plugins.json"
+  local _plugins=()
+  while IFS= read -r _p; do
+    [ -n "$_p" ] && _plugins+=("$_p")
+  done < <(python3 -c "import json,sys; print('\n'.join(json.load(open(sys.argv[1])).get('plugins',[])))" "$_plugins_file" 2>/dev/null)
+
+  if [ "${#_plugins[@]}" -eq 0 ]; then
+    echo -e "  ${YELLOW}→ Plugins: no entries found in plugins.json — skipping${NC}"
+    return 0
+  fi
+
+  local _ok=0 _failed=()
   for _p in "${_plugins[@]}"; do
     if claude plugin update "$_p" >/dev/null 2>&1; then
       (( _ok++ )) || true
     else
-      (( _err++ )) || true
+      _failed+=("$_p")
     fi
   done
-  echo -e "  ${GREEN}→ Plugins: $_ok updated, $_err skipped ✓${NC}"
+
+  if [ "${#_failed[@]}" -eq 0 ]; then
+    echo -e "  ${GREEN}→ Plugins: $_ok updated ✓${NC}"
+  else
+    echo -e "  ${GREEN}→ Plugins: $_ok updated${NC}, ${YELLOW}${#_failed[@]} failed:${NC}"
+    for _p in "${_failed[@]}"; do
+      echo -e "      ${YELLOW}• $_p${NC}"
+    done
+  fi
 }
 
 if [ "$PLUGINS_ONLY" = true ]; then

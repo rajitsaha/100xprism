@@ -9,7 +9,9 @@
     "code-simplifier@claude-plugins-official",
     "pr-review-toolkit@claude-plugins-official",
     "hookify@claude-plugins-official",
-    "claude-mem@thedotmack"
+    "claude-mem@thedotmack",
+    "understand-anything@understand-anything",
+    "ui-ux-pro-max@ui-ux-pro-max-skill"
   ],
   "extraKnownMarketplaces": {
     "claude-code-plugins": {

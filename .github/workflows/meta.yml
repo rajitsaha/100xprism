@@ -1,0 +1,38 @@
+# 100x Dev — repo self-CI (meta / consistency).
+# Distinct from github-actions/ci.yml, which is a TEMPLATE users copy into their
+# own projects. This workflow guards THIS repo against drift before merge.
+name: Meta
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  consistency:
+    name: Consistency / drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      # ubuntu-latest ships python3; no setup-python action needed.
+      - name: Meta-check (counts, frontmatter, evals, version triple)
+        run: python3 scripts/meta-check.py
+
+  tests:
+    name: Generator tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Run generator + adapter tests
+        run: node --test test/*.test.js

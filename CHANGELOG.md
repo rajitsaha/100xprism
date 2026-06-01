@@ -5,6 +5,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [Unreleased]
+
+Correctness & drift hardening (issue #23) — no breaking changes.
+
+### Fixed
+- **`package.json`** — version bumped `2.0.1 → 2.0.4` to match `VERSION`/git tag. The npm-published version had been 3 releases stale.
+- **`plugins/plugins.json`** — added `understand-anything@understand-anything` and `ui-ux-pro-max@ui-ux-pro-max-skill` to `plugins[]` (previously only in `extraKnownMarketplaces`), so fresh installs enable all 12 plugins instead of 10.
+- **`update.sh`** — `run_plugin_updates()` now reads the plugin list from `plugins.json` (single source of truth) using the fully-qualified `name@marketplace` ids. The old hardcoded bare-name list silently failed for **every** plugin — `claude plugin update <bare-name>` errors with "not found"; only the qualified form works. Failures are now printed by name instead of bucketed as "skipped".
+- **`modules/gate/SKILL.md`, `modules/pr/SKILL.md`** — reconciled gate-count wording ("four"/"5 gates" → "all gates", noting Gates 4–5 are conditional).
+
+### Added
+- **`scripts/meta-check.py`** — repo consistency checker: parses all module frontmatter, asserts README counts (modules/slash/skills/plugins) match the repo, validates every `evals.json`, and asserts the `VERSION == package.json == tag` version triple.
+- **`.github/workflows/meta.yml`** — repo self-CI (distinct from the `github-actions/ci.yml` template): runs `meta-check.py` and the generator/adapter test suite on every PR and push to main.
+- **`.github/workflows/release.yml`** — added a pre-release version-triple guard that fails the release if `VERSION`, `package.json`, and the tag disagree.
+- **`test/meta-check.test.js`** — tests for the drift gate.
+
+---
+
 ## [2.0.4] — 2026-05-15
 
 Update UX improvement — no breaking changes.

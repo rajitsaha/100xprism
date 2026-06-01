@@ -32,7 +32,7 @@ CURRENT_BRANCH=$(git branch --show-current)
 
 ## Phase 1 — Pre-flight
 
-Run the **gate** workflow. All 5 gates must pass before creating a PR.
+Run the **gate** workflow. All gates must pass before creating a PR (Gates 1–3 always; Gates 4–5 when applicable).
 
 **If any gate fails → STOP. Fix issues first. Do NOT create a PR with failing gates.**
 
@@ -193,7 +193,7 @@ Clean implementation. No issues found.
 ║ PR:       #<number> — <title>                        ║
 ║ Branch:   <branch> → <default_branch>                ║
 ║ Review:   AI review posted ✅                         ║
-║ Gate:     ✅ All 5 gates passed                       ║
+║ Gate:     ✅ All gates passed                         ║
 ╠══════════════════════════════════════════════════════╣
 ║ URL:      <pr_url>                                   ║
 ║ STATUS:   Awaiting human approval. DO NOT auto-merge. ║
