@@ -249,8 +249,7 @@ echo -e "${GREEN}✓ Done!${NC}"
 echo ""
 if [ "$TOOL_CLAUDE" = true ]; then
   echo -e "  ${CYAN}In Claude Code:${NC}"
-  echo -e "    Restart Claude Code to load modules."
-  echo -e "    Run ${YELLOW}/reload-plugins${NC} inside Claude Code to load plugins."
+  echo -e "    Restart Claude Code to load modules and plugins."
   echo ""
 fi
 echo -e "  ${CYAN}In your terminal:${NC}"

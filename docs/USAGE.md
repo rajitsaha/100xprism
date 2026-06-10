@@ -2,21 +2,25 @@
 
 ---
 
-## How It Works
+## How it works
 
-100x Dev provides 64 modules as markdown instructions with frontmatter. Your AI tool reads them and follows them — running bash commands, enforcing thresholds, looping until checks pass.
+100x Dev ships 65 modules as markdown files with YAML frontmatter. Your AI tool reads them and follows the instructions — running commands, enforcing thresholds, looping until checks pass.
 
-| Approach | Tools | How modules are delivered |
-|:---------|:------|:---------------------------|
-| **Global install** | Claude Code | Each module → skill in `~/.claude/skills/<slug>/`, plus slash command aliases in `~/.claude/commands/` for the 25 modules with a `slash_command` |
-| **Per-project (multi-file)** | Cursor | One file per module in `.cursor/rules/<slug>.mdc` (auto-trigger via `description`) |
-| **Per-project (single-file)** | Codex, Windsurf, Copilot, Gemini, Antigravity | Core modules inlined + on-demand index in `AGENTS.md` / `.windsurfrules` / etc. — commit it to your repo |
+Each module is the **single source of truth**. Adapters generate the right format for each tool:
+
+| Delivery | Tools | How modules arrive |
+|:---------|:------|:-------------------|
+| **Global install** | Claude Code | Each module → `~/.claude/skills/<slug>/SKILL.md`, plus slash command aliases in `~/.claude/commands/` |
+| **Per-project (multi-file)** | Cursor | One file per module → `.cursor/rules/<slug>.mdc` (auto-trigger via description) |
+| **Per-project (single-file)** | Codex, Windsurf, Copilot, Gemini, Antigravity | Core modules inlined + on-demand index → `AGENTS.md` / `.windsurfrules` / etc. |
 
 ---
 
 ## Installation
 
-**Mac / Linux** — run once per machine:
+### Step 1 — Global setup (once per machine)
+
+**Mac / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
 source ~/.zshrc   # or ~/.bashrc — reload shell to activate the 100x-dev command
@@ -27,183 +31,204 @@ source ~/.zshrc   # or ~/.bashrc — reload shell to activate the 100x-dev comma
 npm install -g 100x-dev && 100x-dev install
 ```
 
-The installer sets up Claude Code globally (`~/.claude/commands/`) and scaffolds a `CLAUDE.md` in your project with placeholders for DB config, GCP, production URLs, and security exceptions.
+The installer:
+1. Emits all 65 modules to `~/.claude/skills/`
+2. Creates 26 slash command aliases in `~/.claude/commands/`
+3. Merges 12 plugins into `~/.claude/settings.json`
+4. Adds shell aliases (`cc`, `ccc`, `100x-update`, `100x-check`)
+5. Copies 4 project templates to `~/100x-templates/`
+6. Optionally installs enforcing hooks (gate-on-commit, secret-scan)
 
-> **Terminal vs Claude Code:** The `100x-dev` command and its subcommands (`init`, `update`, `check`) run in your **terminal** (zsh/bash). Slash commands like `/commit`, `/gate`, and `/reload-plugins` run **inside Claude Code**. Don't mix them up — if you see "command not found", you're likely in the wrong environment.
+> **Terminal vs Claude Code:** `100x-dev install`, `init`, `update`, and `check` run in your **terminal**. Slash commands like `/commit` and `/gate` run **inside Claude Code**. If you see "command not found", you're in the wrong environment.
 
-### Add to a project
-
-Run once from each project root:
+### Step 2 — Project setup (once per project)
 
 ```bash
 cd my-project && 100x-dev init
 ```
 
-This writes the right instruction file for each enabled tool (`.cursorrules`, `AGENTS.md`, `.windsurfrules`, etc.). **Commit the generated file** so teammates get the same workflows.
+This generates the right instruction file for each enabled tool (`.cursor/rules/`, `AGENTS.md`, `.windsurfrules`, etc.). **Commit the generated file** so teammates get the same modules on clone.
 
-### Keep up to date
+It also scaffolds a `CLAUDE.md` with placeholders for database, cloud, production URLs, and security exceptions — see [Project configuration](#project-configuration).
 
-```bash
-100x-dev update                 # pull latest + sync plugins + regenerate all tracked projects
-100x-dev update --plugins-only  # refresh plugins only (use when repo is already current)
-100x-dev check                  # check for a newer version without applying it
+### Step 3 — Start using
+
+Open Claude Code in your project and try:
+```
+/gate        # run the quality gate
+/test        # run all test layers
+/commit      # gate + stage + commit
 ```
 
-> **Tip:** Even when your repo is already at the latest version, plugins (superpowers, claude-mem, hookify, etc.) can receive independent updates. Running `update --plugins-only` keeps them current without re-pulling the repo. After either command, run `/reload-plugins` inside Claude Code.
+---
 
-### Custom install location
+## Keeping up to date
 
-The default `get.sh` installer clones to `~/100x-dev` and writes that path into your `~/.zshrc` (or `~/.bashrc`) and `~/.claude/settings.json` (SessionStart hook for `check-update.sh`).
+```bash
+100x-dev check                  # check if a newer version is available
+100x-dev update                 # pull latest + sync plugins + regenerate tracked projects
+100x-dev update --plugins-only  # refresh plugins only (when repo is already current)
+```
 
-If you cloned the repo somewhere else — e.g. `~/work/git_udemy/100x-dev` — you'll see errors on every shell login and Claude Code session start:
+`update` does the following:
+1. Pulls the latest code from `origin/main`
+2. Backs up `~/.claude/commands/` to `~/.claude/commands.bak.<timestamp>`
+3. Re-emits all modules to `~/.claude/skills/` and `~/.claude/commands/`
+4. Merges any new plugins into `~/.claude/settings.json`
+5. Runs `claude plugin update` for each plugin (updates across all scopes)
+6. Syncs any installed hooks to their latest versions
+7. Regenerates instruction files in all tracked projects
 
+After updating, **restart your Claude Code session** to load the new modules and plugins.
+
+> **Tip:** Plugins (superpowers, claude-mem, hookify, etc.) receive independent updates. Running `update --plugins-only` refreshes them without re-pulling the repo.
+
+Claude Code also shows an update banner at session start when a new version is available.
+
+---
+
+## Custom install location
+
+The `get.sh` installer clones to `~/100x-dev` by default and writes that path into `~/.zshrc` and `~/.claude/settings.json`.
+
+If you cloned elsewhere (e.g. `~/work/100x-dev`), you'll see errors:
 ```
 .zshrc:source: no such file or directory: /Users/<you>/100x-dev/shell/aliases.sh
 SessionStart:startup hook error
 ```
 
-**Fix — point both files at your actual clone using `$HOME` (no usernames hardcoded):**
+**Fix both files:**
 
-1. **`~/.zshrc`** — replace the 100x-dev source block with a single configurable env var:
+1. **`~/.zshrc`** (or `~/.bashrc`):
    ```bash
-   # 100x Dev — point this at wherever you cloned/installed the repo
-   export DEV_100X_HOME="$HOME/work/git_udemy/100x-dev"   # adjust to your path
+   # 100x Dev — point at wherever you cloned the repo
+   export DEV_100X_HOME="$HOME/work/100x-dev"   # adjust to your path
    [ -f "$DEV_100X_HOME/shell/aliases.sh" ] && source "$DEV_100X_HOME/shell/aliases.sh"
    ```
-   The `[ -f … ] &&` guard means a missing file fails silently instead of printing on every login.
 
-2. **`~/.claude/settings.json`** — update the SessionStart hook command. Claude Code runs hooks in non-interactive shells that don't source `~/.zshrc`, so use `$HOME` directly (always set by the OS) — `$DEV_100X_HOME` won't be available there:
+2. **`~/.claude/settings.json`** — update the SessionStart hook. Use `$HOME` (not env vars — hooks run in non-interactive shells that don't source `~/.zshrc`):
    ```json
    "hooks": {
      "SessionStart": [
        {
          "matcher": "",
          "hooks": [
-           { "type": "command", "command": "$HOME/work/git_udemy/100x-dev/shell/check-update.sh --claude-hook" }
+           { "type": "command", "command": "$HOME/work/100x-dev/shell/check-update.sh --claude-hook" }
          ]
        }
      ]
    }
    ```
 
-3. **Verify** — open a new terminal (no `source` errors) and start a new Claude Code session (no `SessionStart:startup hook error`).
-
-> Both files are per-user and never committed, so hardcoded paths there don't affect anyone else — but using `$HOME` keeps your config working if your username changes, and the env var keeps the repo path easy to update if you move the clone.
+3. **Verify** — open a new terminal (no errors) and a new Claude Code session (no hook errors).
 
 ---
 
-## Using the Workflows
+## Using the modules
 
 ### In Claude Code — slash commands
 
+The following 26 slash commands are available. Run them directly:
+
+**Lifecycle:**
 ```
-/context               7-day git + GitHub activity dump — orient before touching anything
-/issue                 Investigate a bug and create a detailed GitHub issue
-/spec                  Turn a vague request into an implementation-ready spec
-/fix                   Autonomous bug fixer — CI failures, docker logs, Slack pastes
-/gate                  5-point quality gate — run before every commit
-/test                  All test layers against real Docker services, loops until 95% coverage
-/test --all            Full pass across entire codebase
-/test --unit           Unit tests only
-/test --integration    Integration tests only (spins up Docker DB)
-/test --e2e            Full-stack E2E via docker compose, zero mocks
-/test --e2e staging    E2E against staging environment
-/test --e2e prod       E2E against production
+/branch                Create conventional feature branch (feat/, fix/, chore/)
 /commit                Gate → stage → conventional commit
-/grill                 Adversarial self-review before opening a PR
+/grill                 Adversarial code review before opening a PR
 /pr                    Gate → push branch → create PR
 /push                  Gate → push → monitor CI → verify production health
-/release patch         Bump patch version, tag, publish to PyPI/npm/Docker Hub, verify
+/release patch         Bump patch version, tag, publish, verify
 /release minor         Bump minor version and publish
 /release major         Bump major version and publish
 /launch                Full deploy pipeline in one command
-/branch                Create conventional feature branch (feat/, fix/, chore/)
-/lint                  Auto-detect and fix all lint errors (ESLint, TypeScript, ruff)
-/security              Scan for vulnerabilities and secrets, auto-fix where possible
-/techdebt              Scan for dead code, duplication, stale TODOs
-/db                    Query any of 7 database engines from one interface
-/query                 Plain-English analytics — describe what you want, Claude writes the SQL
-/architect             Architectural Q&A and decision matrices
-/enterprise-design     Full technical blueprint — IA, API, data model, stack
-/cloud-security        Deep GCP IAM, networking, PII, and compliance scan
-/docs                  Detect code changes and update documentation
-/orchestrate           Plan-first methodology for complex multi-step tasks
-/update-claude         Write a CLAUDE.md rule after any correction
-/connect               Install + auth any SaaS CLI (GitHub, AWS, Stripe, Supabase…) from .env
 ```
 
-**Typical daily flow:**
+**Quality:**
 ```
-/context   →  /spec or /fix   →  /test   →  /commit   →  /grill   →  /pr
+/gate                  5-point quality gate — MANDATORY before every commit
+/test                  All test layers, loops until 95% coverage
+/test --unit           Unit tests only
+/test --integration    Integration tests only (spins up Docker DB)
+/test --e2e            Full-stack E2E via docker compose
+/test --e2e staging    E2E against staging environment
+/test --e2e prod       E2E against production
+/lint                  Auto-detect and fix all lint errors (ESLint, TypeScript, ruff)
+/security              Vulnerability + secrets scan, auto-fix where possible
+/cloud-security        GCP IAM, networking, PII, compliance scan
+/eval                  Run module evals — check triggers and output quality
 ```
+
+**Engineering:**
+```
+/spec                  Turn a vague request into an implementation-ready spec
+/fix                   Autonomous bug fixer — CI failures, docker logs, Slack pastes
+/orchestrate           Plan-first methodology for complex multi-step tasks
+/techdebt              Dead code, duplication, stale TODOs
+/context               7-day git + GitHub activity dump
+/update-claude         Write a CLAUDE.md rule after any correction
+```
+
+**Data & Infrastructure:**
+```
+/db                    Query any of 7 database engines from one interface
+/query                 Plain-English analytics — describe what you want, get SQL
+/connect               Install + auth 27 SaaS CLIs from .env
+```
+
+**Documentation & Architecture:**
+```
+/docs                  Detect code changes and update documentation
+/issue                 Investigate a bug and create a detailed GitHub issue
+/architect             Architectural Q&A and decision matrices
+/enterprise-design     Full technical blueprint — IA, API, data model, stack
+```
+
+### Auto-trigger skills (39 modules)
+
+These modules activate automatically when your prompt matches their description. No slash command needed — just describe the task naturally:
+
+- "Write homepage copy" → triggers `copywriting`
+- "Audit SEO on this page" → triggers `seo-audit`
+- "Optimize the signup flow" → triggers `signup-flow-cro`
+- "Plan a product launch" → triggers `launch-strategy`
 
 ### In other tools (Cursor, Codex, Windsurf, Copilot, Gemini)
 
-Reference workflows by name in your prompts:
+Reference modules by name in your prompts:
 
 ```
 "Run the gate workflow before committing"
 "Run the test workflow — I need 95% coverage"
 "Follow the commit workflow"
 "Run the security workflow on this project"
-"Use the launch workflow to ship this release"
+```
+
+In Cursor, modules auto-trigger from their description (same as Claude Code). In single-file tools (Codex, Windsurf, Copilot, Gemini), core modules are always available; on-demand modules appear as an index the AI can reference.
+
+---
+
+## Daily workflows
+
+**Typical session:**
+```
+/context → /spec or /fix → /test → /commit → /grill → /pr
+```
+
+**Pre-release:**
+```
+/context → /techdebt → /grill → /test → /commit → /gate → /pr → /launch → /release
+```
+
+**Quick bug fix:**
+```
+/fix "the login button returns 403" → /test → /commit → /pr
 ```
 
 ---
 
-## Propagating to Multiple Projects
+## Project configuration
 
-### One project at a time
-
-```bash
-cd ~/projects/my-app && 100x-dev init
-```
-
-### Batch apply to all repos
-
-```bash
-for dir in ~/projects/*/; do
-  [ -d "$dir/.git" ] && bash ~/100x-dev/adapters/cursor.sh "$dir"
-done
-```
-
-### Auto-apply to every new repo (git init hook)
-
-```bash
-mkdir -p ~/.git-templates/hooks
-cat > ~/.git-templates/hooks/post-checkout << 'HOOK'
-#!/usr/bin/env bash
-[ "$3" = "1" ] || exit 0   # branch checkout only
-PROJECT_ROOT="$(git rev-parse --show-toplevel)"
-[ -f "$PROJECT_ROOT/.cursorrules" ] && exit 0   # already set up
-[ -f "$HOME/100x-dev/adapters/cursor.sh" ] && \
-  bash "$HOME/100x-dev/adapters/cursor.sh" "$PROJECT_ROOT"
-HOOK
-chmod +x ~/.git-templates/hooks/post-checkout
-git config --global init.templateDir ~/.git-templates
-```
-
-Change `cursor` to your tool. Every `git clone` or `git init` now gets workflows automatically.
-
-### Team onboarding
-
-Add to your team's onboarding checklist:
-
-```
-- [ ] Mac/Linux: curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
-      Windows:   npm install -g 100x-dev && 100x-dev install
-- [ ] Reload shell: source ~/.zshrc (or ~/.bashrc)
-- [ ] cd <your-project> && 100x-dev init
-- [ ] Open Claude Code in your project and run /gate
-```
-
-For teams using Cursor/Codex/etc., commit the generated instruction file to each repo — new team members get the workflows automatically on clone.
-
----
-
-## Project-Specific Configuration
-
-`install.sh` scaffolds a `CLAUDE.md` in your project. Fill in the sections that apply:
+`100x-dev init` scaffolds a `CLAUDE.md` in your project. Uncomment and fill in the sections that apply:
 
 ```markdown
 ## Database
@@ -230,121 +255,160 @@ For teams using Cursor/Codex/etc., commit the generated instruction file to each
 #   - lodash CVE-2020-XXXX: dev dependency only, not in production bundle
 
 ## Rules
-# Add project-specific Claude rules here. /update-claude appends to this section.
+# Project-specific rules. /update-claude appends here automatically.
 ```
 
-For per-project tools (Cursor, Codex, etc.) add the same config to the generated instruction file.
+These sections are consumed by `/db`, `/gate`, `/cloud-security`, `/launch`, `/push`, and `/security`.
 
 ---
 
-## Keeping Workflows Updated
+## Multi-project setup
+
+### One project at a time
 
 ```bash
-100x-dev check                  # check if an update is available
-100x-dev update                 # pull latest and regenerate all tracked projects
-100x-dev update --plugins-only  # refresh plugins only (when repo is already current)
+cd ~/projects/my-app && 100x-dev init
 ```
 
-Claude Code shows an update banner at session start when a new version is available. After updating, instruction files in all tracked projects are regenerated automatically. Plugin updates are now always applied regardless of whether the repo itself has changed — so plugins like `superpowers`, `claude-mem`, and `hookify` stay current without waiting for a repo release.
+### Batch apply to all repos
+
+```bash
+for dir in ~/projects/*/; do
+  [ -d "$dir/.git" ] && (cd "$dir" && 100x-dev init)
+done
+```
+
+### Auto-apply on every clone (git template hook)
+
+```bash
+mkdir -p ~/.git-templates/hooks
+cat > ~/.git-templates/hooks/post-checkout << 'HOOK'
+#!/usr/bin/env bash
+[ "$3" = "1" ] || exit 0   # branch checkout only
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+[ -f "$PROJECT_ROOT/.cursorrules" ] && exit 0   # already set up
+command -v 100x-dev >/dev/null && (cd "$PROJECT_ROOT" && 100x-dev init)
+HOOK
+chmod +x ~/.git-templates/hooks/post-checkout
+git config --global init.templateDir ~/.git-templates
+```
+
+Every `git clone` or `git init` now gets modules automatically.
+
+### Team onboarding
+
+Add to your team's onboarding checklist:
+
+```
+- [ ] Install: curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
+      (Windows: npm install -g 100x-dev && 100x-dev install)
+- [ ] Reload shell: source ~/.zshrc (or ~/.bashrc)
+- [ ] Set up project: cd <your-project> && 100x-dev init
+- [ ] Open Claude Code and run /gate to verify
+```
+
+For Cursor/Codex/Windsurf teams, commit the generated instruction file — new members get modules on clone.
 
 ---
 
-## GitHub Actions Templates
+## GitHub Actions templates
 
 Copy into any project:
 
 ```bash
 mkdir -p .github/workflows
 cp ~/100x-dev/github-actions/ci.yml      .github/workflows/ci.yml
-cp ~/100x-dev/github-actions/release.yml .github/workflows/release.yml
+cp ~/100x-dev/github-actions/release.yml  .github/workflows/release.yml
 ```
 
 ### ci.yml — runs on every push and PR
 
 | Job | What it does |
 |:----|:-------------|
-| **lint** | ESLint, TypeScript `tsc --noEmit`, ruff. Skips steps that don't apply to your stack. |
+| **lint** | ESLint, TypeScript `tsc --noEmit`, ruff. Skips steps that don't apply. |
 | **unit-tests** | Unit + integration tests against real Docker Postgres 16 + Redis 7. 95% coverage enforced. |
-| **e2e-tests** | Builds full `docker compose` stack, smoke tests first, then full Playwright suite. Skips if no `playwright.e2e.config.ts` or `e2e/` directory. |
+| **e2e-tests** | Full `docker compose` stack, smoke tests, then Playwright suite. Skipped if no `playwright.e2e.config.ts` or `e2e/` directory. |
 
 ### release.yml — runs on version tags (`v*.*.*`)
 
 Pre-release checks → build → GitHub Release → publish to PyPI/npm/Docker Hub → verify from live registry → Homebrew tap update.
 
-**Required secrets:** `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `NPM_TOKEN`. PyPI uses OIDC trusted publishing (no secret needed). Jobs that don't apply to your stack are skipped automatically.
+**Required secrets:** `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `NPM_TOKEN`. PyPI uses OIDC trusted publishing (no secret needed). Jobs that don't apply are skipped automatically.
 
 ---
 
-## Common CI Traps
+## Common CI traps
 
-Three bugs that consistently cause CI failures when AI tools generate pipelines. All three are now documented in the project templates and the `ci.yml` template with inline `# TRAP:` comments.
+Three bugs that consistently cause CI failures when AI tools generate pipelines. All three are documented in the project templates and `ci.yml` with `# TRAP:` comments. [Full breakdown →](ci-traps.md)
 
 ### 1. npm package not published → Docker build 404
 
-**Symptom:** `npm error 404 Not Found — GET https://registry.npmjs.org/@yourorg%2fpkg`
-
-If a package appears in `dependencies` but hasn't been published to the npm registry, `npm install` silently passes locally (package may be in `node_modules` from a prior install) but fails inside Docker where there is no cache.
+`npm install` passes locally (cached) but fails in Docker with `404 Not Found`.
 
 ```json
-// Wrong — 404 in every Docker build
+// Wrong — 404 in Docker
 "dependencies": { "@yourorg/internal-client": "^0.1.0" }
 
-// Right option A — local file reference
+// Fix — local file reference
 "dependencies": { "@yourorg/internal-client": "file:./internal-client" }
-
-// Right option B — vendor source into build context, import as local file
-// (copy src/index.ts → build_dir/internal-client.ts, import './internal-client.js')
 ```
 
-### 2. `useState(false)` animation → Playwright `toBeVisible()` timeout
+### 2. `useState(false)` animation → Playwright timeout
 
-**Symptom:** E2E tests time out waiting for form inputs that are present in the DOM but invisible.
+Form renders with `opacity-0` on first paint. `toBeVisible()` fails on invisible elements.
 
 ```tsx
-// Wrong — form renders with opacity-0 on first paint; toBeVisible() fails
+// Wrong — opacity-0 until mount effect runs
 const [mounted, setMounted] = useState(false);
-useEffect(() => { setMounted(true); }, []);
-// ...
-<form className={mounted ? "opacity-100" : "opacity-0"}>
+
+// Fix — initialize true (no SSR hydration guard needed in SPA)
+const [mounted, setMounted] = useState(true);
 ```
 
-This pattern is an SSR hydration guard. In a client-only SPA it serves no purpose — the component always mounts in the browser. Playwright's `toBeVisible()` checks CSS visibility and fails on `opacity-0` elements even when they are in the DOM.
+### 3. Integration tests silently excluded
 
-```tsx
-// Right — immediately visible, animation via CSS @keyframes instead
-const mounted = true;
-// or keep the state but initialize true: useState(true)
-```
-
-### 3. Integration tests silently excluded from the gate
-
-**Symptom:** Tests pass in CI but integration failures only appear after merge or in prod.
+Tests pass in CI but integration failures only appear after merge.
 
 ```yaml
-# Wrong — integration tests never run in CI
+# Wrong — integration tests never run
 run: pytest tests/unit/
 
-# Right — gate both together
+# Fix — run both
 run: pytest tests/unit/ tests/integration/
 ```
 
-Docker-build tests, database schema tests, and cross-service contract tests all live in `tests/integration/`. Omitting them means a 404 npm error or a broken Dockerfile can merge undetected.
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|:--------|:---------|
+| "command not found: 100x-dev" | Run `source ~/.zshrc` (or `~/.bashrc`) to reload shell aliases |
+| Slash command not recognized in Claude Code | Restart your Claude Code session — modules load at startup |
+| "source: no such file: ~/100x-dev/shell/aliases.sh" | You cloned to a custom path — see [Custom install location](#custom-install-location) |
+| "SessionStart:startup hook error" | Update the hook path in `~/.claude/settings.json` — see [Custom install location](#custom-install-location) |
+| Modules not updating after `100x-dev update` | Restart your Claude Code session to pick up new modules |
+| `/gate` hangs on Docker check | Docker Desktop must be running, or set `SKIP_DOCKER=1` in your environment |
+| Plugin not activating | Check `~/.claude/settings.json` → `enabledPlugins`, then restart Claude Code |
 
 ---
 
 ## FAQ
 
 **Does this work without an AI coding tool?**
-No. The workflows are instructions for AI tools. Without an AI reading them, they're just markdown.
+No. Modules are instructions for AI tools. Without an AI reading them, they're just markdown.
 
-**Can I use only some workflows?**
-Yes — workflows are independent. In Claude Code, just run the slash commands you need. In other tools, ask the AI to run a specific workflow by name.
+**Can I use only some modules?**
+Yes — modules are independent. In Claude Code, run only the slash commands you need. Auto-trigger skills activate only when relevant.
 
 **Will this slow down my workflow?**
 The gate adds checks before commits. Most runs complete in under 2 minutes. Catching issues locally is faster than debugging production.
 
-**How do I add a new database engine?**
-Add a file to `workflows/db-engines/your-engine.md` following the pattern of existing engines.
+**How do I add a custom database engine?**
+Add a file to `modules/db/references/your-engine.md` following the pattern of existing engines, then run `100x-dev update`.
+
+**How do I contribute a new module?**
+Create `modules/<slug>/SKILL.md` with the required frontmatter (`name`, `description`, `category`, `tier`), run `100x-dev update` to regenerate, and open a PR.
 
 **How do I contribute a new adapter?**
-Source `adapters/lib/shared.sh`, call `_run_generate` with your output filename and tool name, add it to `install.sh`, and open a PR. Most adapters are under 15 lines.
+Create `adapters/<tool>.sh`, call `adapters/lib/modules.py` with your tool name, add it to `install.sh`, and open a PR.
