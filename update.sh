@@ -89,7 +89,7 @@ if [ "$PLUGINS_ONLY" = true ]; then
   echo "Updating Claude plugins..."
   run_plugin_updates
   echo ""
-  echo -e "${GREEN}✓ Done. Run /reload-plugins in Claude Code to activate changes.${NC}"
+  echo -e "${GREEN}✓ Done. Restart Claude Code to activate changes.${NC}"
   echo ""
   exit 0
 fi
@@ -144,7 +144,7 @@ PYEOF
   sync_hooks
   run_plugin_updates
   echo ""
-  echo -e "${CYAN}Tip: Run /reload-plugins in Claude Code to activate any plugin changes.${NC}"
+  echo -e "${CYAN}Tip: Restart Claude Code to activate any plugin changes.${NC}"
   echo ""
   exit 0
 fi
@@ -305,7 +305,7 @@ regenerate_tracked_projects
 
 echo ""
 NEW_VERSION="$(cat "$REPO_DIR/VERSION" 2>/dev/null | tr -d '[:space:]')"
-echo -e "${GREEN}✓ 100x Dev updated to v${NEW_VERSION}! Note: if using Claude Code, run /reload-plugins to activate new plugins.${NC}"
+echo -e "${GREEN}✓ 100x Dev updated to v${NEW_VERSION}! Restart Claude Code to activate new modules and plugins.${NC}"
 echo ""
 echo -e "${CYAN}Tip: Add this to your crontab to get notified weekly:${NC}"
 echo "  0 9 * * 1 $REPO_DIR/update.sh --check-only"

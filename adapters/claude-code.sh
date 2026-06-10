@@ -177,7 +177,7 @@ print(f'  Added {added} new plugins ({len(enabled)} total)')
 PYEOF
 
   echo -e "  ${GREEN}→ Plugins merged into ~/.claude/settings.json ✓${NC}"
-  echo -e "  ${CYAN}→ Run /reload-plugins in Claude Code to activate${NC}"
+  echo -e "  ${CYAN}→ Restart Claude Code to activate new plugins${NC}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
