@@ -10,9 +10,9 @@
 [![npm](https://img.shields.io/npm/v/100x-dev?style=flat-square&color=red)](https://www.npmjs.com/package/100x-dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-**One source of truth.** 65 modules generate native config for **Claude Code · Cursor · Codex · Windsurf · Copilot · Gemini · Antigravity**. Quality gates run on every commit.
+**One source of truth.** 68 modules generate native config for **Claude Code · Cursor · Codex · Windsurf · Copilot · Gemini · Antigravity**. Quality gates run on every commit.
 
-<img src="assets/postcard-stack.png" alt="100x-dev v2.1.2 — 12 plugins, 26 slash commands, 39 auto-trigger skills" width="100%" />
+<img src="assets/postcard-stack.png" alt="100x-dev v2.1.2 — 13 plugins, 26 slash commands, 42 auto-trigger skills" width="100%" />
 
 </div>
 
@@ -62,8 +62,8 @@ Every `/commit` and `/push` runs a 5-point gate — tests, security, build, Dock
 
 | | |
 |---|---|
-| **65 modules** | 26 slash commands + 39 auto-trigger skills — see [full reference below](#slash-commands) |
-| **12 plugins** | superpowers, playwright, github, hookify, claude-mem, understand-anything, ui-ux-pro-max, and more |
+| **68 modules** | 26 slash commands + 42 auto-trigger skills — see [full reference below](#slash-commands) |
+| **13 plugins** | superpowers, playwright, github, hookify, claude-mem, understand-anything, ui-ux-pro-max, and more |
 | **7 database engines** | Postgres, Cloud SQL, Snowflake, Databricks, Athena, Presto, Oracle — one `/db` interface |
 | **27 SaaS CLIs** | `/connect` installs + authenticates GitHub, AWS, Stripe, Supabase, and more from `.env` |
 | **4 project templates** | node-fullstack · node-frontend · python-api · docker-compose |

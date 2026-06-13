@@ -11,7 +11,8 @@
     "hookify@claude-plugins-official",
     "claude-mem@thedotmack",
     "understand-anything@understand-anything",
-    "ui-ux-pro-max@ui-ux-pro-max-skill"
+    "ui-ux-pro-max@ui-ux-pro-max-skill",
+    "chrome-devtools-mcp@claude-plugins-official"
   ],
   "extraKnownMarketplaces": {
     "claude-code-plugins": {
