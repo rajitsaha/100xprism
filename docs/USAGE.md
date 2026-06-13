@@ -4,7 +4,7 @@
 
 ## How it works
 
-100x Dev ships 65 modules as markdown files with YAML frontmatter. Your AI tool reads them and follows the instructions — running commands, enforcing thresholds, looping until checks pass.
+100x Dev ships 68 modules as markdown files with YAML frontmatter. Your AI tool reads them and follows the instructions — running commands, enforcing thresholds, looping until checks pass.
 
 Each module is the **single source of truth**. Adapters generate the right format for each tool:
 
@@ -32,9 +32,9 @@ npm install -g 100x-dev && 100x-dev install
 ```
 
 The installer:
-1. Emits all 65 modules to `~/.claude/skills/`
+1. Emits all 68 modules to `~/.claude/skills/`
 2. Creates 26 slash command aliases in `~/.claude/commands/`
-3. Merges 12 plugins into `~/.claude/settings.json`
+3. Merges 13 plugins into `~/.claude/settings.json`
 4. Adds shell aliases (`cc`, `ccc`, `100x-update`, `100x-check`)
 5. Copies 4 project templates to `~/100x-templates/`
 6. Optionally installs enforcing hooks (gate-on-commit, secret-scan)
@@ -183,7 +183,7 @@ The following 26 slash commands are available. Run them directly:
 /enterprise-design     Full technical blueprint — IA, API, data model, stack
 ```
 
-### Auto-trigger skills (39 modules)
+### Auto-trigger skills (42 modules)
 
 These modules activate automatically when your prompt matches their description. No slash command needed — just describe the task naturally:
 
@@ -191,6 +191,9 @@ These modules activate automatically when your prompt matches their description.
 - "Audit SEO on this page" → triggers `seo-audit`
 - "Optimize the signup flow" → triggers `signup-flow-cro`
 - "Plan a product launch" → triggers `launch-strategy`
+- "Audit this page for WCAG accessibility" → triggers `a11y-auditor`
+- "Spec the modal entrance animation" → triggers `motion-designer`
+- "Pick the right chart for this dashboard" → triggers `data-viz`
 
 ### In other tools (Cursor, Codex, Windsurf, Copilot, Gemini)
 
