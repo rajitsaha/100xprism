@@ -55,3 +55,6 @@ conversion-copy <-> copywriting
 # - pr: generic-token overlap (~0.17), same class as the accepted issue<->pr / context-dump<->pr
 architect <-> enterprise-design
 architect <-> pr
+# data-viz and motion-designer share generic UI tokens (loading/states/dashboard/interactive)
+# but cover disjoint domains: chart selection vs animation specs.
+data-viz <-> motion-designer
