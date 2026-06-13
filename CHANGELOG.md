@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.2.0] — 2026-06-12
+
+Frontend UI/UX surface expansion. Three new design-category modules round out coverage alongside the existing `visual-system-architect`, `interaction-engineer`, and `figma-translator`. One additional plugin is curated through `plugins/plugins.json` so fresh installs pick it up automatically.
+
+### Added
+- **`modules/a11y-auditor/`** — Senior Accessibility Engineer skill. Audits a page, component, or design against WCAG 2.2 AA. Outputs a triaged finding list (Critical/Serious/Moderate/Minor), focus-order map, contrast report, ARIA decision tree, screen-reader test plan (VoiceOver/NVDA/JAWS/TalkBack), and ready-to-run axe/lighthouse/pa11y commands.
+- **`modules/motion-designer/`** — Senior Motion Designer skill. Specifies UI animation (micro-interactions, entrances, state expression, scroll-driven, page transitions, layout transitions). Ships duration + easing tokens, Framer Motion + CSS recipes, performance rules (compositor-only properties, animation budgets), and a `prefers-reduced-motion` strategy on every recommendation.
+- **`modules/data-viz/`** — Senior Data Visualization Designer skill. Chart-type decision tree organized by question type, dashboard layout heuristics, library picker (Recharts / visx / D3 / ECharts / Plotly / Observable Plot), color-blind safe palette guidance, and mandatory empty/loading/error/partial states for every chart.
+- **`plugins/plugins.json`** — added `chrome-devtools-mcp@claude-plugins-official` (was already installed at user scope; now curated so `100x-dev install` provisions it on fresh machines).
+
+### Changed
+- **`README.md`, `docs/USAGE.md`, `ROADMAP.md`** — refreshed module/plugin/skill counts (65→68 modules, 12→13 plugins, 39→42 auto-trigger skills).
+- **`assets/postcard-stack.html` + `postcard-stack.png`** — re-rendered with the three new design skills under Engineering & Design (now 9 modules in that group), `chrome-devtools-mcp` in the claude-plugins-official band, and version stamp `v2.2.0`.
+- **`scripts/trigger-overlap-allow.txt`** — allow-listed the benign `data-viz ⇄ motion-designer` keyword overlap (0.175). Both share generic UI tokens (loading/states/dashboard/interactive) but cover disjoint domains (chart selection vs. animation specs).
+
+---
+
 ## [2.1.1] — 2026-05-31
 
 ### Fixed

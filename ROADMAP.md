@@ -1,6 +1,6 @@
 # 100x-dev — Power-Up Roadmap
 
-> Modernizing 64 modules · 7 adapters · 12 plugins for the mid-2026 frontier-model era
+> Modernizing 68 modules · 7 adapters · 12 plugins for the mid-2026 frontier-model era
 > (Opus 4.8 @ 1M context · Sonnet 4.6 · Haiku 4.5 · Workflow tool · native hooks · MCP).
 >
 > **Source of truth:** [`docs/superpowers/specs/2026-05-31-100x-powerup-review-design.md`](docs/superpowers/specs/2026-05-31-100x-powerup-review-design.md)
@@ -8,11 +8,11 @@
 
 ## Guiding insight
 
-`adapters/lib/modules.py` is **the fan-out point** — any capability taught there propagates to all 64 modules across 7 platforms at once. Today it emits only prose and silently drops every modern affordance (model routing, hooks, Workflows, structured output, MCP). Most leverage lives at the generator layer, not in individual skills.
+`adapters/lib/modules.py` is **the fan-out point** — any capability taught there propagates to all 68 modules across 7 platforms at once. Today it emits only prose and silently drops every modern affordance (model routing, hooks, Workflows, structured output, MCP). Most leverage lives at the generator layer, not in individual skills.
 
 ## Sequencing rule
 
-Sequencing matters more than raw priority labels. The **highest-leverage edits (model routing, fan-out) are also the highest-blast-radius** — they touch all 64 modules × 7 adapters. So the **eval/meta safety net is built first**, and it supplies the cost/quality-per-tier evidence that makes model re-tiering falsifiable instead of a guess.
+Sequencing matters more than raw priority labels. The **highest-leverage edits (model routing, fan-out) are also the highest-blast-radius** — they touch all 68 modules × 7 adapters. So the **eval/meta safety net is built first**, and it supplies the cost/quality-per-tier evidence that makes model re-tiering falsifiable instead of a guess.
 
 ---
 
