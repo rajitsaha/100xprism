@@ -5,7 +5,7 @@ set -e
 source "$(dirname "${BASH_SOURCE[0]}")/lib/shared.sh"
 
 install_project() {
-  _run_generate "${1:-.}" "AGENTS.md" "Codex"
+  _run_codex "${1:-.}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

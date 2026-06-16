@@ -5,9 +5,8 @@ Run locally (`python3 scripts/meta-check.py`) or in CI (.github/workflows/meta.y
 Catches the drift classes that have bitten releases before:
 
   1. Module frontmatter parses cleanly (delimited block + non-empty name & description).
-  2. Declared counts in README match what the repo actually contains
-     (modules / slash commands / auto-trigger skills / plugins) — every mention,
-     including the banner alt-text.
+  2. Declared counts in README and selected current docs match what the repo
+     actually contains (modules / slash commands / auto-trigger skills / plugins).
   3. Every evals.json is valid JSON.
   4. Version triple agrees: VERSION == package.json.version
      (== git tag when TAG is passed via --tag or the TAG env var, e.g. in release.yml).
@@ -72,6 +71,7 @@ def check_modules() -> dict[str, int]:
         return {"modules": 0, "slash": 0, "skills": 0}
 
     slash = 0
+    allowed_tiers = {"core", "on-demand"}
     for sf in skill_files:
         fm, well_formed = split_frontmatter(sf.read_text())
         slug = sf.parent.name
@@ -82,6 +82,9 @@ def check_modules() -> dict[str, int]:
             fail(f"{slug}: frontmatter missing `name`")
         if not fm.get("description"):
             fail(f"{slug}: frontmatter missing `description`")
+        tier = fm.get("tier", "on-demand")
+        if tier not in allowed_tiers:
+            fail(f"{slug}: frontmatter tier='{tier}' must be one of {sorted(allowed_tiers)}")
         if fm.get("slash_command"):
             slash += 1
 
@@ -118,7 +121,7 @@ def check_readme_counts(counts: dict[str, int]) -> None:
         r"(\d+)\s+modules": ("modules", counts["modules"]),
         r"(\d+)\s+slash commands": ("slash commands", counts["slash"]),
         r"(\d+)\s+auto-trigger skills": ("auto-trigger skills", counts["skills"]),
-        r"(\d+)\s+plugins": ("plugins", counts["plugins"]),
+        r"(\d+)\s+(?:Claude Code\s+)?plugins": ("plugins", counts["plugins"]),
     }
     for pat, (label, expected) in patterns.items():
         found = [int(m) for m in re.findall(pat, readme)]
@@ -130,6 +133,37 @@ def check_readme_counts(counts: dict[str, int]) -> None:
             fail(f"README: '{label}' says {bad} but repo has {expected}")
         else:
             ok(f"README '{label}' count = {expected} ({len(found)} mention(s)) ✓")
+
+
+def check_current_doc_count_drift(counts: dict[str, int]) -> None:
+    """Fail on stale count mentions in current, non-historical project docs."""
+    files = [
+        "AGENTS.md",
+        "docs/USAGE.md",
+        "install.sh",
+        "package.json",
+    ]
+    patterns = {
+        r"(\d+)\s+modules": ("modules", counts["modules"]),
+        r"(\d+)\s+SKILL\.md files": ("SKILL.md files", counts["modules"]),
+        r"(\d+)\s+cross-tool modules": ("cross-tool modules", counts["modules"]),
+        r"(\d+)\s+slash commands": ("slash commands", counts["slash"]),
+        r"(\d+)\s+slash command aliases": ("slash command aliases", counts["slash"]),
+        r"(\d+)\s+command-style modules": ("command-style modules", counts["slash"]),
+        r"(\d+)\s+auto-trigger skills": ("auto-trigger skills", counts["skills"]),
+        r"(\d+)\s+plugins": ("plugins", counts["plugins"]),
+        r"(\d+)\s+Claude Code plugins": ("Claude Code plugins", counts["plugins"]),
+    }
+    checked = 0
+    for rel in files:
+        text = (REPO / rel).read_text()
+        for pat, (label, expected) in patterns.items():
+            found = [int(m) for m in re.findall(pat, text)]
+            bad = [v for v in found if v != expected]
+            checked += len(found)
+            if bad:
+                fail(f"{rel}: '{label}' says {bad} but repo has {expected}")
+    ok(f"current doc count mentions checked: {checked}")
 
 
 def check_evals() -> None:
@@ -170,6 +204,7 @@ def main() -> int:
     counts = check_modules()
     counts["plugins"] = check_plugins()
     check_readme_counts(counts)
+    check_current_doc_count_drift(counts)
     check_evals()
     check_version_triple(args.tag or None)
 
