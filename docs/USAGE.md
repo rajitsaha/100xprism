@@ -12,7 +12,8 @@ Each module is the **single source of truth**. Adapters generate the right forma
 |:---------|:------|:-------------------|
 | **Global install** | Claude Code | Each module → `~/.claude/skills/<slug>/SKILL.md`, plus slash command aliases in `~/.claude/commands/` |
 | **Per-project (multi-file)** | Cursor | One file per module → `.cursor/rules/<slug>.mdc` (auto-trigger via description) |
-| **Per-project (single-file)** | Codex, Windsurf, Copilot, Gemini, Antigravity | Core modules inlined + on-demand index → `AGENTS.md` / `.windsurfrules` / etc. |
+| **Per-project (Codex-native)** | Codex | Compact `AGENTS.md` + repo skills in `.agents/skills/` + hooks in `.codex/hooks.json` |
+| **Per-project (single-file)** | Windsurf, Copilot, Gemini, Antigravity | Core modules inlined + on-demand index → `.windsurfrules` / `GEMINI.md` / etc. |
 
 ---
 
@@ -34,7 +35,7 @@ npm install -g 100x-dev && 100x-dev install
 The installer:
 1. Emits all 68 modules to `~/.claude/skills/`
 2. Creates 26 slash command aliases in `~/.claude/commands/`
-3. Merges 13 plugins into `~/.claude/settings.json`
+3. Merges 13 Claude Code plugins into `~/.claude/settings.json`
 4. Adds shell aliases (`cc`, `ccc`, `100x-update`, `100x-check`)
 5. Copies 4 project templates to `~/100x-templates/`
 6. Optionally installs enforcing hooks (gate-on-commit, secret-scan)
@@ -47,7 +48,9 @@ The installer:
 cd my-project && 100x-dev init
 ```
 
-This generates the right instruction file for each enabled tool (`.cursor/rules/`, `AGENTS.md`, `.windsurfrules`, etc.). **Commit the generated file** so teammates get the same modules on clone.
+This generates the right instruction files for each enabled tool (`.cursor/rules/`, `AGENTS.md`, `.agents/skills/`, `.codex/hooks.json`, `.windsurfrules`, etc.). **Commit the generated files** so teammates get the same modules on clone.
+
+For Codex, `AGENTS.md` stays compact and the full 100x-dev modules are emitted as repo-scoped skills under `.agents/skills/`. Use `$gate`, `$commit`, `$test`, or `/skills` in Codex to invoke them explicitly. Generated Codex hooks live in `.codex/hooks.json`; review and trust them with `/hooks` before relying on enforcement.
 
 It also scaffolds a `CLAUDE.md` with placeholders for database, cloud, production URLs, and security exceptions — see [Project configuration](#project-configuration).
 
@@ -183,7 +186,7 @@ The following 26 slash commands are available. Run them directly:
 /enterprise-design     Full technical blueprint — IA, API, data model, stack
 ```
 
-### Auto-trigger skills (42 modules)
+### Auto-trigger skills (42 skills)
 
 These modules activate automatically when your prompt matches their description. No slash command needed — just describe the task naturally:
 
@@ -195,7 +198,26 @@ These modules activate automatically when your prompt matches their description.
 - "Spec the modal entrance animation" → triggers `motion-designer`
 - "Pick the right chart for this dashboard" → triggers `data-viz`
 
-### In other tools (Cursor, Codex, Windsurf, Copilot, Gemini)
+### In Codex
+
+Codex gets native repo skills instead of deprecated custom prompt slash commands:
+
+```
+$gate        # run the gate skill
+$test        # run the test skill
+$commit      # gate + stage + commit
+```
+
+You can also type `/skills` and pick a 100x-dev skill. If you type a Claude-style workflow name like `/gate` in prose, the generated `AGENTS.md` tells Codex to treat that as the matching skill request.
+
+Codex hooks are generated into `.codex/hooks.json`:
+
+- `gate-on-commit` blocks `git commit` / `git push` until the gate cache matches the current tree.
+- `secret-scan` blocks obvious hard-coded credentials in writes.
+
+Open `/hooks` in Codex to inspect and trust generated hooks. Claude Code plugins from `plugins/plugins.json` do not install into Codex; use Codex `/plugins` for Codex-native plugins and app/MCP integrations.
+
+### In other tools (Cursor, Windsurf, Copilot, Gemini)
 
 Reference modules by name in your prompts:
 
@@ -206,7 +228,7 @@ Reference modules by name in your prompts:
 "Run the security workflow on this project"
 ```
 
-In Cursor, modules auto-trigger from their description (same as Claude Code). In single-file tools (Codex, Windsurf, Copilot, Gemini), core modules are always available; on-demand modules appear as an index the AI can reference.
+In Cursor, modules auto-trigger from their description (same as Claude Code). In single-file tools (Windsurf, Copilot, Gemini), core modules are always available; on-demand modules appear as an index the AI can reference.
 
 ---
 
@@ -391,8 +413,11 @@ run: pytest tests/unit/ tests/integration/
 | "source: no such file: ~/100x-dev/shell/aliases.sh" | You cloned to a custom path — see [Custom install location](#custom-install-location) |
 | "SessionStart:startup hook error" | Update the hook path in `~/.claude/settings.json` — see [Custom install location](#custom-install-location) |
 | Modules not updating after `100x-dev update` | Restart your Claude Code session to pick up new modules |
+| Codex skill not appearing | Restart Codex, then run `/skills`; verify `.agents/skills/<slug>/SKILL.md` exists |
+| Codex hook not running | Run `/hooks` in Codex and trust the generated hook definition |
 | `/gate` hangs on Docker check | Docker Desktop must be running, or set `SKIP_DOCKER=1` in your environment |
-| Plugin not activating | Check `~/.claude/settings.json` → `enabledPlugins`, then restart Claude Code |
+| Claude Code plugin not activating | Check `~/.claude/settings.json` → `enabledPlugins`, then restart Claude Code |
+| Codex plugin not activating | Open Codex `/plugins`; Claude Code plugins from `plugins/plugins.json` are not Codex plugins |
 
 ---
 
@@ -402,7 +427,7 @@ run: pytest tests/unit/ tests/integration/
 No. Modules are instructions for AI tools. Without an AI reading them, they're just markdown.
 
 **Can I use only some modules?**
-Yes — modules are independent. In Claude Code, run only the slash commands you need. Auto-trigger skills activate only when relevant.
+Yes — modules are independent. In Claude Code, run only the slash commands you need. In Codex, invoke the matching skill with `$skill-name` or `/skills`. Auto-trigger skills activate only when relevant.
 
 **Will this slow down my workflow?**
 The gate adds checks before commits. Most runs complete in under 2 minutes. Catching issues locally is faster than debugging production.

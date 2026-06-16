@@ -2,6 +2,8 @@
 
 Refactor plan: collapse `workflows/` + `skills/` into a single cross-tool `modules/` directory, eliminate 8 duplicate pairs, and minimize token cost in every supported tool.
 
+> Current note: the original v2 plan treated Codex as a single-file target. The current Codex adapter emits a compact `AGENTS.md`, repo-scoped skills in `.agents/skills/`, and hooks in `.codex/hooks.json` so Codex can use progressive skill loading.
+
 ---
 
 ## Goals
@@ -42,13 +44,13 @@ allowed-tools: Read Grep Glob    # Claude Code only; other adapters ignore
 |---|---|---|---|
 | **Claude Code** | `~/.claude/skills/<name>/SKILL.md` (auto-trigger) + `~/.claude/commands/<name>.md` (slash alias `Use the <name> skill.`) | All modules; body loads only when triggered | ~0 baseline; ~description-len at every prompt |
 | **Cursor** | `.cursor/rules/<name>.mdc` (one file per module, `alwaysApply: false`) | All modules; body loads only when description/globs match | ~0 baseline |
-| **Codex** | `AGENTS.md` (concatenated, sectioned by category) | **`tier: core` only** + one-line index of on-demand modules | ≤ ~10K tokens |
+| **Codex** | `AGENTS.md` + `.agents/skills/<name>/SKILL.md` + `.codex/hooks.json` | Compact command map in `AGENTS.md`; full modules load as repo skills | ≤ default `AGENTS.md` budget; full bodies on demand |
 | **Windsurf** | `.windsurfrules` (concatenated) | **`tier: core` only** + one-line index | ≤ ~6K chars (Windsurf hard limit) |
 | **Antigravity** | `ANTIGRAVITY.md` | **`tier: core` only** + index | ≤ ~10K tokens |
 | **Copilot** | `.github/copilot-instructions.md` | **`tier: core` only** + index | ≤ ~10K tokens |
 | **Gemini** | `GEMINI.md` | **`tier: core` only** + index | ≤ ~10K tokens |
 
-**Why tiered:** Claude Code & Cursor support per-skill auto-trigger — full module bodies cost nothing until used. The other tools concatenate everything into one file that loads every session — dumping all 72 modules there would burn ~50K tokens per session for no gain. Tiering keeps single-file tools lean while still giving them an **index** so Claude can ask the user to invoke the right module by name.
+**Why tiered:** Claude Code, Cursor, and Codex support per-skill/rule loading — full module bodies cost little until used. The remaining single-file tools concatenate instructions into one file that loads every session — dumping every module there would burn tokens for no gain. Tiering keeps single-file tools lean while still giving them an **index** so the agent can ask the user to invoke the right module by name.
 
 **Index format** (for single-file tools):
 ```markdown

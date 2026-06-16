@@ -63,7 +63,7 @@ Every `/commit` and `/push` runs a 5-point gate — tests, security, build, Dock
 | | |
 |---|---|
 | **68 modules** | 26 slash commands + 42 auto-trigger skills — see [full reference below](#slash-commands) |
-| **13 plugins** | superpowers, playwright, github, hookify, claude-mem, understand-anything, ui-ux-pro-max, and more |
+| **13 Claude Code plugins** | superpowers, playwright, github, hookify, claude-mem, understand-anything, ui-ux-pro-max, and more |
 | **7 database engines** | Postgres, Cloud SQL, Snowflake, Databricks, Athena, Presto, Oracle — one `/db` interface |
 | **27 SaaS CLIs** | `/connect` installs + authenticates GitHub, AWS, Stripe, Supabase, and more from `.env` |
 | **4 project templates** | node-fullstack · node-frontend · python-api · docker-compose |
@@ -73,7 +73,7 @@ Every `/commit` and `/push` runs a 5-point gate — tests, security, build, Dock
 
 ## Slash commands
 
-The following 26 slash commands are available. Run them inside Claude Code (or reference by name in other tools).
+The following 26 slash commands are available. Run them inside Claude Code. In Codex, use the generated repo skill by name instead, for example `$gate`, `$commit`, or `/skills`.
 
 ### Lifecycle
 
@@ -148,11 +148,12 @@ These modules activate automatically when you describe a relevant task — no sl
 |:-----|:-------------------|:--------------|
 | **Claude Code** | `~/.claude/skills/<slug>/` + slash command aliases | Yes — per description |
 | **Cursor** | `.cursor/rules/<slug>.mdc` (one file per module) | Yes — per description |
-| **Codex / Antigravity** | `AGENTS.md` / `ANTIGRAVITY.md` (core inlined + on-demand index) | Core only |
+| **Codex** | `AGENTS.md` + `.agents/skills/<slug>/` + `.codex/hooks.json` | Yes — repo skills |
+| **Antigravity** | `ANTIGRAVITY.md` (core inlined + on-demand index) | Core only |
 | **Windsurf** | `.windsurfrules` (size-budgeted) | Core only |
 | **Copilot / Gemini** | `.github/copilot-instructions.md` / `GEMINI.md` | Core only |
 
-Modules with `tier: core` (26) inline into single-file tools; `tier: on-demand` (39) appear as a compact index. In Claude Code and Cursor, every module auto-triggers from its description — **zero baseline token cost**.
+Modules with `tier: core` (26) inline into single-file tools; `tier: on-demand` (39) appear as a compact index. In Claude Code, Cursor, and Codex, modules are also available as native skills/rules so full bodies load on demand. Claude Code plugins remain Claude-specific; use Codex `/plugins` for Codex-native plugins.
 
 ---
 

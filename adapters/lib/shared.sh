@@ -52,6 +52,19 @@ _run_cursor() {
   echo -e "  ${GREEN}→ Generated .cursor/rules/ in $project_path ✓${NC}"
 }
 
+# _run_codex <project_path>
+# Codex supports repo-scoped skills and hooks, so we keep AGENTS.md compact and
+# emit full module bodies into .agents/skills for progressive loading.
+_run_codex() {
+  local project_path="$1"
+  echo ""
+  echo "Generating Codex project artifacts..."
+  python3 "$MODULES_PY" emit-codex "$project_path"
+  _track_project "$project_path"
+  echo -e "  ${GREEN}→ Generated AGENTS.md, .agents/skills/, and .codex/hooks.json in $project_path ✓${NC}"
+  echo -e "  ${YELLOW}→ In Codex, run /hooks to review and trust generated hooks.${NC}"
+}
+
 _track_project() {
   local project_path="$1"
   local _tracked_file="$HOME/.100x-dev/tracked-projects"
