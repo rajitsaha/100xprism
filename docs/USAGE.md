@@ -76,11 +76,11 @@ Open Claude Code in your project and try:
 `update` does the following:
 1. Pulls the latest code from `origin/main`
 2. Backs up `~/.claude/commands/` to `~/.claude/commands.bak.<timestamp>`
-3. Re-emits all modules to `~/.claude/skills/` and `~/.claude/commands/`
-4. Merges any new plugins into `~/.claude/settings.json`
+3. Re-emits all modules to `~/.claude/skills/` and `~/.claude/commands/`, and **prunes** any skill or slash-command alias 100x-dev previously installed that no longer exists (e.g. a merged/renamed module) — your own hand-authored skills and commands are never touched
+4. Reconciles plugins in `~/.claude/settings.json`: **adds** newly-declared plugins and **removes** ones 100x-dev previously installed but has since dropped, without changing plugins you enabled or disabled yourself
 5. Runs `claude plugin update` for each plugin (updates across all scopes)
 6. Syncs any installed hooks to their latest versions
-7. Regenerates instruction files in all tracked projects
+7. Regenerates instruction files in all tracked projects (Codex `AGENTS.md`, `.windsurfrules`, etc. are rewritten wholesale, so removed modules simply stop appearing)
 
 After updating, **restart your Claude Code session** to load the new modules and plugins.
 
@@ -401,6 +401,29 @@ run: pytest tests/unit/
 # Fix — run both
 run: pytest tests/unit/ tests/integration/
 ```
+
+---
+
+## Monitoring token usage
+
+Claude Code records every session's token usage in `~/.claude/projects/**/*.jsonl`.
+100x-dev ships a local, offline dashboard to make sense of it:
+
+```bash
+python3 ~/100x-dev/scripts/token-dashboard.py          # web UI at http://127.0.0.1:8787
+python3 ~/100x-dev/scripts/token-dashboard.py --print   # text summary, no server
+```
+
+It breaks usage into the four token "purposes" — **input**, **output**,
+**cache-read** (re-sent context, usually the largest), and **cache-write** — and
+shows a **startup-bloat meter** (the fixed context re-sent every turn) plus
+per-project / per-model / per-day breakdowns. The first run scans all transcripts;
+later runs use an incremental cache.
+
+To shrink token spend, audit your installed plugins/skills/MCP servers for
+duplication and trim the fixed context — see
+[docs/token-optimization.md](token-optimization.md). Built-in `/context` (live
+window) and `/cost` (session total) complement the dashboard.
 
 ---
 

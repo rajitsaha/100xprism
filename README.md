@@ -12,7 +12,7 @@
 
 **One source of truth.** 66 modules generate native config for **Claude Code · Cursor · Codex · Windsurf · Copilot · Gemini · Antigravity**. Quality gates run on every commit.
 
-<img src="assets/postcard-stack.png" alt="100x-dev v2.2.0 — 13 plugins, 26 slash commands, 40 auto-trigger skills" width="100%" />
+<img src="assets/postcard-stack.png" alt="100x-dev v2.3.0 — 13 plugins, 26 slash commands, 40 auto-trigger skills" width="100%" />
 
 </div>
 
@@ -167,6 +167,7 @@ Modules with `tier: core` (26) inline into single-file tools; `tier: on-demand` 
 
 - [Full usage guide](docs/USAGE.md) — daily patterns, multi-project setup, CI templates, project config, troubleshooting
 - [Architecture](docs/v2-refactor.md) — why modules replaced workflows + skills
+- [Token usage & optimization](docs/token-optimization.md) — audit your plugin/skill footprint and monitor token spend with the local dashboard
 - [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [Issues](https://github.com/rajitsaha/100x-dev/issues)
 
 ---
