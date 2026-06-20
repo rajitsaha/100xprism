@@ -20,16 +20,20 @@
 
 ## Install
 
-**Mac / Linux:**
+**npm (any platform — macOS, Linux, Windows):**
+```bash
+npm install -g 100x-dev && 100x-dev install
+```
+
+**curl (macOS / Linux):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
 source ~/.zshrc   # or ~/.bashrc — activates the 100x-dev command
 ```
 
-**Windows / anywhere with Node:**
-```bash
-npm install -g 100x-dev && 100x-dev install
-```
+Either way, `100x-dev install` clones the toolkit to `~/100x-dev` and provisions your AI tools. The npm package is a thin launcher — the modules, hooks, and plugins live in that clone, which `100x-dev update` keeps current.
+
+> **Windows:** plugin sync works, but native Windows module emit is being reworked ([#54](https://github.com/rajitsaha/100x-dev/issues/54)). For full module support today, install under **WSL** with either method above.
 
 **Set up a project:**
 ```bash
@@ -38,9 +42,17 @@ cd your-project && 100x-dev init
 
 **Keep up to date:**
 ```bash
-100x-dev update                    # pull latest modules + sync plugins
+100x-dev update                    # pull latest, then add/update/remove skills + plugins
 100x-dev update --plugins-only     # refresh plugins only (repo already current)
+npm install -g 100x-dev@latest     # (optional) upgrade the launcher itself
 ```
+
+`install` and `update` are **fully reconciling**, not append-only — every run:
+- **adds** newly shipped skills, slash commands, and curated plugins,
+- **updates** changed ones in place, and
+- **removes** skills, slash-command aliases, and 100x-dev-managed plugins that were deleted or merged upstream.
+
+Your own hand-authored skills/commands and any plugins you enabled yourself are never touched. See [docs/USAGE.md](docs/USAGE.md#keeping-up-to-date) for details.
 
 > **Cloned to a custom path?** The default install lives at `~/100x-dev`. If you cloned elsewhere, update your shell + Claude Code config — see [Custom install location](docs/USAGE.md#custom-install-location).
 
