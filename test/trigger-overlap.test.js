@@ -27,10 +27,11 @@ function flaggedPairs() {
 }
 
 test('flags the known overlapping pairs from the issue', () => {
+  // conversion-copy and systems-architect were merged into copywriting /
+  // enterprise-design respectively, resolving two of the issue's pairs. The
+  // remaining intentional CRO-funnel overlaps must still be flagged.
   const pairs = new Set(flaggedPairs())
   for (const pair of [
-    ['conversion-copy', 'copywriting'],
-    ['enterprise-design', 'systems-architect'],
     ['form-cro', 'signup-flow-cro'],
     ['onboarding-cro', 'signup-flow-cro'],
   ]) {
@@ -63,6 +64,6 @@ test('--strict fails when a previously-accepted overlap is no longer allow-liste
 
 test('allow-list file exists and lists the named pairs', () => {
   const allow = fs.readFileSync(ALLOW, 'utf8')
-  assert.match(allow, /conversion-copy <-> copywriting/)
-  assert.match(allow, /enterprise-design <-> systems-architect/)
+  assert.match(allow, /form-cro <-> signup-flow-cro/)
+  assert.match(allow, /onboarding-cro <-> signup-flow-cro/)
 })

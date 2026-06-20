@@ -142,39 +142,11 @@ install_plugins() {
     echo '{}' > "$SETTINGS_FILE"
   fi
 
-  PLUGINS_FILE="$PLUGINS_FILE" SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PYEOF'
-import json, os
-
-plugins_file = os.environ['PLUGINS_FILE']
-settings_file = os.environ['SETTINGS_FILE']
-
-with open(plugins_file) as f:
-    plugins_data = json.load(f)
-
-with open(settings_file) as f:
-    settings = json.load(f)
-
-new_plugins = plugins_data.get('plugins', [])
-extra_marketplaces = plugins_data.get('extraKnownMarketplaces', {})
-
-enabled = settings.get('enabledPlugins', {})
-added = 0
-for p in new_plugins:
-    if p not in enabled:
-        enabled[p] = True
-        added += 1
-
-settings['enabledPlugins'] = enabled
-
-existing_marketplaces = settings.get('extraKnownMarketplaces', {})
-existing_marketplaces.update(extra_marketplaces)
-settings['extraKnownMarketplaces'] = existing_marketplaces
-
-with open(settings_file, 'w') as f:
-    json.dump(settings, f, indent=2)
-
-print(f'  Added {added} new plugins ({len(enabled)} total)')
-PYEOF
+  # Reconcile plugins (adds new, removes 100x-dev-managed plugins dropped from
+  # plugins.json) — the same helper the update path uses, so install and update
+  # stay in agreement.
+  python3 "$REPO_DIR/adapters/lib/sync_plugins.py" \
+    --settings "$SETTINGS_FILE" --plugins "$PLUGINS_FILE"
 
   echo -e "  ${GREEN}→ Plugins merged into ~/.claude/settings.json ✓${NC}"
   echo -e "  ${CYAN}→ Restart Claude Code to activate new plugins${NC}"

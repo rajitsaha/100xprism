@@ -1,7 +1,7 @@
 {
   "name": "100x-dev",
-  "version": "2.2.0",
-  "description": "68 cross-tool modules (workflows + skills). Quality gates on every commit. Works with Claude Code, Cursor, Codex, Windsurf, Antigravity, Copilot, Gemini.",
+  "version": "2.3.0",
+  "description": "66 cross-tool modules (workflows + skills). Quality gates on every commit. Works with Claude Code, Cursor, Codex, Windsurf, Antigravity, Copilot, Gemini.",
   "scripts": {
     "test": "node --test",
     "check": "node --test && python3 scripts/meta-check.py && HOME=$(mktemp -d) ./adapters/claude-code.sh"

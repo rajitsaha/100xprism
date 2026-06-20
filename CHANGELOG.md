@@ -5,6 +5,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.3.0] — 2026-06-20
+
+Token-footprint cleanup + update-propagation fixes. Two near-duplicate modules are merged, a local token-usage dashboard is added, and `install`/`update` now remove stale artifacts instead of only adding them.
+
+### Added
+- **`scripts/token-dashboard.py`** — offline, dependency-free local dashboard (web UI + `--print`) over `~/.claude/projects/**/*.jsonl`. Breaks usage into the four token purposes (input / output / cache-read / cache-write), shows a startup-bloat meter (fixed context re-sent each turn), and per-project / per-model / per-day breakdowns. Incremental on-disk cache for fast re-runs.
+- **`docs/token-optimization.md`** — audit of the installed plugin/skill/hook/MCP footprint (duplication + conflicting capabilities), ranked optimization recommendations, and a monitoring guide.
+- **`adapters/lib/sync_plugins.py`** — single, testable plugin-reconciler used by both install and update.
+
+### Changed
+- **Module dedup (68 → 66 modules, 42 → 40 auto-trigger skills):** `systems-architect` merged into **`enterprise-design`** (a strict superset); `conversion-copy` merged into **`copywriting`** (folded in as a "Full-Page Mode" section). `figma-translator` repointed to `enterprise-design` + `copywriting`. Counts synced across README/AGENTS/USAGE/install/package.json; dead `trigger-overlap-allow.txt` entries pruned.
+- **`assets/postcard-stack.html` + `postcard-stack.png`** — re-rendered for v2.3.0 with corrected counts and the merged module names.
+- **`README.md`, `docs/USAGE.md`** — token-usage/optimization docs linked; update-behavior and monitoring sections added.
+
+### Fixed
+- **`adapters/lib/modules.py` (`emit-claude-code`)** — now writes a per-skill marker + a manifest and **prunes** skills and slash-command aliases it previously emitted that no longer exist (e.g. merged/removed modules), without ever touching the user's own hand-authored skills/commands. Previously add-only, so removed modules orphaned in `~/.claude/skills` and `~/.claude/commands`. (Cursor/Codex emitters already pruned via markers.)
+- **Plugin sync** — install + update now **add and remove**: 100x-dev-managed plugins dropped from `plugins.json` are removed from `settings.json`, without flipping a value the user set or removing plugins the user enabled themselves. Replaces three duplicated add-only inline blocks in `update.sh`/`adapters/claude-code.sh`; `lib/adapters/windows.js` `mergePluginsJson` gains the same parity.
+- **Tests** — added `test/claude-code-emit.test.js`, `test/sync-plugins.test.js`, and a removal case in `test/windows-adapters.test.js` (57 pass).
+
+---
+
 ## [2.2.0] — 2026-06-12
 
 Frontend UI/UX surface expansion. Three new design-category modules round out coverage alongside the existing `visual-system-architect`, `interaction-engineer`, and `figma-translator`. One additional plugin is curated through `plugins/plugins.json` so fresh installs pick it up automatically.

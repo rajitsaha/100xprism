@@ -53,7 +53,7 @@ select_components() {
   echo ""
 
   while true; do
-    echo "  [$([ "$INSTALL_MODULES" = true ] && echo "x" || echo " ")] 1) Modules      — 68 modules (lifecycle, quality, engineering, marketing, …)"
+    echo "  [$([ "$INSTALL_MODULES" = true ] && echo "x" || echo " ")] 1) Modules      — 66 modules (lifecycle, quality, engineering, marketing, …)"
     if [ "$TOOL_CLAUDE" = true ]; then
       echo "  [$([ "$INSTALL_PLUGINS" = true ] && echo "x" || echo " ")] 2) Plugins      — Claude Code only: superpowers, hookify, claude-mem, ..."
     fi
