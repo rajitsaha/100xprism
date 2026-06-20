@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.3.1] — 2026-06-20
+
+### Fixed
+- **`lib/adapters/windows.js`** — migrated the Windows adapter off the pre-v2 `workflows/` layout (it read a non-existent `installDir/workflows`, so `100x-dev install`/`init`/`update` threw `ENOENT` and emitted nothing on Windows). It's now a pure-JS port of `adapters/lib/modules.py emit-claude-code`: walks `modules/<slug>/SKILL.md`, writes Claude Code skills + slash-command aliases with a generation marker, writes a manifest, and **prunes** stale skills/aliases (manifest + marker + removed-modules list) without touching the user's own files. Output is byte-for-byte identical to the Python emitter (verified across aliases, skill trees, and manifest). `generateCombinedConfig` (replacing `generateCombinedWorkflows`) now builds the single-file project config from `modules/`; `WORKFLOW_ORDER` and `copyWorkflowsToClaudeCommands` removed; `mergePluginsJson` retains add/remove parity. Closes #54.
+- **`test/windows-adapters.test.js`** — rewritten for the `modules/`-based emit, covering skill/alias emission, pruning of removed modules, and preservation of user-authored skills/commands.
+
+---
+
 ## [2.3.0] — 2026-06-20
 
 Token-footprint cleanup + update-propagation fixes. Two near-duplicate modules are merged, a local token-usage dashboard is added, and `install`/`update` now remove stale artifacts instead of only adding them.
