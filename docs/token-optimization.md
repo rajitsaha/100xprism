@@ -70,6 +70,28 @@ Disabled globally (re-enable per-project via a project `.claude/settings.json`):
 - Removed dead entries from `scripts/trigger-overlap-allow.txt`.
 - Added `scripts/token-dashboard.py` (below).
 
+### Update propagation (so removals actually reach users)
+
+A merge/removal is only useful if `100x-dev update` cleans up the old artifacts.
+Two gaps were fixed so it does:
+
+- **Claude Code skills + slash aliases now prune.** `emit-claude-code` writes a
+  per-skill marker + a manifest, then removes any skill/alias it previously
+  emitted that no longer exists (e.g. `systems-architect`, `conversion-copy`) —
+  while never deleting the user's own hand-authored skills/commands. (Cursor and
+  Codex emitters already pruned via markers.)
+- **Plugins now add *and* remove.** `adapters/lib/sync_plugins.py` (used by both
+  install and update) adds newly-declared plugins and removes ones 100x-dev
+  previously installed but has since dropped from `plugins.json`, without
+  touching plugins the user enabled themselves or flipping a value they set. The
+  managed set is tracked in a sidecar beside `settings.json`.
+
+Single-file tool configs (Codex `AGENTS.md`, `.windsurfrules`,
+`copilot-instructions.md`, `GEMINI.md`, `ANTIGRAVITY.md`) are regenerated
+wholesale on update, so removed modules simply stop appearing. 100x-dev does not
+generate `CLAUDE.md` — it scaffolds an editable project file once and leaves it
+to you.
+
 ## Further recommendations (not yet applied)
 
 1. Move rarely-used **user-scoped plugins to project scope** (`understand-anything`,

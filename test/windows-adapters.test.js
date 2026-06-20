@@ -81,6 +81,25 @@ test('mergePluginsJson is idempotent', () => {
   assert.equal(Object.keys(settings.enabledPlugins).length, 1)
 })
 
+test('mergePluginsJson removes a dropped managed plugin but keeps user plugins', () => {
+  const settingsFile = path.join(makeTmpDir(), 'settings.json')
+  const pluginsFile = path.join(makeTmpDir(), 'plugins.json')
+  fs.writeFileSync(settingsFile, JSON.stringify({ enabledPlugins: { 'user-only': true } }))
+
+  // First run: declare a + b (seed managed set, add both, remove nothing).
+  fs.writeFileSync(pluginsFile, JSON.stringify({ plugins: ['plugin-a', 'plugin-b'] }))
+  mergePluginsJson(pluginsFile, settingsFile)
+
+  // Second run: drop plugin-b from plugins.json -> it should be removed.
+  fs.writeFileSync(pluginsFile, JSON.stringify({ plugins: ['plugin-a'] }))
+  mergePluginsJson(pluginsFile, settingsFile)
+
+  const enabled = JSON.parse(fs.readFileSync(settingsFile, 'utf8')).enabledPlugins
+  assert.equal('plugin-b' in enabled, false, 'dropped managed plugin removed')
+  assert.equal(enabled['plugin-a'], true, 'still-declared plugin kept')
+  assert.equal(enabled['user-only'], true, 'user-managed plugin preserved')
+})
+
 test('generateCombinedWorkflows concatenates gate before commit', () => {
   const workflowsDir = makeTmpDir()
   fs.writeFileSync(path.join(workflowsDir, 'gate.md'), '# Gate')

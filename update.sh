@@ -108,39 +108,8 @@ if [ "$LOCAL" = "$REMOTE" ]; then
   echo -e "${GREEN}✓ Repo already up to date.${NC}"
   echo ""
   echo "Syncing plugins and settings..."
-  REPO_DIR="$REPO_DIR" SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PYEOF'
-import json, os
-
-plugins_file = os.path.join(os.environ['REPO_DIR'], 'plugins', 'plugins.json')
-settings_file = os.environ['SETTINGS_FILE']
-
-with open(plugins_file) as f:
-    repo_data = json.load(f)
-
-with open(settings_file) as f:
-    settings = json.load(f)
-
-new_plugins = repo_data.get('plugins', [])
-enabled = settings.get('enabledPlugins', {})
-added = 0
-for p in new_plugins:
-    if p not in enabled:
-        enabled[p] = True
-        added += 1
-
-settings['enabledPlugins'] = enabled
-
-extra = repo_data.get('extraKnownMarketplaces', {})
-settings.setdefault('extraKnownMarketplaces', {}).update(extra)
-
-with open(settings_file, 'w') as f:
-    json.dump(settings, f, indent=2)
-
-if added > 0:
-    print(f'  Added {added} new plugin(s) to settings.json ✓')
-else:
-    print('  Plugins: settings already up to date ✓')
-PYEOF
+  python3 "$REPO_DIR/adapters/lib/sync_plugins.py" \
+    --settings "$SETTINGS_FILE" --plugins "$REPO_DIR/plugins/plugins.json"
   sync_hooks
   run_plugin_updates
   echo ""
@@ -201,59 +170,9 @@ fi
 python3 "$REPO_DIR/adapters/lib/modules.py" emit-claude-code
 echo -e "  ${GREEN}→ Updated modules ✓${NC}"
 
-REPO_DIR="$REPO_DIR" SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PYEOF'
-import json, os
-
-plugins_file = os.path.join(os.environ['REPO_DIR'], 'plugins', 'plugins.json')
-settings_file = os.environ['SETTINGS_FILE']
-
-with open(plugins_file) as f:
-    repo_data = json.load(f)
-
-with open(settings_file) as f:
-    settings = json.load(f)
-
-new_plugins = repo_data.get('plugins', [])
-enabled = settings.get('enabledPlugins', {})
-added = 0
-for p in new_plugins:
-    if p not in enabled:
-        enabled[p] = True
-        added += 1
-
-settings['enabledPlugins'] = enabled
-
-extra = repo_data.get('extraKnownMarketplaces', {})
-settings.setdefault('extraKnownMarketplaces', {}).update(extra)
-
-# Merge SessionStart hook for version check
-hook_cmd = os.path.expanduser('~/100x-dev/shell/check-update.sh') + ' --claude-hook'
-hooks = settings.setdefault('hooks', {})
-session_start = hooks.setdefault('SessionStart', [])
-
-already_exists = any(
-    h.get('command') == hook_cmd
-    for entry in session_start
-    for h in entry.get('hooks', [])
-)
-
-if not already_exists:
-    session_start.append({
-        'matcher': '',
-        'hooks': [{'type': 'command', 'command': hook_cmd}]
-    })
-    print('  Added SessionStart update-check hook ✓')
-else:
-    print('  SessionStart hook: already configured ✓')
-
-with open(settings_file, 'w') as f:
-    json.dump(settings, f, indent=2)
-
-if added > 0:
-    print(f'  Added {added} new plugin(s) to settings.json ✓')
-else:
-    print('  Plugins: already up to date ✓')
-PYEOF
+python3 "$REPO_DIR/adapters/lib/sync_plugins.py" \
+  --settings "$SETTINGS_FILE" --plugins "$REPO_DIR/plugins/plugins.json" \
+  --session-hook "$HOME/100x-dev/shell/check-update.sh --claude-hook"
 
 echo -e "  ${CYAN}→ Shell aliases auto-updated (sourced file)${NC}"
 
