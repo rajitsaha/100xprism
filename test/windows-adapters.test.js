@@ -6,10 +6,10 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const {
-  copyWorkflowsToClaudeCommands,
+  emitClaudeModules,
   scaffoldClaudeMd,
   mergePluginsJson,
-  generateCombinedWorkflows,
+  generateCombinedConfig,
   addTrackedProject,
 } = require('../lib/adapters/windows')
 
@@ -17,24 +17,60 @@ function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), '100x-test-'))
 }
 
-test('copyWorkflowsToClaudeCommands copies .md files and appends $ARGUMENTS', () => {
-  const src = makeTmpDir()
-  const dst = makeTmpDir()
-  fs.writeFileSync(path.join(src, 'gate.md'), '# Gate\ncontent')
-  copyWorkflowsToClaudeCommands(src, dst)
-  const content = fs.readFileSync(path.join(dst, 'gate.md'), 'utf8')
-  assert.ok(content.includes('# Gate'))
-  assert.ok(content.includes('$ARGUMENTS'))
+// Build a fake modules/ dir: each entry is { slug, frontmatter, body }.
+function fakeModules(dir, mods) {
+  for (const m of mods) {
+    const md = path.join(dir, m.slug)
+    fs.mkdirSync(md, { recursive: true })
+    const fm = Object.entries(m.fm || {}).map(([k, v]) => `${k}: ${v}`).join('\n')
+    fs.writeFileSync(path.join(md, 'SKILL.md'), `---\n${fm}\n---\n\n${m.body || 'body'}\n`)
+  }
+}
+
+test('emitClaudeModules writes skills + slash aliases from modules/', () => {
+  const modulesDir = makeTmpDir(), skills = makeTmpDir(), commands = makeTmpDir()
+  fakeModules(modulesDir, [
+    { slug: 'gate', fm: { name: 'gate', description: 'Quality gate.', slash_command: '/gate' } },
+    { slug: 'copywriting', fm: { name: 'copywriting', description: 'Write copy.' } }, // no slash
+    { slug: '_lib', fm: {}, body: '' }, // shared-ref dir — but has SKILL.md here; skip via missing? keep simple
+  ])
+  // _lib in the real repo has no SKILL.md; emulate that:
+  fs.rmSync(path.join(modulesDir, '_lib', 'SKILL.md'))
+
+  const r = emitClaudeModules(modulesDir, skills, commands)
+  assert.equal(r.skills, 2, 'two real modules emitted, _lib skipped')
+  assert.ok(fs.existsSync(path.join(skills, 'gate', 'SKILL.md')))
+  assert.ok(fs.existsSync(path.join(skills, 'gate', '.100x-dev-generated')), 'marker written')
+  assert.ok(fs.existsSync(path.join(commands, 'gate.md')), 'slash alias written')
+  assert.ok(!fs.existsSync(path.join(commands, 'copywriting.md')), 'no alias without slash_command')
+  const manifest = JSON.parse(fs.readFileSync(path.join(skills, '.100x-dev-manifest.json'), 'utf8'))
+  assert.deepEqual(manifest.skills, ['copywriting', 'gate'])
+  assert.deepEqual(manifest.commands, ['gate'])
 })
 
-test('copyWorkflowsToClaudeCommands copies db-engines subdir', () => {
-  const src = makeTmpDir()
-  const dst = makeTmpDir()
-  const dbDir = path.join(src, 'db-engines')
-  fs.mkdirSync(dbDir)
-  fs.writeFileSync(path.join(dbDir, 'postgres.md'), '# Postgres')
-  copyWorkflowsToClaudeCommands(src, dst)
-  assert.ok(fs.existsSync(path.join(dst, 'db-engines', 'postgres.md')))
+test('emitClaudeModules prunes removed modules but keeps user-authored skills/commands', () => {
+  const modulesDir = makeTmpDir(), skills = makeTmpDir(), commands = makeTmpDir()
+  fakeModules(modulesDir, [{ slug: 'gate', fm: { name: 'gate', description: 'Quality gate.', slash_command: '/gate' } }])
+
+  // Pre-existing: a merged-away module (in REMOVED_MODULES, no marker), a user skill, a user command.
+  fs.mkdirSync(path.join(skills, 'systems-architect'))
+  fs.writeFileSync(path.join(skills, 'systems-architect', 'SKILL.md'), 'old')
+  fs.mkdirSync(path.join(skills, 'my-skill'))
+  fs.writeFileSync(path.join(skills, 'my-skill', 'SKILL.md'), 'mine')
+  fs.writeFileSync(path.join(commands, 'my-cmd.md'), 'mine')
+
+  const r = emitClaudeModules(modulesDir, skills, commands)
+  assert.ok(r.prunedSkills >= 1)
+  assert.ok(!fs.existsSync(path.join(skills, 'systems-architect')), 'removed module pruned')
+  assert.ok(fs.existsSync(path.join(skills, 'my-skill')), 'user skill kept')
+  assert.ok(fs.existsSync(path.join(commands, 'my-cmd.md')), 'user command kept')
+
+  // A future-removed module tracked only via manifest/marker is pruned on re-run.
+  fs.mkdirSync(path.join(skills, 'ghost'))
+  fs.writeFileSync(path.join(skills, 'ghost', 'SKILL.md'), 'x')
+  fs.writeFileSync(path.join(skills, 'ghost', '.100x-dev-generated'), 'gen')
+  emitClaudeModules(modulesDir, skills, commands)
+  assert.ok(!fs.existsSync(path.join(skills, 'ghost')), 'marker-tagged orphan pruned')
 })
 
 test('scaffoldClaudeMd writes CLAUDE.md with project name', () => {
@@ -100,12 +136,17 @@ test('mergePluginsJson removes a dropped managed plugin but keeps user plugins',
   assert.equal(enabled['user-only'], true, 'user-managed plugin preserved')
 })
 
-test('generateCombinedWorkflows concatenates gate before commit', () => {
-  const workflowsDir = makeTmpDir()
-  fs.writeFileSync(path.join(workflowsDir, 'gate.md'), '# Gate')
-  fs.writeFileSync(path.join(workflowsDir, 'commit.md'), '# Commit')
-  const result = generateCombinedWorkflows(workflowsDir)
-  assert.ok(result.indexOf('# Gate') < result.indexOf('# Commit'))
+test('generateCombinedConfig inlines core module bodies and indexes on-demand ones', () => {
+  const modulesDir = makeTmpDir()
+  fakeModules(modulesDir, [
+    { slug: 'gate', fm: { name: 'gate', category: 'quality', tier: 'core', slash_command: '/gate', description: 'Quality gate.' }, body: 'GATE BODY' },
+    { slug: 'copywriting', fm: { name: 'copywriting', category: 'marketing', tier: 'on-demand', description: 'Write copy.' }, body: 'COPY BODY' },
+  ])
+  const result = generateCombinedConfig(modulesDir)
+  assert.ok(result.includes('100x Dev — Modules'), 'has header')
+  assert.ok(result.includes('GATE BODY'), 'core body inlined')
+  assert.ok(!result.includes('COPY BODY'), 'on-demand body not inlined')
+  assert.ok(result.includes('`copywriting`'), 'on-demand module indexed')
 })
 
 test('addTrackedProject writes path to file', () => {
