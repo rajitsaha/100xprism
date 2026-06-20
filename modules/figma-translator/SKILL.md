@@ -1,6 +1,6 @@
 ---
 name: figma-translator
-description: Translate any technical specification into five precise, self-contained Figma Make prompts ready to paste and generate. Use when you have a systems-architect, visual-system-architect, or conversion-copy output and need to convert it into Figma Make–compatible prompts covering hero, features, social proof, CTA, and mobile views.
+description: Translate any technical specification into five precise, self-contained Figma Make prompts ready to paste and generate. Use when you have an enterprise-design, visual-system-architect, or copywriting output and need to convert it into Figma Make–compatible prompts covering hero, features, social proof, CTA, and mobile views.
 category: design
 tier: on-demand
 allowed-tools: Read Write

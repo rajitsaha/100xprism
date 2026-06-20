@@ -1,6 +1,6 @@
 ---
 name: copywriting
-description: When the user wants to write, rewrite, or improve marketing copy for any page — including homepage, landing pages, pricing pages, feature pages, about pages, or product pages. Also use when the user says "write copy for," "improve this copy," "rewrite this page," "marketing copy," "headline help," "CTA copy," "value proposition," "tagline," "subheadline," "hero section copy," "above the fold," "this copy is weak," "make this more compelling," or "help me describe my product." Use this whenever someone is working on website text that needs to persuade or convert. For email copy, see email-sequence. For popup copy, see popup-cro. For editing existing copy, see copy-editing.
+description: When the user wants to write, rewrite, or improve marketing copy for any page — including homepage, landing pages, pricing pages, feature pages, about pages, or product pages. Also use when the user says "write copy for," "improve this copy," "rewrite this page," "marketing copy," "headline help," "CTA copy," "value proposition," "tagline," "subheadline," "hero section copy," "above the fold," "this copy is weak," "make this more compelling," "conversion copy," "complete website copy," or "help me describe my product." Use this whenever someone is working on website text that needs to persuade or convert — including complete, Figma-ready full-page copy (see Full-Page Mode below). For email copy, see email-sequence. For popup copy, see popup-cro. For editing existing copy, see copy-editing.
 category: marketing
 tier: on-demand
 ---
@@ -240,6 +240,25 @@ For headlines and CTAs, provide 2-3 options:
 ### Meta Content (if relevant)
 - Page title (for SEO)
 - Meta description
+
+---
+
+## Full-Page Mode (Figma Make / complete website copy)
+
+When asked for **complete, drop-in website copy** (e.g. for a landing page or
+SaaS site, or as input to `figma-translator`), act as a Senior Conversion
+Strategist and write every section below with explicit character counts and
+labeled hierarchy so it can populate Figma Make layouts without editing:
+
+1. **Hero** — Headline (≤6 words), Subheadline (~15 words), Primary CTA
+2. **Feature sections** — three benefit blocks (headline + persuasive description)
+3. **Social proof** — testimonial framework, authority indicators, quantifiable results
+4. **FAQ** — eight high-intent questions with conversion-focused answers
+5. **Footer** — structured navigation, legal disclaimers, social prompts
+
+Requirements: apply persuasion triggers (authority, urgency, exclusivity),
+integrate high-impact power words, specify a character count for each field, and
+label hierarchy (H1 / H2 / Body).
 
 ---
 

@@ -4,7 +4,7 @@
 
 ## How it works
 
-100x Dev ships 68 modules as markdown files with YAML frontmatter. Your AI tool reads them and follows the instructions — running commands, enforcing thresholds, looping until checks pass.
+100x Dev ships 66 modules as markdown files with YAML frontmatter. Your AI tool reads them and follows the instructions — running commands, enforcing thresholds, looping until checks pass.
 
 Each module is the **single source of truth**. Adapters generate the right format for each tool:
 
@@ -33,7 +33,7 @@ npm install -g 100x-dev && 100x-dev install
 ```
 
 The installer:
-1. Emits all 68 modules to `~/.claude/skills/`
+1. Emits all 66 modules to `~/.claude/skills/`
 2. Creates 26 slash command aliases in `~/.claude/commands/`
 3. Merges 13 Claude Code plugins into `~/.claude/settings.json`
 4. Adds shell aliases (`cc`, `ccc`, `100x-update`, `100x-check`)
@@ -186,7 +186,7 @@ The following 26 slash commands are available. Run them directly:
 /enterprise-design     Full technical blueprint — IA, API, data model, stack
 ```
 
-### Auto-trigger skills (42 skills)
+### Auto-trigger skills (40 skills)
 
 These modules activate automatically when your prompt matches their description. No slash command needed — just describe the task naturally:
 

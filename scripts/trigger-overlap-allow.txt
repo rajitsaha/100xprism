@@ -8,7 +8,6 @@
 # --- lifecycle / quality clusters (shared gate→commit→push→launch vocabulary) ---
 launch <-> release
 commit <-> gate
-enterprise-design <-> systems-architect
 commit <-> push
 gate <-> push
 page-cro <-> signup-flow-cro
@@ -30,7 +29,6 @@ paid-ads <-> social-content
 ai-seo <-> schema-markup
 page-cro <-> popup-cro
 cold-email <-> revops
-conversion-copy <-> figma-translator
 copywriting <-> page-cro
 ai-seo <-> site-architecture
 popup-cro <-> signup-flow-cro
@@ -38,18 +36,15 @@ ab-test-setup <-> analytics-tracking
 context-dump <-> pr
 issue <-> pr
 cold-email <-> email-sequence
-conversion-copy <-> enterprise-design
 form-cro <-> onboarding-cro
 form-cro <-> popup-cro
 ai-seo <-> seo-audit
-interaction-engineer <-> systems-architect
 content-strategy <-> social-content
 db <-> revops
 lint <-> test
 seo-audit <-> site-architecture
 competitor-alternatives <-> programmatic-seo
 copy-editing <-> copywriting
-conversion-copy <-> copywriting
 # architect's keyword-packed description (#26) raised two benign overlaps:
 # - enterprise-design: intentional, architect's description cross-references it ("for full blueprints, use enterprise-design")
 # - pr: generic-token overlap (~0.17), same class as the accepted issue<->pr / context-dump<->pr

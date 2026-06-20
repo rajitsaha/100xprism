@@ -35,7 +35,7 @@ test('codex adapter emits compact AGENTS plus repo skills', () => {
   const skillsDir = path.join(tmp, '.agents', 'skills')
   const skillFiles = fs.readdirSync(skillsDir)
     .filter((name) => fs.existsSync(path.join(skillsDir, name, 'SKILL.md')))
-  assert.equal(skillFiles.length, 68)
+  assert.equal(skillFiles.length, 66)
   assert.ok(fs.existsSync(path.join(skillsDir, 'gate', 'SKILL.md')))
   assert.ok(fs.existsSync(path.join(skillsDir, 'copywriting', 'SKILL.md')))
 })
