@@ -89,5 +89,48 @@ class GitValueTest(unittest.TestCase):
             self.assertIsNone(_shipped.git_value(d, None, None))
 
 
+class DirValueTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self._orig = (_shipped.STORE_DIR, _shipped.STORE_PATH)
+        _shipped.STORE_DIR = self.tmp.name
+        _shipped.STORE_PATH = os.path.join(self.tmp.name, "value.json")
+
+    def tearDown(self):
+        _shipped.STORE_DIR, _shipped.STORE_PATH = self._orig
+        self.tmp.cleanup()
+
+    def test_git_dir_value_kind_git(self):
+        with tempfile.TemporaryDirectory() as repo:
+            git(repo, "init", "-q", "-b", "main")
+            commit(repo, "feat: a")
+            v = _shipped.dir_value(repo, "~/x", "claude-code", None, None)
+            self.assertEqual(v["kind"], "git")
+            self.assertEqual(v["commits"], 1)
+
+    def test_non_repo_uses_fs_fallback(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "note.md"), "w") as f:
+                f.write("x")
+            v = _shipped.dir_value(d, "~/d", "claude-code", None, None)
+            self.assertEqual(v["kind"], "fs")
+            self.assertGreaterEqual(v["fs_files"], 1)
+
+    def test_cache_preserves_summary_until_head_changes(self):
+        with tempfile.TemporaryDirectory() as repo:
+            git(repo, "init", "-q", "-b", "main")
+            commit(repo, "feat: a")
+            _shipped.cached_dir_value(repo, "~/x", "claude-code", None, None)
+            # inject a summary as the background pass would
+            store = _shipped.load_store()
+            store["dirs"][os.path.abspath(repo)]["value"]["summary"] = "did a thing"
+            _shipped.save_store(store)
+            again = _shipped.cached_dir_value(repo, "~/x", "claude-code", None, None)
+            self.assertEqual(again["summary"], "did a thing")   # head unchanged → kept
+            commit(repo, "fix: b")
+            after = _shipped.cached_dir_value(repo, "~/x", "claude-code", None, None)
+            self.assertIsNone(after["summary"])                 # head changed → recomputed
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

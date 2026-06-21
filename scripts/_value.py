@@ -141,3 +141,94 @@ def git_value(repo, start, end):
         "files": len(files), "insertions": ins, "deletions": dele,
         "subjects": subjects[:5],
     }
+
+
+# ----------------------------------------------------------------- fs fallback + snapshot + cache
+
+_SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__",
+              "dist", "build", ".next", ".cache"}
+
+
+def _day_bounds(start, end):
+    import time
+    lo = time.mktime(time.strptime(start + " 00:00:00", "%Y-%m-%d %H:%M:%S")) if start else None
+    hi = time.mktime(time.strptime(end + " 23:59:59", "%Y-%m-%d %H:%M:%S")) if end else None
+    return lo, hi
+
+
+def fs_value(directory, start, end):
+    """Count files modified within the window (mtime). Best-effort; never raises."""
+    lo, hi = _day_bounds(start, end)
+    n = 0
+    try:
+        for dp, dirs, files in os.walk(directory):
+            dirs[:] = [d for d in dirs if d not in _SKIP_DIRS and not d.startswith(".")]
+            for fn in files:
+                try:
+                    mt = os.stat(os.path.join(dp, fn)).st_mtime
+                except OSError:
+                    continue
+                if (lo is None or mt > lo) and (hi is None or mt <= hi):
+                    n += 1
+    except OSError:
+        pass
+    return {"fs_files": n}
+
+
+def _empty_value():
+    return {"kind": "none", "commits": 0, "prs": 0, "files": 0,
+            "insertions": 0, "deletions": 0, "subjects": [], "fs_files": 0,
+            "summary": None}
+
+
+def dir_value(real_dir, label, tool, start, end):
+    """Tool-agnostic value snapshot for one real directory."""
+    v = _empty_value()
+    g = git_value(real_dir, start, end)
+    if g is not None:
+        v.update(g)
+        v["kind"] = "git"
+        return v
+    fs = fs_value(real_dir, start, end)
+    v["fs_files"] = fs["fs_files"]
+    v["kind"] = "fs" if fs["fs_files"] else "none"
+    return v
+
+
+def load_store():
+    try:
+        with open(STORE_PATH, encoding="utf-8") as f:
+            s = json.load(f)
+        if s.get("version") == STORE_VERSION and isinstance(s.get("dirs"), dict):
+            return s
+    except (OSError, ValueError):
+        pass
+    return {"version": STORE_VERSION, "dirs": {}}
+
+
+def save_store(store):
+    try:
+        os.makedirs(STORE_DIR, exist_ok=True)
+        with open(STORE_PATH, "w", encoding="utf-8") as f:
+            json.dump(store, f, indent=2)
+    except OSError as e:
+        print(f"warning: could not write value store ({STORE_PATH}): {e}", file=sys.stderr)
+
+
+def cached_dir_value(real_dir, label, tool, start, end):
+    """Return cached value if HEAD+window unchanged, else recompute and cache.
+    Preserves a previously-written AI `summary` across cache hits."""
+    real_dir = os.path.abspath(real_dir)
+    head = git_head(real_dir)
+    window = {"start": start, "end": end}
+    store = load_store()
+    prev = store["dirs"].get(real_dir)
+    if prev and prev.get("head") == head and prev.get("window") == window:
+        return prev["value"]
+    v = dir_value(real_dir, label, tool, start, end)
+    store["dirs"][real_dir] = {
+        "label": label, "tool": tool, "head": head, "window": window,
+        "value": v, "scanned": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+    save_store(store)
+    return v
