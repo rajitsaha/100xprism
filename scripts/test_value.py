@@ -174,5 +174,35 @@ class DirectoriesShapeTest(unittest.TestCase):
             self.assertEqual(row["dir"], os.path.abspath(repo))
 
 
+class SummariesTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self._orig = (_shipped.STORE_DIR, _shipped.STORE_PATH)
+        _shipped.STORE_DIR = self.tmp.name
+        _shipped.STORE_PATH = os.path.join(self.tmp.name, "value.json")
+        import importlib
+        self.sm = importlib.import_module("_summaries")
+        _shipped.save_store({"version": 2, "dirs": {"/x": {
+            "label": "~/x", "tool": "claude-code", "head": "abc",
+            "window": {"start": None, "end": None},
+            "value": {"kind": "git", "commits": 1, "subjects": ["feat: a"],
+                      "fs_files": 0, "summary": None}, "scanned": "t"}}})
+
+    def tearDown(self):
+        _shipped.STORE_DIR, _shipped.STORE_PATH = self._orig
+        self.tmp.cleanup()
+
+    def test_backfill_writes_summary(self):
+        n = self.sm.backfill(runner=lambda prompt: "shipped feature a")
+        self.assertEqual(n, 1)
+        v = _shipped.load_store()["dirs"]["/x"]["value"]
+        self.assertEqual(v["summary"], "shipped feature a")
+
+    def test_backfill_graceful_when_cli_absent(self):
+        n = self.sm.backfill(runner=lambda prompt: None)  # CLI absent / failed
+        self.assertEqual(n, 0)
+        self.assertIsNone(_shipped.load_store()["dirs"]["/x"]["value"]["summary"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -45,6 +45,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _value  # noqa: E402 — shared value layer (one source of truth)
+import _summaries  # noqa: E402
 
 HOME = os.path.expanduser("~")
 PROJECTS_DIR = os.path.join(HOME, ".claude", "projects")
@@ -519,6 +520,7 @@ _build_lock = threading.Lock()
 def _rebuild():
     with _build_lock:
         Handler.data = build(verbose=False)
+    threading.Thread(target=lambda: _summaries.backfill(), daemon=True).start()
     return Handler.data
 
 
