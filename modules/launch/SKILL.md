@@ -127,7 +127,7 @@ Fix any compiler errors. Re-build only the failing target.
 Phases 1–4 constitute a full gate pass. Record it so the `gate-on-commit` hook and the
 commit/push workflows skip re-running the gate:
 ```bash
-python3 ~/100x-dev/hooks/gate-pass.py 2>/dev/null || true
+python3 ~/100xprism/hooks/gate-pass.py 2>/dev/null || true
 ```
 This writes a token for the **current tree state** (HEAD + tracked diff + untracked
 files), so any later edit re-arms the gate. Only run it when all of Phases 1–4 passed.

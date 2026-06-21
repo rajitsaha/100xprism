@@ -1,18 +1,18 @@
 # Security Policy
 
-Thanks for helping keep **100x-dev** and its users safe.
+Thanks for helping keep **100xprism** and its users safe.
 
 ## Reporting a Vulnerability
 
 **Please do not open public GitHub issues for security vulnerabilities.**
 
-Report privately via **[GitHub Security Advisories](https://github.com/rajitsaha/100x-dev/security/advisories/new)** (the "Report a vulnerability" button on the [Security tab](https://github.com/rajitsaha/100x-dev/security)). This keeps the report confidential until a fix is ready.
+Report privately via **[GitHub Security Advisories](https://github.com/rajitsaha/100xprism/security/advisories/new)** (the "Report a vulnerability" button on the [Security tab](https://github.com/rajitsaha/100xprism/security)). This keeps the report confidential until a fix is ready.
 
 When reporting, please include:
 
 - A clear description of the issue and its impact
 - Steps to reproduce (commands, config, environment)
-- Affected version(s) — `100x-dev --version` or commit SHA
+- Affected version(s) — `100xprism --version` or commit SHA
 - Any proof-of-concept code or screenshots (optional but helpful)
 
 ## What to Expect
@@ -31,7 +31,7 @@ This project is maintained by a solo author, so timelines are best-effort. Criti
 Security fixes are applied to the **latest minor release** on the `main` branch. Older versions are not patched — please upgrade to receive fixes:
 
 ```bash
-100x-dev update
+100xprism update
 ```
 
 ## Scope
@@ -39,13 +39,13 @@ Security fixes are applied to the **latest minor release** on the `main` branch.
 **In scope:**
 
 - Code in this repository: shell scripts (`get.sh`, `install.sh`, `update.sh`, `shell/*.sh`), the Node CLI (`bin/`, `lib/`), adapters, templates, and generated artifacts
-- The published npm package [`100x-dev`](https://www.npmjs.com/package/100x-dev)
-- The install one-liner served from `raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh`
+- The published npm package [`100xprism`](https://www.npmjs.com/package/100xprism)
+- The install one-liner served from `raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh`
 
 **Out of scope:**
 
-- Vulnerabilities in **upstream tools** that 100x-dev integrates with (Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini, Antigravity, npm, GitHub Actions). Report those to the respective vendors.
-- Vulnerabilities in **your project's** dependencies or generated CI workflows after `100x-dev init` runs — these are your project's responsibility.
+- Vulnerabilities in **upstream tools** that 100xprism integrates with (Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini, Antigravity, npm, GitHub Actions). Report those to the respective vendors.
+- Vulnerabilities in **your project's** dependencies or generated CI workflows after `100xprism init` runs — these are your project's responsibility.
 - Issues that require an attacker to already have write access to your machine, your `.env`, or your shell config.
 - Social-engineering or phishing scenarios that don't involve a flaw in this codebase.
 

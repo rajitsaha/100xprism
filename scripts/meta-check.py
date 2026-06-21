@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repo consistency / drift checker for 100x-dev.
+"""Repo consistency / drift checker for 100xprism.
 
 Run locally (`python3 scripts/meta-check.py`) or in CI (.github/workflows/meta.yml).
 Catches the drift classes that have bitten releases before:
@@ -196,7 +196,7 @@ def check_version_triple(tag: str | None) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="100x-dev repo consistency checker")
+    ap = argparse.ArgumentParser(description="100xprism repo consistency checker")
     ap.add_argument("--tag", default=os.environ.get("TAG", ""),
                     help="git tag (e.g. v2.0.4) to include in the version-triple check")
     args = ap.parse_args()

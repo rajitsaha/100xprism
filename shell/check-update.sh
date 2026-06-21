@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check-update.sh — daily version check + cache for 100x-dev
+# check-update.sh — daily version check + cache for 100xprism
 #
 # Usage:
 #   check-update.sh --silent       Refresh cache only. No output.
@@ -9,7 +9,7 @@
 set -euo pipefail
 
 REPO_DIR="${HUNDRED_X_REPO_OVERRIDE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-STATE_DIR="$HOME/.100x-dev"
+STATE_DIR="$HOME/.100xprism"
 CACHE_FILE="$STATE_DIR/update-cache"
 FLAG="${1:-}"
 
@@ -90,7 +90,7 @@ _fetch_release_notes() {
   # Try GitHub Releases API first (requires gh CLI)
   if command -v gh >/dev/null 2>&1; then
     local notes
-    notes=$(gh release view --repo rajitsaha/100x-dev --json body -q .body 2>/dev/null | head -20 || true)
+    notes=$(gh release view --repo rajitsaha/100xprism --json body -q .body 2>/dev/null | head -20 || true)
     if [[ -n "$notes" ]]; then
       echo "$notes"
       return

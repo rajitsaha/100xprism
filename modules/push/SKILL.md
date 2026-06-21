@@ -22,14 +22,14 @@ dirty or rebased tree never reuses a stale pass — the same token `/commit` wri
 `gate-on-commit` hook checks:
 
 ```bash
-TOKEN=$(python3 ~/100x-dev/hooks/gate-pass.py --print 2>/dev/null)
-CACHED=$(cat ~/.100x-dev/gate-cache 2>/dev/null)
+TOKEN=$(python3 ~/100xprism/hooks/gate-pass.py --print 2>/dev/null)
+CACHED=$(cat ~/.100xprism/gate-cache 2>/dev/null)
 [ -n "$TOKEN" ] && [ "$CACHED" = "$TOKEN" ] && echo "Gate: skipped (already passed for this tree)" && GATE_DONE=true || GATE_DONE=false
 ```
 
 If `GATE_DONE=false`: run the **gate** workflow. On pass, record it:
 ```bash
-python3 ~/100x-dev/hooks/gate-pass.py
+python3 ~/100xprism/hooks/gate-pass.py
 ```
 
 Do NOT push until gate passes. If gate fails → STOP, fix, clear cache, new commit, re-run.
@@ -42,7 +42,7 @@ Check review cache — skip if HEAD already reviewed by a prior `/commit` run:
 
 ```bash
 HEAD=$(git rev-parse HEAD)
-REVIEWED=$(cat ~/.100x-dev/review-cache 2>/dev/null)
+REVIEWED=$(cat ~/.100xprism/review-cache 2>/dev/null)
 [ "$REVIEWED" = "$HEAD" ] && echo "Review: skipped (already done for $HEAD)" && REVIEW_DONE=true || REVIEW_DONE=false
 ```
 
@@ -57,7 +57,7 @@ PR=$(gh pr list --head "$(git branch --show-current)" --json number -q '.[0].num
 
 On clean review:
 ```bash
-echo "$HEAD" > ~/.100x-dev/review-cache
+echo "$HEAD" > ~/.100xprism/review-cache
 ```
 
 **Critical or High issues** → fix, new commit, clear cache, re-run gate. Do NOT push.

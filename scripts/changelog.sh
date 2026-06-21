@@ -100,7 +100,7 @@ _do_release() {
   if [[ "$_push" =~ ^[Yy]$ ]]; then
     git -C "$REPO_DIR" push origin "$tag"
     echo -e "${GREEN}Tag $tag pushed — GitHub Release will be created automatically.${NC}"
-    echo -e "${CYAN}Watch: https://github.com/rajitsaha/100x-dev/releases${NC}"
+    echo -e "${CYAN}Watch: https://github.com/rajitsaha/100xprism/releases${NC}"
   else
     echo -e "${CYAN}  Push when ready: git push origin $tag${NC}"
   fi

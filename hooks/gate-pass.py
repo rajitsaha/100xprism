@@ -3,7 +3,7 @@
 
 Called by the /gate skill as its final step once ALL gates report PASSED, and by
 /commit's Phase-0 cache check. Writes the token (sha256 of HEAD + tracked diff +
-untracked status) to the single-file cache ~/.100x-dev/gate-cache so the gate-on-commit
+untracked status) to the single-file cache ~/.100xprism/gate-cache so the gate-on-commit
 hook (pretooluse-gate.py) will allow the next commit/push — and only until the tree
 changes.
 

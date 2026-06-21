@@ -26,7 +26,7 @@ TOOL_CLAUDE=false
 select_tools() {
   echo "This installs 100x Dev globally for Claude Code."
   echo "To set up Cursor, Codex, Windsurf, Copilot, Gemini, or Antigravity in a project,"
-  echo "run  100x-dev init  from that project directory after this completes."
+  echo "run  100xprism init  from that project directory after this completes."
   echo ""
   read -rp "  Install for Claude Code? [Y/n]: " yn || true
   yn="${yn:-Y}"
@@ -105,7 +105,7 @@ _install_session_hook() {
 import json, os
 
 settings_file = os.environ['SETTINGS_FILE']
-hook_cmd = os.path.expanduser('~/100x-dev/shell/check-update.sh') + ' --claude-hook'
+hook_cmd = os.path.expanduser('~/100xprism/shell/check-update.sh') + ' --claude-hook'
 
 with open(settings_file) as f:
     settings = json.load(f)
@@ -256,5 +256,5 @@ echo -e "  ${CYAN}In your terminal:${NC}"
 if [ -n "$RC_FILE" ]; then
   echo -e "    source ~/${RC_FILE##*/}          # reload shell aliases"
 fi
-echo -e "    cd your-project && ${YELLOW}100x-dev init${NC}  # set up a project"
+echo -e "    cd your-project && ${YELLOW}100xprism init${NC}  # set up a project"
 echo ""

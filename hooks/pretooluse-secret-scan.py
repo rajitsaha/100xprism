@@ -89,7 +89,7 @@ def main() -> int:
     path = ti.get("file_path", "(file)")
     bullets = "\n".join(f"   • {f}" for f in findings)
     return block(
-        f"⛔ 100x-dev secret-scan hook: refusing to write a likely credential into {path}\n"
+        f"⛔ 100xprism secret-scan hook: refusing to write a likely credential into {path}\n"
         f"{bullets}\n"
         "   Move the secret to an env var / secret manager and reference it instead.\n"
         "   False positive? Set HOOK_SECRET_SCAN=off for this session."

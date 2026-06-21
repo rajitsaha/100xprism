@@ -78,5 +78,5 @@ fi
 
 echo ""
 echo -e "${GREEN}✓ Project set up!${NC}"
-echo -e "${CYAN}  Run 100x-dev update any time to pull latest workflows.${NC}"
+echo -e "${CYAN}  Run 100xprism update any time to pull latest workflows.${NC}"
 echo ""

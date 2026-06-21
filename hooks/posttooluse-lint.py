@@ -52,7 +52,7 @@ def main() -> int:
         return 0
     out = lint(path, event_cwd(event))
     if out:
-        sys.stderr.write(f"⚠ 100x-dev lint-on-save ({Path(path).name}):\n{out}\n")
+        sys.stderr.write(f"⚠ 100xprism lint-on-save ({Path(path).name}):\n{out}\n")
     return 0  # advisory only — never block
 
 
