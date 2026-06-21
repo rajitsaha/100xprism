@@ -36,15 +36,21 @@ import json
 import os
 import socket
 import sys
+import threading
+import time
 import webbrowser
 from collections import defaultdict
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _shipped  # noqa: E402 — shared value/store helper (one source of truth)
+
 HOME = os.path.expanduser("~")
 PROJECTS_DIR = os.path.join(HOME, ".claude", "projects")
 CACHE_FILE = os.path.join(HOME, ".claude", ".token-dashboard-cache.json")
 CACHE_VERSION = 2
+REFRESH_SECONDS = 300  # auto-rebuild cadence so a long-lived tab never goes stale
 
 # $ per 1M tokens — rough Opus-tier list prices; edit to match your plan/model.
 RATES = {"input": 15.0, "output": 75.0, "cache_read": 1.5, "cache_write": 18.75}
@@ -190,10 +196,9 @@ def save_cache(files):
         print(f"warning: could not write cache: {e}", file=sys.stderr)
 
 
-def project_label(path):
-    """Turn a transcript path into a readable project name."""
-    seg = path.split("/projects/")[1].split("/")[0] if "/projects/" in path else path
-    return seg.replace("-Users-rajit-", "~/").replace("-", "/")
+# project_label lives in _shipped so the dashboard and the value store derive the
+# exact same join key from a path.
+project_label = _shipped.project_label
 
 
 def build(verbose=True):
@@ -229,6 +234,7 @@ def build(verbose=True):
     totals = _empty()
     by_project = defaultdict(_empty)
     by_day = defaultdict(_empty)
+    by_project_day = defaultdict(lambda: defaultdict(_empty))
     by_model = defaultdict(_empty)
     comp_chars = defaultdict(int)
     sessions = 0
@@ -237,10 +243,12 @@ def build(verbose=True):
     for s in new_cache.values():
         t = s["totals"]
         _add(totals, t["input"], t["output"], t["cache_read"], t["cache_write"])
-        bp = by_project[s.get("project", "?")]
+        proj = s.get("project", "?")
+        bp = by_project[proj]
         _add(bp, t["input"], t["output"], t["cache_read"], t["cache_write"])
         for day, d in s.get("by_day", {}).items():
             _add(by_day[day], d["input"], d["output"], d["cache_read"], d["cache_write"])
+            _add(by_project_day[proj][day], d["input"], d["output"], d["cache_read"], d["cache_write"])
         for mdl, d in s.get("by_model", {}).items():
             _add(by_model[mdl], d["input"], d["output"], d["cache_read"], d["cache_write"])
         for cat, n in s.get("comp", {}).items():
@@ -258,6 +266,15 @@ def build(verbose=True):
 
     def cost(d):
         return sum(d[k] / 1_000_000 * RATES[k] for k in RATES)
+
+    # cost per (project label × day) — server-side input to the value↔cost join
+    by_project_day_cost = {
+        lbl: {day: round(cost(dd), 4) for day, dd in days.items()}
+        for lbl, days in by_project_day.items()
+    }
+    # Re-scan the value store once per rebuild (every 5 min / on demand), not per
+    # /api/value request — git subprocesses stay off the request path.
+    value_store = _shipped.refresh_store().get("repos", {})
 
     # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -287,6 +304,8 @@ def build(verbose=True):
             ([k, v] for k, v in by_model.items()),
             key=lambda r: -(r[1]["input"] + r[1]["cache_read"] + r[1]["cache_write"]),
         ),
+        "by_project_day_cost": by_project_day_cost,
+        "value_store": value_store,
     }
 
 
@@ -319,6 +338,72 @@ def print_summary(data):
         tot = v["input"] + v["cache_read"] + v["cache_write"]
         print(f"    {fmt(tot):>8} in / {fmt(v['output']):>6} out  ${c:>8,.0f}  {name}")
     print()
+
+
+# ---------------------------------------------------------------- value × cost
+
+def _window_cost(daycost, start, end):
+    """Sum a project's daily cost over the window (start, end].
+
+    start=None → open at the beginning; end=None → open through today. Dates are
+    "YYYY-MM-DD" strings, which sort lexicographically.
+    """
+    total = 0.0
+    for day, c in daycost.items():
+        if start and day <= start:
+            continue
+        if end and day > end:
+            continue
+        total += c
+    return round(total, 2)
+
+
+def _top_items(release, n=3):
+    out = []
+    for items in release.get("sections", {}).values():
+        for it in items:
+            out.append(_shipped._strip_md(it))
+            if len(out) >= n:
+                return out
+    return out
+
+
+def value_panel(data):
+    """Join the central value store to per-project token cost: for each release,
+    the estimated cost is that project's spend over (prev release date, this
+    release date]. Attribution is by date window — an estimate, like composition.
+    """
+    # Use the store cached by build() (refreshed each rebuild). Standalone callers
+    # that didn't go through build() fall back to a plain load — no rescan here.
+    store_repos = data.get("value_store")
+    if store_repos is None:
+        store_repos = _shipped.load_store().get("repos", {})
+    bpd = data.get("by_project_day_cost", {})
+    repos = []
+    for path, e in store_repos.items():
+        daycost = bpd.get(e.get("label"), {})
+        releases = e.get("releases", [])
+        rows = []
+        for i, r in enumerate(releases):
+            d_this = r.get("date") or None
+            d_prev = releases[i + 1].get("date") or None if i + 1 < len(releases) else None
+            rows.append({
+                "version": r.get("version"), "date": r.get("date"),
+                "items": r.get("items"), "top": _top_items(r),
+                "cost": _window_cost(daycost, d_prev, d_this) if d_this else None,
+            })
+        newest_date = releases[0].get("date") or None if releases else None
+        un = e.get("unreleased")
+        unreleased = None
+        if un:
+            unreleased = {**un, "cost": _window_cost(daycost, newest_date, None)}
+        repos.append({
+            "name": e.get("name"), "label": e.get("label"),
+            "source": e.get("source"), "scanned": e.get("scanned"),
+            "has_cost": bool(daycost), "releases": rows, "unreleased": unreleased,
+        })
+    repos.sort(key=lambda r: (r.get("source") != "registry", r.get("name") or ""))
+    return {"repos": repos, "store_path": _shipped.STORE_PATH}
 
 
 # ---------------------------------------------------------------- web UI
@@ -372,13 +457,37 @@ function legend(){return `<div class=legend>
  <span><i class=dot style=background:var(--cw)></i>cache write</span>
  <span><i class=dot style=background:var(--in)></i>input</span>
  <span><i class=dot style=background:var(--out)></i>output</span></div>`;}
+let VALUE=null;
+async function loadValue(){try{VALUE=await (await fetch('/api/value')).json();}catch(e){VALUE=null;}}
 async function load(){
- const d=await (await fetch('/api/data')).json(); render(d);}
+ const [d]=await Promise.all([ (await fetch('/api/data')).json(), loadValue() ]); render(d);}
 async function refresh(){document.getElementById('app').innerHTML='<p class=muted>Rescanning…</p>';
- const d=await (await fetch('/api/refresh')).json(); render(d);}
+ const [d]=await Promise.all([ (await fetch('/api/refresh')).json(), loadValue() ]); render(d);}
+function money(c){return c==null?'<span class=muted>—</span>':'$'+(+c).toLocaleString(undefined,{maximumFractionDigits:0});}
+function valueHTML(){
+ if(!VALUE||!VALUE.repos||!VALUE.repos.length) return '';
+ let h=`<h2>Value — cost vs. what shipped <span class=muted style="text-transform:none;font-weight:400">— estimate, cost attributed by date window</span></h2>`;
+ for(const r of VALUE.repos){
+  h+=`<h3 style="margin:18px 0 6px;font-size:13px">${esc(r.name)} <span class=muted style="font-weight:400">· ${esc(r.label||'')} · ${r.source}</span></h3>`;
+  if(!r.has_cost) h+=`<p class=muted style=margin:0_0_6px>No token cost matched this repo's label yet — value shown without cost.</p>`;
+  h+=`<table><tr><th>release</th><th>date</th><th>what shipped</th><th>items</th><th>est $</th></tr>`;
+  if(r.unreleased&&r.unreleased.count)
+   h+=`<tr><td><em>unreleased</em></td><td class=muted>since ${esc(r.unreleased.since||'')}</td>
+     <td>${Object.entries(r.unreleased.buckets||{}).map(([k,n])=>esc(k)+' '+n).join(', ')||'—'}</td>
+     <td>${r.unreleased.count}</td><td>${money(r.unreleased.cost)}</td></tr>`;
+  for(const rel of r.releases){
+   h+=`<tr><td>v${esc(rel.version)}</td><td class=muted>${esc(rel.date||'')}</td>
+     <td>${(rel.top||[]).map(esc).join('<br>')||'—'}</td>
+     <td>${rel.items==null?'—':rel.items}</td><td>${money(rel.cost)}</td></tr>`;
+  }
+  h+='</table>';
+ }
+ h+=`<p class=muted style=margin-top:8px>Cost is this project's token spend over each release's date window (previous release → this release) — directional, not billed-per-feature. Repos come from the registry — run <code>100x-value</code> in a repo to add it here; auto-discovery is best-effort and skips paths it can't resolve.</p>`;
+ return h;
+}
 function render(d){
  document.getElementById('meta').textContent=
-  `${d.transcripts} transcripts · ${d.sessions} sessions · generated ${d.generated}`;
+  `${d.transcripts} transcripts · ${d.sessions} sessions · updated ${d.generated}`;
  const t=d.totals, max=Math.max(...d.bloat.window?[]:[1]);
  const card=(lbl,val,note,col)=>`<div class=card><div class=lbl>${col?`<i class=dot style=background:${col}></i>`:''}${lbl}</div>
    <div class=val>${val}</div><div class=note>${note||''}</div></div>`;
@@ -391,6 +500,7 @@ function render(d){
    ${card('input',fmt(t.input),'new uncached text','var(--in)')}
    ${card('est. cost','$'+d.total_cost.toLocaleString(),'rough, list rates (editable)')}
   </div>`;
+ h+=valueHTML();
  h+=`<h2>Startup bloat — fixed context re-sent every turn</h2>
    <div class=meter><b style="width:${mw}%;background:${mw>30?'var(--cw)':'var(--cr)'}"></b>
    <em>median ${fmt(d.bloat.median)} of 200K window (${(d.bloat.median/W*100).toFixed(1)}%)</em></div>
@@ -423,7 +533,23 @@ function render(d){
  document.getElementById('app').innerHTML=h;
 }
 load();
+setInterval(load, 300000);  // auto-refresh every 5 min so the tab never goes stale
 </script></body></html>"""
+
+
+_build_lock = threading.Lock()
+
+
+def _rebuild():
+    with _build_lock:
+        Handler.data = build(verbose=False)
+    return Handler.data
+
+
+def _client_data(data):
+    """Token data for the browser, minus the heavy server-only fields."""
+    drop = {"by_project_day_cost", "value_store"}
+    return {k: v for k, v in data.items() if k not in drop}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -442,12 +568,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/api/refresh"):
-            Handler.data = build(verbose=False)
-            self._send(json.dumps(Handler.data))
+            self._send(json.dumps(_client_data(_rebuild())))
         elif self.path.startswith("/api/data"):
             if Handler.data is None:
-                Handler.data = build(verbose=False)
-            self._send(json.dumps(Handler.data))
+                _rebuild()
+            self._send(json.dumps(_client_data(Handler.data)))
+        elif self.path.startswith("/api/value"):
+            if Handler.data is None:
+                _rebuild()
+            self._send(json.dumps(value_panel(Handler.data)))
         else:
             self._send(PAGE, "text/html; charset=utf-8")
 
@@ -528,6 +657,17 @@ def main():
                 pass
         return
     print(f"\nToken dashboard → {url}  (Ctrl-C to stop) — all sessions & repos on this machine")
+
+    def _auto_refresh():
+        while True:
+            time.sleep(REFRESH_SECONDS)
+            try:
+                _rebuild()
+            except Exception:
+                pass
+
+    threading.Thread(target=_auto_refresh, daemon=True).start()
+
     if not args.no_open:
         try:
             webbrowser.open(url)

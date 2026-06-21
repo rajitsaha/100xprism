@@ -139,14 +139,23 @@ treat it as directional. It's the closest you can get without re-tokenizing.
 ### Value, not just cost: `value-report.py`
 
 Tokens measure *cost*; they can't tell you what you *shipped*. `value-report.py`
-fills that gap from a repo's `CHANGELOG.md` + recent git history:
+fills that gap from a repo's `CHANGELOG.md` + the unreleased commits on top of the
+last release (the "unreleased" boundary is the most recent `chore(release):`
+commit, so versions already in the CHANGELOG don't double-count):
 
 ```bash
-100x-value                          # alias → what shipped in the current repo
+100x-value                          # what shipped in the current repo — and register it
 python3 scripts/value-report.py /path/to/repo --versions 8
+python3 scripts/value-report.py --no-register   # print only, don't touch the store
 ```
 
-Read it next to `100x-tokens` for a cost-vs-value picture.
+Running it also **registers the repo** in a central store at
+`~/.100xprism/value.json`. The `100x-tokens` dashboard reads that store and renders
+a **"Value — cost vs. what shipped"** panel **in the same URL**: each release's
+*estimated* token cost — that project's spend over the release's date window —
+next to what it delivered. The estimate is directional (attributed by date, not
+billed per feature), like the composition meter. The CLI and the dashboard share
+one parser (`scripts/_shipped.py`), so they never disagree.
 
 ### Other options
 - `npx ccusage@latest` and `npx ccusage@latest blocks --live` — terminal dashboards.
