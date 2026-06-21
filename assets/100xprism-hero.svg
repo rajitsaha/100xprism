@@ -9,16 +9,17 @@
   <rect width="1200" height="420" rx="20" fill="url(#bg)"/>
   <rect x="0.5" y="0.5" width="1199" height="419" rx="20" fill="none" stroke="#232a31"/>
 
-  <!-- prism motif -->
-  <g transform="translate(96,120)">
-    <rect x="0" y="86" width="118" height="9" rx="4.5" fill="#e7edf3"/>
-    <polygon points="150,18 220,182 80,182" fill="#cfd8e3" fill-opacity="0.07" stroke="#cfd8e3" stroke-width="6" stroke-linejoin="round"/>
-    <g stroke-width="8" stroke-linecap="round">
-      <line x1="172" y1="92" x2="300" y2="34"  stroke="#ff5c5c"/>
-      <line x1="172" y1="92" x2="300" y2="63"  stroke="#ffa23d"/>
-      <line x1="172" y1="92" x2="300" y2="92"  stroke="#ffe14d"/>
-      <line x1="172" y1="92" x2="300" y2="121" stroke="#3ddc84"/>
-      <line x1="172" y1="92" x2="300" y2="150" stroke="#3da9ff"/>
+  <!-- leverage motif: small effort, 100x outcome -->
+  <g transform="translate(96,118)">
+    <line x1="70" y1="190" x2="212" y2="190" stroke="#8b97a3" stroke-width="5" stroke-linecap="round" opacity="0.4"/>
+    <polygon points="150,96 182,188 118,188" fill="#aeb9c4" fill-opacity="0.10" stroke="#aeb9c4" stroke-width="6" stroke-linejoin="round"/>
+    <line x1="8" y1="146" x2="304" y2="58" stroke="#aeb9c4" stroke-width="11" stroke-linecap="round"/>
+    <path d="M22 100 V126" stroke="#ff8a3d" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M12 116 l10 12 l10 -12" stroke="#ff8a3d" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="22" cy="140" r="10" fill="#ff8a3d"/>
+    <g transform="translate(244,26)">
+      <rect width="78" height="48" rx="12" fill="#3ddc84"/>
+      <text x="39" y="33" text-anchor="middle" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="27" font-weight="800" fill="#06251a">100×</text>
     </g>
   </g>
 
