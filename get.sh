@@ -2,6 +2,14 @@
 set -e
 
 INSTALL_DIR="$HOME/100xprism"
+LEGACY_DIR="$HOME/100x-dev"
+
+# Migrate a legacy 100x-dev clone to the new name before anything else (rebrand).
+if [ -d "$LEGACY_DIR/.git" ] && [ ! -d "$INSTALL_DIR" ]; then
+  echo "Migrating ~/100x-dev → ~/100xprism (rebrand)..."
+  mv "$LEGACY_DIR" "$INSTALL_DIR"
+  git -C "$INSTALL_DIR" remote set-url origin https://github.com/rajitsaha/100xprism.git 2>/dev/null || true
+fi
 
 if [ -d "$INSTALL_DIR/.git" ]; then
   echo "100xprism already installed — pulling latest..."

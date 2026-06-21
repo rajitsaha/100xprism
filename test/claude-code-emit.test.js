@@ -79,3 +79,33 @@ test('emit-claude-code prunes a future-removed module via manifest/marker', () =
   assert.ok(!fs.existsSync(path.join(skills, 'ghost-module')), 'manifest-tracked skill pruned')
   assert.ok(!fs.existsSync(path.join(commands, 'ghost.md')), 'marker-tagged alias pruned')
 })
+
+test('emit-claude-code migrates legacy 100x-dev markers so removed skills still prune', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), '100x-cc3-'))
+  const skills = path.join(home, '.claude', 'skills')
+  const commands = path.join(home, '.claude', 'commands')
+  fs.mkdirSync(skills, { recursive: true })
+  fs.mkdirSync(commands, { recursive: true })
+
+  // Simulate an install last emitted under the OLD name: a ghost module carrying
+  // the legacy marker + legacy manifest + legacy alias comment, now gone upstream.
+  fs.mkdirSync(path.join(skills, 'ghost-legacy'))
+  fs.writeFileSync(path.join(skills, 'ghost-legacy', 'SKILL.md'), 'x\n')
+  fs.writeFileSync(path.join(skills, 'ghost-legacy', '.100x-dev-generated'), 'gen\n')
+  fs.writeFileSync(
+    path.join(commands, 'ghostl.md'),
+    '---\ndescription: x\n---\n\n<!-- 100x-dev generated alias — regenerate, do not edit -->\n\nUse the `ghost-legacy` skill.\n',
+  )
+  fs.writeFileSync(
+    path.join(skills, '.100x-dev-manifest.json'),
+    JSON.stringify({ skills: ['ghost-legacy'], commands: ['ghostl'] }),
+  )
+
+  assert.equal(emit(home).status, 0)
+
+  assert.ok(!fs.existsSync(path.join(skills, 'ghost-legacy')), 'legacy-marked removed skill pruned')
+  assert.ok(!fs.existsSync(path.join(commands, 'ghostl.md')), 'legacy-marked alias pruned')
+  // The legacy manifest is migrated to the new name.
+  assert.ok(!fs.existsSync(path.join(skills, '.100x-dev-manifest.json')), 'legacy manifest renamed')
+  assert.ok(fs.existsSync(path.join(skills, '.100xprism-manifest.json')), 'new manifest present')
+})

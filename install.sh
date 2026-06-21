@@ -6,6 +6,13 @@ TEMPLATES_DIR="$HOME/100x-templates"
 VERSION="$(cat "$REPO_DIR/VERSION" 2>/dev/null | tr -d '[:space:]')"
 RC_FILE=""
 
+# Migrate the legacy 100x-dev config/cache dir (rebrand → 100xPrism). The clone
+# dir itself is migrated earlier (get.sh / npm bootstrap) before this runs.
+if [ -d "$HOME/.100x-dev" ] && [ ! -d "$HOME/.100xprism" ]; then
+  mv "$HOME/.100x-dev" "$HOME/.100xprism"
+  echo "  → Migrated ~/.100x-dev → ~/.100xprism"
+fi
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -14,7 +21,7 @@ NC='\033[0m'
 
 echo ""
 echo "╔══════════════════════════════════════╗"
-echo "║      100x Dev Setup — Installer      ║"
+echo "║     100xPrism Setup — Installer      ║"
 [ -n "$VERSION" ] && printf "║  %-36s║\n" "version v$VERSION"
 echo "╚══════════════════════════════════════╝"
 echo ""
@@ -24,7 +31,7 @@ echo ""
 TOOL_CLAUDE=false
 
 select_tools() {
-  echo "This installs 100x Dev globally for Claude Code."
+  echo "This installs 100xPrism globally for Claude Code."
   echo "To set up Cursor, Codex, Windsurf, Copilot, Gemini, or Antigravity in a project,"
   echo "run  100xprism init  from that project directory after this completes."
   echo ""
@@ -113,6 +120,14 @@ with open(settings_file) as f:
 hooks = settings.setdefault('hooks', {})
 session_start = hooks.setdefault('SessionStart', [])
 
+# Drop any stale hook pointing at the legacy ~/100x-dev path (rebrand cleanup).
+for entry in session_start:
+    entry['hooks'] = [
+        h for h in entry.get('hooks', [])
+        if '100x-dev/shell/check-update.sh' not in h.get('command', '')
+    ]
+session_start[:] = [e for e in session_start if e.get('hooks')]
+
 already_exists = any(
     h.get('command') == hook_cmd
     for entry in session_start
@@ -195,10 +210,16 @@ install_shell() {
     echo -e "  ${YELLOW}→ Removed old claude-dev-setup alias line${NC}"
   fi
 
+  # Remove the legacy 100x-dev source line + comment if present (rebrand cleanup)
+  if grep -qE "100x-dev/shell/aliases.sh|# 100x Dev aliases" "$RC_FILE" 2>/dev/null; then
+    grep -vE "100x-dev/shell/aliases.sh|# 100x Dev aliases" "$RC_FILE" > "$RC_FILE.tmp" && mv "$RC_FILE.tmp" "$RC_FILE"
+    echo -e "  ${YELLOW}→ Removed legacy 100x-dev alias line${NC}"
+  fi
+
   if grep -qF "$SOURCE_LINE" "$RC_FILE" 2>/dev/null; then
     echo -e "  ${YELLOW}→ Already sourced in ~/${RC_FILE##*/} (no change)${NC}"
   else
-    { echo ""; echo "# 100x Dev aliases"; echo "$SOURCE_LINE"; } >> "$RC_FILE"
+    { echo ""; echo "# 100xPrism aliases"; echo "$SOURCE_LINE"; } >> "$RC_FILE"
     echo -e "  ${GREEN}→ Added source line to ~/${RC_FILE##*/} ($SHELL_NAME) ✓${NC}"
   fi
 

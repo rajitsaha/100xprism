@@ -360,6 +360,34 @@ def _read_manifest(skills_dir: Path) -> dict:
         return {}
 
 
+# Pre-rebrand marker names. Renamed in place so manifest/prune logic recognizes
+# installs that were last emitted under the old `100x-dev` name.
+_LEGACY_GENERATED_MARKER = ".100x-dev-generated"
+_LEGACY_MANIFEST_NAME = ".100x-dev-manifest.json"
+_LEGACY_ALIAS_MARKER = "<!-- 100x-dev generated alias — regenerate, do not edit -->"
+
+
+def _migrate_legacy_markers(skills_dir: Path, commands_dir: Path) -> None:
+    legacy_manifest = skills_dir / _LEGACY_MANIFEST_NAME
+    if legacy_manifest.exists() and not (skills_dir / MANIFEST_NAME).exists():
+        legacy_manifest.rename(skills_dir / MANIFEST_NAME)
+    for child in skills_dir.iterdir():
+        if not child.is_dir():
+            continue
+        legacy = child / _LEGACY_GENERATED_MARKER
+        if legacy.exists() and not (child / GENERATED_MARKER).exists():
+            legacy.rename(child / GENERATED_MARKER)
+    for f in commands_dir.iterdir():
+        if not f.is_file() or f.suffix != ".md":
+            continue
+        try:
+            text = f.read_text()
+        except OSError:
+            continue
+        if _LEGACY_ALIAS_MARKER in text:
+            f.write_text(text.replace(_LEGACY_ALIAS_MARKER, ALIAS_MARKER))
+
+
 def cmd_emit_claude_code():
     home = Path(os.environ.get("HOME", str(Path.home())))
     skills_dir = home / ".claude" / "skills"
@@ -367,6 +395,7 @@ def cmd_emit_claude_code():
     skills_dir.mkdir(parents=True, exist_ok=True)
     commands_dir.mkdir(parents=True, exist_ok=True)
 
+    _migrate_legacy_markers(skills_dir, commands_dir)
     prev = _read_manifest(skills_dir)
     prev_skills = set(prev.get("skills", []))
     prev_cmds = set(prev.get("commands", []))
