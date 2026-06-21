@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.3.2] — 2026-06-20
+
+### Added
+- **`motion-framer` plugin** — Framer Motion / Motion animation recipes (variants, gestures, layout + exit animations, spring physics, scroll effects) from the community `claude-design-skillstack` marketplace. Plugin count 13 → 14. It's a markdown skill (no executable code/MCP), so a small supply-chain surface.
+
+---
+
 ## [2.3.1] — 2026-06-20
 
 ### Fixed
