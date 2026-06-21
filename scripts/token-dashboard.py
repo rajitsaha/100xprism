@@ -272,6 +272,9 @@ def build(verbose=True):
         lbl: {day: round(cost(dd), 4) for day, dd in days.items()}
         for lbl, days in by_project_day.items()
     }
+    # Re-scan the value store once per rebuild (every 5 min / on demand), not per
+    # /api/value request — git subprocesses stay off the request path.
+    value_store = _shipped.refresh_store().get("repos", {})
 
     # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -302,6 +305,7 @@ def build(verbose=True):
             key=lambda r: -(r[1]["input"] + r[1]["cache_read"] + r[1]["cache_write"]),
         ),
         "by_project_day_cost": by_project_day_cost,
+        "value_store": value_store,
     }
 
 
@@ -369,10 +373,14 @@ def value_panel(data):
     the estimated cost is that project's spend over (prev release date, this
     release date]. Attribution is by date window — an estimate, like composition.
     """
-    store = _shipped.refresh_store()
+    # Use the store cached by build() (refreshed each rebuild). Standalone callers
+    # that didn't go through build() fall back to a plain load — no rescan here.
+    store_repos = data.get("value_store")
+    if store_repos is None:
+        store_repos = _shipped.load_store().get("repos", {})
     bpd = data.get("by_project_day_cost", {})
     repos = []
-    for path, e in store.get("repos", {}).items():
+    for path, e in store_repos.items():
         daycost = bpd.get(e.get("label"), {})
         releases = e.get("releases", [])
         rows = []
@@ -474,7 +482,7 @@ function valueHTML(){
   }
   h+='</table>';
  }
- h+=`<p class=muted style=margin-top:8px>Cost is this project's token spend over each release's date window (previous release → this release) — directional, not billed-per-feature. Run <code>100x-value</code> in a repo to add it here.</p>`;
+ h+=`<p class=muted style=margin-top:8px>Cost is this project's token spend over each release's date window (previous release → this release) — directional, not billed-per-feature. Repos come from the registry — run <code>100x-value</code> in a repo to add it here; auto-discovery is best-effort and skips paths it can't resolve.</p>`;
  return h;
 }
 function render(d){
@@ -539,8 +547,9 @@ def _rebuild():
 
 
 def _client_data(data):
-    """Token data for the browser, minus the heavy internal join map."""
-    return {k: v for k, v in data.items() if k != "by_project_day_cost"}
+    """Token data for the browser, minus the heavy server-only fields."""
+    drop = {"by_project_day_cost", "value_store"}
+    return {k: v for k, v in data.items() if k not in drop}
 
 
 class Handler(BaseHTTPRequestHandler):
