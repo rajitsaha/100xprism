@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.3.4] — 2026-06-21
+
+### Added
+- **Value × cost, one dashboard.** `100x-value` no longer just summarizes what shipped — it now **registers each repo** in a central store at `~/.100xprism/value.json`, and `token-dashboard.py` renders a **"Value — cost vs. what shipped"** panel in the same URL: each release's *estimated* token cost (attributed by date window — directional, not billed-per-feature) next to what it delivered. New `scripts/_shipped.py` is the one parser shared by the CLI and the dashboard so they never drift.
+- **Dashboard auto-refresh** — the token dashboard rebuilds every 5 minutes (background thread + client poll) so a long-lived tab never goes stale; the header shows an `updated HH:MM:SS` stamp.
+
+### Fixed
+- **Unreleased-work double-count** — `value-report.py` derived its "unreleased" boundary from `git describe --tags`, so when the CHANGELOG ran ahead of the git tags (as 2.3.2/2.3.3 did), already-released commits showed up *again* as unreleased. The boundary is now the most recent `chore(release):` commit (tag as fallback), so released versions stop reappearing.
+
+### Changed
+- **Token store reads off the request path** — the dashboard refreshes the value store on its rebuild tick (startup / 5-min / manual Rescan) and caches it, instead of running git per `/api/value` request.
+
+---
+
 ## [2.3.3] — 2026-06-21
 
 ### Added
