@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://rajitsaha.github.io/100x-dev/sitemap.xml
+Sitemap: https://rajitsaha.github.io/100xprism/sitemap.xml
