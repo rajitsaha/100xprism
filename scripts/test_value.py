@@ -70,5 +70,24 @@ class ResolveDirTest(unittest.TestCase):
         self.assertIsNone(_shipped.resolve_real_dir("-"))
 
 
+class GitValueTest(unittest.TestCase):
+    def test_windowed_commits_prs_files(self):
+        with tempfile.TemporaryDirectory() as repo:
+            git(repo, "init", "-q", "-b", "main")
+            commit(repo, "feat: a (#1)")
+            commit(repo, "fix: b")
+            commit(repo, "docs: c (#2)")
+            self.assertNotEqual(_shipped.git_head(repo), "")
+            v = _shipped.git_value(repo, None, None)
+            self.assertEqual(v["commits"], 3)
+            self.assertEqual(v["prs"], 2)               # (#1) and (#2)
+            self.assertGreaterEqual(v["files"], 1)
+            self.assertEqual(len(v["subjects"]), 3)
+
+    def test_not_a_repo_returns_none(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIsNone(_shipped.git_value(d, None, None))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

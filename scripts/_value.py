@@ -88,3 +88,56 @@ def resolve_real_dir(mangled_dirname, root="/"):
             return None
         cur, i = matched[0], matched[1] + 1
     return cur if os.path.isdir(cur) else None
+
+
+# ----------------------------------------------------------------- git value
+
+_PR_RE = re.compile(r"\(#\d+\)")
+
+
+def _git(repo, *a, timeout=10):
+    return subprocess.run(["git", "-C", repo, *a], capture_output=True,
+                          text=True, timeout=timeout)
+
+
+def git_head(repo):
+    try:
+        r = _git(repo, "rev-parse", "HEAD")
+        return r.stdout.strip() if r.returncode == 0 else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def git_value(repo, start, end):
+    """Windowed git activity, or None if `repo` is not a git work tree."""
+    try:
+        if _git(repo, "rev-parse", "--is-inside-work-tree").returncode != 0:
+            return None
+        args = ["log", "--no-merges", "--pretty=%s"]
+        if start:
+            args.append(f"--since={start} 00:00:00")
+        if end:
+            args.append(f"--until={end} 23:59:59")
+        subjects = [s for s in _git(repo, *args).stdout.splitlines() if s]
+        # files / insertions / deletions over the same window
+        nargs = ["log", "--no-merges", "--numstat", "--pretty=tformat:"]
+        if start:
+            nargs.append(f"--since={start} 00:00:00")
+        if end:
+            nargs.append(f"--until={end} 23:59:59")
+        files, ins, dele = set(), 0, 0
+        for ln in _git(repo, *nargs).stdout.splitlines():
+            parts = ln.split("\t")
+            if len(parts) == 3:
+                a, d, path = parts
+                files.add(path)
+                ins += int(a) if a.isdigit() else 0
+                dele += int(d) if d.isdigit() else 0
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+    return {
+        "commits": len(subjects),
+        "prs": sum(1 for s in subjects if _PR_RE.search(s)),
+        "files": len(files), "insertions": ins, "deletions": dele,
+        "subjects": subjects[:5],
+    }
