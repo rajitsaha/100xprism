@@ -12,7 +12,8 @@
     "claude-mem@thedotmack",
     "understand-anything@understand-anything",
     "ui-ux-pro-max@ui-ux-pro-max-skill",
-    "chrome-devtools-mcp@claude-plugins-official"
+    "chrome-devtools-mcp@claude-plugins-official",
+    "motion-framer@claude-design-skillstack"
   ],
   "extraKnownMarketplaces": {
     "claude-code-plugins": {
@@ -37,6 +38,12 @@
       "source": {
         "source": "github",
         "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+      }
+    },
+    "claude-design-skillstack": {
+      "source": {
+        "source": "github",
+        "repo": "freshtechbro/claudedesignskills"
       }
     }
   }
