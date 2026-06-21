@@ -1,16 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 200" width="120" height="94" role="img" aria-label="100xPrism logo">
-  <title>100xPrism</title>
-  <!-- incoming white beam -->
-  <rect x="6" y="99" width="92" height="8" rx="4" fill="#e7edf3"/>
-  <!-- prism -->
-  <polygon points="128,44 198,164 58,164" fill="#cfd8e3" fill-opacity="0.08" stroke="#cfd8e3" stroke-width="6" stroke-linejoin="round"/>
-  <!-- refracted spectrum -->
-  <g stroke-width="7" stroke-linecap="round">
-    <line x1="150" y1="104" x2="250" y2="58"  stroke="#ff5c5c"/>
-    <line x1="150" y1="104" x2="250" y2="76"  stroke="#ffa23d"/>
-    <line x1="150" y1="104" x2="250" y2="94"  stroke="#ffe14d"/>
-    <line x1="150" y1="104" x2="250" y2="112" stroke="#3ddc84"/>
-    <line x1="150" y1="104" x2="250" y2="130" stroke="#3da9ff"/>
-    <line x1="150" y1="104" x2="250" y2="148" stroke="#a06bff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 200" width="120" height="94" role="img" aria-label="100xPrism logo — small effort, 100x outcome">
+  <title>100xPrism — minimal effort, 100× outcome</title>
+
+  <!-- ground -->
+  <line x1="66" y1="170" x2="190" y2="170" stroke="#8b97a3" stroke-width="4" stroke-linecap="round" opacity="0.45"/>
+
+  <!-- fulcrum -->
+  <polygon points="150,98 176,168 124,168" fill="#8b97a3" fill-opacity="0.16" stroke="#8b97a3" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- lever beam: pivots on the fulcrum — effort end (left) low, outcome end (right) lifted high -->
+  <line x1="26" y1="134" x2="226" y2="66" stroke="#5b6b7a" stroke-width="9" stroke-linecap="round"/>
+
+  <!-- small effort: a light press down on the long arm -->
+  <path d="M33 104 V124" stroke="#ff8a3d" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M27 117 l6 8 l6 -8" stroke="#ff8a3d" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="33" cy="132" r="7.5" fill="#ff8a3d"/>
+
+  <!-- big outcome: the 100x badge, lifted -->
+  <g transform="translate(192,32)">
+    <rect width="60" height="38" rx="10" fill="#3ddc84"/>
+    <text x="30" y="26" text-anchor="middle" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="21" font-weight="800" fill="#06251a">100×</text>
   </g>
 </svg>
