@@ -6,7 +6,17 @@ Reads ~/.claude/projects/**/*.jsonl (the transcripts Claude Code writes), and
 serves a small web UI that breaks usage down by the four token "purposes"
 (input / output / cache-read / cache-write), by project, by day, and by model.
 It also shows a "startup bloat" meter: the fixed context (system prompt + tool/
-skill/agent descriptions + SessionStart injections) re-sent on every turn.
+skill/agent descriptions + SessionStart injections) re-sent on every turn, and a
+"content composition" ESTIMATE (code written / files read / logs / model prose /
+prompts) derived char-by-char from the transcripts — see the caveat below.
+
+Machine-global + singleton: it reads the global ~/.claude/projects dir, so ONE
+instance covers every session and every repo/directory on the machine. Launching
+it again (from any repo, any session) just opens the already-running URL.
+
+Composition caveat: the API bills tokens per TURN as aggregates, not per content
+block — so the composition view is an *estimate* of where text volume goes
+(chars ÷ 4), not billed truth. Treat it as directional.
 
 No third-party dependencies. Fully offline (no CDN). Uses an on-disk cache
 keyed by file path + mtime + size, so only new/changed transcripts are re-parsed.
@@ -24,6 +34,7 @@ import argparse
 import glob
 import json
 import os
+import socket
 import sys
 import webbrowser
 from collections import defaultdict
@@ -50,11 +61,70 @@ def _add(dst, i, o, cr, cw):
     dst["cache_write"] += cw
 
 
+# Content-composition categories. CHAR counts (later ÷4 → an *estimate* of tokens).
+# This is NOT billed truth: the API bills per-turn aggregates, not per content
+# block — so this shows where conversation TEXT VOLUME goes, not exact tokens.
+COMP_CATS = ["prompts", "model_output", "code_authored", "tool_calls",
+             "files_read", "logs", "other_results"]
+COMP_LABELS = {
+    "prompts": "your prompts",
+    "model_output": "model output (prose)",
+    "code_authored": "code written (edits)",
+    "tool_calls": "tool calls",
+    "files_read": "code / files read",
+    "logs": "command output / logs",
+    "other_results": "other tool results",
+}
+_READ_TOOLS = {"Read", "Glob", "Grep", "LS", "NotebookRead"}
+_SHELL_TOOLS = {"Bash", "BashOutput"}
+_EDIT_TOOLS = {"Edit", "Write", "NotebookEdit", "MultiEdit"}
+
+
+def _classify(role, content, comp, tool_names):
+    """Tally character counts per content-type category for one message."""
+    if isinstance(content, str):
+        comp["model_output" if role == "assistant" else "prompts"] += len(content)
+        return
+    if not isinstance(content, list):
+        return
+    for b in content:
+        if isinstance(b, str):
+            comp["model_output" if role == "assistant" else "prompts"] += len(b)
+            continue
+        if not isinstance(b, dict):
+            continue
+        bt = b.get("type")
+        if bt == "text":
+            comp["model_output" if role == "assistant" else "prompts"] += len(b.get("text") or "")
+        elif bt == "tool_use":
+            name = b.get("name", "")
+            tool_names[b.get("id", "")] = name
+            sz = len(json.dumps(b.get("input", {}), ensure_ascii=False))
+            comp["code_authored" if name in _EDIT_TOOLS else "tool_calls"] += sz
+        elif bt == "tool_result":
+            name = tool_names.get(b.get("tool_use_id", ""), "")
+            c = b.get("content", "")
+            if isinstance(c, list):
+                sz = sum(len(x.get("text") or "") for x in c if isinstance(x, dict))
+            elif isinstance(c, str):
+                sz = len(c)
+            else:
+                sz = len(json.dumps(c, ensure_ascii=False))
+            if name in _READ_TOOLS:
+                comp["files_read"] += sz
+            elif name in _SHELL_TOOLS:
+                comp["logs"] += sz
+            else:
+                comp["other_results"] += sz
+
+
 def parse_file(path):
     """Aggregate one transcript. Returns a per-file summary dict."""
     totals = _empty()
     by_day = defaultdict(_empty)
     by_model = defaultdict(_empty)
+    comp = defaultdict(int)      # content-type char counts (composition estimate)
+    tool_names = {}              # tool_use id -> tool name, for classifying results
     msgs = 0
     first_fixed = None  # fixed context at first billed turn (bloat proxy)
     turns = 0
@@ -66,6 +136,10 @@ def parse_file(path):
         if not isinstance(o, dict):
             continue
         m = o.get("message")
+        # Composition: classify every message's content blocks (billed or not).
+        if isinstance(m, dict):
+            role = m.get("role") or o.get("type") or ""
+            _classify(role, m.get("content"), comp, tool_names)
         u = m.get("usage") if isinstance(m, dict) else None
         if not isinstance(u, dict):
             u = o.get("usage") if isinstance(o.get("usage"), dict) else None
@@ -90,6 +164,7 @@ def parse_file(path):
         "totals": totals,
         "by_day": dict(by_day),
         "by_model": dict(by_model),
+        "comp": {k: comp.get(k, 0) for k in COMP_CATS},
         "msgs": msgs,
         "turns": turns,
         "first_fixed": first_fixed or 0,
@@ -155,6 +230,7 @@ def build(verbose=True):
     by_project = defaultdict(_empty)
     by_day = defaultdict(_empty)
     by_model = defaultdict(_empty)
+    comp_chars = defaultdict(int)
     sessions = 0
     fixed_samples = []
     total_msgs = 0
@@ -167,6 +243,8 @@ def build(verbose=True):
             _add(by_day[day], d["input"], d["output"], d["cache_read"], d["cache_write"])
         for mdl, d in s.get("by_model", {}).items():
             _add(by_model[mdl], d["input"], d["output"], d["cache_read"], d["cache_write"])
+        for cat, n in s.get("comp", {}).items():
+            comp_chars[cat] += n
         if s.get("turns"):
             sessions += 1
             total_msgs += s.get("msgs", 0)
@@ -181,6 +259,15 @@ def build(verbose=True):
     def cost(d):
         return sum(d[k] / 1_000_000 * RATES[k] for k in RATES)
 
+    # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
+    comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
+    comp_sum = sum(comp_tokens.values()) or 1
+    composition = sorted(
+        ([COMP_LABELS[k], comp_tokens[k], round(100 * comp_tokens[k] / comp_sum, 1)]
+         for k in COMP_CATS if comp_tokens[k]),
+        key=lambda r: -r[1],
+    )
+
     return {
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "transcripts": len(paths),
@@ -190,6 +277,7 @@ def build(verbose=True):
         "total_cost": round(cost(totals), 2),
         "rates": RATES,
         "bloat": {"median": int(median_fixed), "avg": int(avg_fixed), "samples": n},
+        "composition": composition,
         "by_project": sorted(
             ([k, v, round(cost(v), 2)] for k, v in by_project.items()),
             key=lambda r: -(r[1]["input"] + r[1]["cache_read"] + r[1]["cache_write"]),
@@ -222,6 +310,10 @@ def print_summary(data):
     print(f"  est. cost        : ${data['total_cost']:,}")
     print(f"\n  startup bloat (fixed context re-sent each turn): "
           f"median {fmt(data['bloat']['median'])} / avg {fmt(data['bloat']['avg'])} tokens")
+    if data.get("composition"):
+        print("\n  Content composition (ESTIMATE — char-based, not billed tokens):")
+        for label, toks, pct in data["composition"]:
+            print(f"    {pct:>5.1f}%  {fmt(toks):>7}  {label}")
     print("\n  Top projects (by input volume):")
     for name, v, c in data["by_project"][:10]:
         tot = v["input"] + v["cache_read"] + v["cache_write"]
@@ -303,6 +395,18 @@ function render(d){
    <div class=meter><b style="width:${mw}%;background:${mw>30?'var(--cw)':'var(--cr)'}"></b>
    <em>median ${fmt(d.bloat.median)} of 200K window (${(d.bloat.median/W*100).toFixed(1)}%)</em></div>
    <p class=muted style=margin-top:8px>avg ${fmt(d.bloat.avg)} · lower is better. This is system prompt + tool/skill/agent descriptions + SessionStart injections, read on every turn.</p>`;
+ if(d.composition&&d.composition.length){
+  const CC=['#58a6ff','#f778ba','#3fb950','#d29922','#a371f7','#ff7b72','#8b949e'];
+  const ct=d.composition.reduce((a,r)=>a+r[1],0)||1;
+  let segs='',rows='';
+  d.composition.forEach((r,i)=>{const col=CC[i%CC.length];
+   segs+=`<span style="width:${100*r[1]/ct}%;background:${col}"></span>`;
+   rows+=`<tr><td><i class=dot style=background:${col}></i>${esc(r[0])}</td><td>${fmt(r[1])}</td><td>${r[2]}%</td></tr>`;});
+  h+=`<h2>Content composition <span class=muted style="text-transform:none;font-weight:400">— estimate, char-based (not billed tokens)</span></h2>
+   <div class=bar style="height:14px;margin-bottom:12px">${segs}</div>
+   <table><tr><th>content type</th><th>est. tokens</th><th>share</th></tr>${rows}</table>
+   <p class=muted style=margin-top:8px>The API bills per-turn aggregates, so this approximates where your conversation <em>text volume</em> goes (chars÷4): code written, files read, command output/logs, model prose, prompts. Directional, not exact.</p>`;
+ }
  h+=`<h2>By project</h2>${legend()}<table><tr><th>project</th><th>mix</th><th>cache read</th><th>output</th><th>est $</th></tr>`;
  for(const[name,v,c]of d.by_project){h+=`<tr><td>${esc(name)}</td><td>${bar(v)}</td>
    <td>${fmt(v.cache_read)}</td><td>${fmt(v.output)}</td><td>$${c.toLocaleString()}</td></tr>`;}
@@ -348,16 +452,61 @@ class Handler(BaseHTTPRequestHandler):
             self._send(PAGE, "text/html; charset=utf-8")
 
 
+def _oneline():
+    """Fast cache-only summary line for shell startup. Silent if no cache yet."""
+    files = load_cache()
+    if not files:
+        return
+    tot = _empty()
+    for s in files.values():
+        t = s.get("totals", {})
+        _add(tot, t.get("input", 0), t.get("output", 0),
+             t.get("cache_read", 0), t.get("cache_write", 0))
+    if not any(tot.values()):
+        return
+    cost = sum(tot[k] / 1_000_000 * RATES[k] for k in RATES)
+    print(f"100xPrism tokens (as of last scan): {fmt(tot['output'])} out · "
+          f"{fmt(tot['cache_read'])} ctx · ~${cost:,.0f} · run `100x-tokens` for the dashboard")
+
+
+def _port_in_use(port):
+    """True if something is already listening on 127.0.0.1:port (a running dash)."""
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+            return True
+    except OSError:
+        return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8787)
     ap.add_argument("--print", action="store_true", dest="text")
+    ap.add_argument("--oneline", action="store_true",
+                    help="one fast summary line from cache (no rescan) — for shell startup")
     ap.add_argument("--no-open", action="store_true")
     args = ap.parse_args()
+
+    if args.oneline:
+        _oneline()
+        return
 
     if not os.path.isdir(PROJECTS_DIR):
         print(f"No transcripts found at {PROJECTS_DIR}", file=sys.stderr)
         sys.exit(1)
+
+    url = f"http://127.0.0.1:{args.port}"
+
+    # Singleton: one dashboard serves EVERY session/repo on this machine (it reads
+    # the global ~/.claude/projects). If one is already up, just open that URL.
+    if not args.text and _port_in_use(args.port):
+        print(f"Token dashboard already running → {url}  (covers all sessions/repos)")
+        if not args.no_open:
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
+        return
 
     print("Scanning transcripts (first run is slow; later runs use the cache)...", file=sys.stderr)
     data = build(verbose=True)
@@ -367,9 +516,18 @@ def main():
         return
 
     Handler.data = data
-    url = f"http://127.0.0.1:{args.port}"
-    srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    print(f"\nToken dashboard → {url}  (Ctrl-C to stop)")
+    try:
+        srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    except OSError:
+        # Lost a startup race with another session — point at the live one.
+        print(f"Token dashboard already running → {url}  (covers all sessions/repos)")
+        if not args.no_open:
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
+        return
+    print(f"\nToken dashboard → {url}  (Ctrl-C to stop) — all sessions & repos on this machine")
     if not args.no_open:
         try:
             webbrowser.open(url)
