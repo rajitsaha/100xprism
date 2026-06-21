@@ -2,7 +2,7 @@
 'use strict'
 
 const HELP = `
-Usage: 100x-dev <command>
+Usage: 100xprism <command>
 
 Commands:
   install    Global setup — copy workflows to ~/.claude/commands/, install plugins
@@ -11,9 +11,9 @@ Commands:
   check      Check for a newer version without applying
 
 Examples:
-  npm install -g 100x-dev && 100x-dev install
-  cd my-project && 100x-dev init
-  100x-dev update
+  npm install -g 100xprism && 100xprism install
+  cd my-project && 100xprism init
+  100xprism update
 `.trimStart()
 
 const [,, cmd, ...args] = process.argv

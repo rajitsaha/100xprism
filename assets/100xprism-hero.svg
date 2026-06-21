@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="100xPrism — one config, every AI coding tool">
+  <title>100xPrism — One config. Every AI coding tool.</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1014"/>
+      <stop offset="1" stop-color="#13181e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="420" rx="20" fill="url(#bg)"/>
+  <rect x="0.5" y="0.5" width="1199" height="419" rx="20" fill="none" stroke="#232a31"/>
+
+  <!-- prism motif -->
+  <g transform="translate(96,120)">
+    <rect x="0" y="86" width="118" height="9" rx="4.5" fill="#e7edf3"/>
+    <polygon points="150,18 220,182 80,182" fill="#cfd8e3" fill-opacity="0.07" stroke="#cfd8e3" stroke-width="6" stroke-linejoin="round"/>
+    <g stroke-width="8" stroke-linecap="round">
+      <line x1="172" y1="92" x2="300" y2="34"  stroke="#ff5c5c"/>
+      <line x1="172" y1="92" x2="300" y2="63"  stroke="#ffa23d"/>
+      <line x1="172" y1="92" x2="300" y2="92"  stroke="#ffe14d"/>
+      <line x1="172" y1="92" x2="300" y2="121" stroke="#3ddc84"/>
+      <line x1="172" y1="92" x2="300" y2="150" stroke="#3da9ff"/>
+    </g>
+  </g>
+
+  <!-- wordmark + copy -->
+  <text x="470" y="150" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="76" font-weight="800" fill="#e7edf3" letter-spacing="-1.5">100x<tspan fill="#3ddc84">Prism</tspan></text>
+  <text x="472" y="200" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#93a1ad">One config. Every AI coding tool.</text>
+  <text x="472" y="262" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" fill="#6f7d89">Claude Code &#183; Cursor &#183; Codex &#183; Windsurf &#183; Copilot &#183; Gemini &#183; Antigravity</text>
+
+  <!-- stat chips -->
+  <g font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="600">
+    <g transform="translate(472,300)">
+      <rect width="150" height="40" rx="20" fill="#14181d" stroke="#232a31"/>
+      <text x="75" y="26" text-anchor="middle" fill="#cfe8d8">66 modules</text>
+    </g>
+    <g transform="translate(636,300)">
+      <rect width="180" height="40" rx="20" fill="#14181d" stroke="#232a31"/>
+      <text x="90" y="26" text-anchor="middle" fill="#cfe8d8">26 slash commands</text>
+    </g>
+    <g transform="translate(830,300)">
+      <rect width="150" height="40" rx="20" fill="#14181d" stroke="#232a31"/>
+      <text x="75" y="26" text-anchor="middle" fill="#cfe8d8">quality gates</text>
+    </g>
+  </g>
+</svg>

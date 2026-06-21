@@ -4,7 +4,7 @@ Contributor contract for AI coding agents working on this repo. Users see `READM
 
 ## What this repo is
 
-100x-dev is a **distributor**, not an app. The product is `modules/` (66 SKILL.md files with YAML frontmatter). Adapters in `adapters/` render those modules into each AI tool's native format (Claude Code skills, Cursor `.mdc`, Codex repo skills + `AGENTS.md`, and Windsurf/Copilot/Gemini/Antigravity single-file configs). Users install via `npm i -g 100x-dev` or `get.sh`.
+100xprism is a **distributor**, not an app. The product is `modules/` (66 SKILL.md files with YAML frontmatter). Adapters in `adapters/` render those modules into each AI tool's native format (Claude Code skills, Cursor `.mdc`, Codex repo skills + `AGENTS.md`, and Windsurf/Copilot/Gemini/Antigravity single-file configs). Users install via `npm i -g 100xprism` or `get.sh`.
 
 ## The golden rule
 

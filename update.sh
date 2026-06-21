@@ -131,7 +131,7 @@ while IFS= read -r line; do echo "  • $line"; done <<< "$CHANGES"
 echo ""
 
 if [ "$CHECK_ONLY" = true ]; then
-  echo -e "${CYAN}Run '~/100x-dev/update.sh' to apply updates.${NC}"
+  echo -e "${CYAN}Run '~/100xprism/update.sh' to apply updates.${NC}"
   echo ""
   exit 0
 fi
@@ -172,7 +172,7 @@ echo -e "  ${GREEN}→ Updated modules ✓${NC}"
 
 python3 "$REPO_DIR/adapters/lib/sync_plugins.py" \
   --settings "$SETTINGS_FILE" --plugins "$REPO_DIR/plugins/plugins.json" \
-  --session-hook "$HOME/100x-dev/shell/check-update.sh --claude-hook"
+  --session-hook "$HOME/100xprism/shell/check-update.sh --claude-hook"
 
 echo -e "  ${CYAN}→ Shell aliases auto-updated (sourced file)${NC}"
 
@@ -185,7 +185,7 @@ run_plugin_updates
 # ── Regenerate tracked project instruction files ────────────────────────────
 
 regenerate_tracked_projects() {
-  local tracked="$HOME/.100x-dev/tracked-projects"
+  local tracked="$HOME/.100xprism/tracked-projects"
   [[ -f "$tracked" ]] || return 0
 
   local count=0
@@ -211,13 +211,13 @@ regenerate_tracked_projects() {
 }
 
 # Clear update-available flag from cache so banner stops showing
-if [[ -f "$HOME/.100x-dev/update-cache" ]]; then
+if [[ -f "$HOME/.100xprism/update-cache" ]]; then
   _tmp="$(mktemp)"
-  grep -v '^has_update=' "$HOME/.100x-dev/update-cache" > "$_tmp" 2>/dev/null || true
+  grep -v '^has_update=' "$HOME/.100xprism/update-cache" > "$_tmp" 2>/dev/null || true
   grep -v '^snoozed_until=' "$_tmp" >> /dev/null || true
-  mv "$_tmp" "$HOME/.100x-dev/update-cache"
-  echo "has_update=false"  >> "$HOME/.100x-dev/update-cache"
-  echo "snoozed_until=0"   >> "$HOME/.100x-dev/update-cache"
+  mv "$_tmp" "$HOME/.100xprism/update-cache"
+  echo "has_update=false"  >> "$HOME/.100xprism/update-cache"
+  echo "snoozed_until=0"   >> "$HOME/.100xprism/update-cache"
 fi
 
 regenerate_tracked_projects

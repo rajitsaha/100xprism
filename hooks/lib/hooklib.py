@@ -1,4 +1,4 @@
-"""Shared helpers for 100x-dev first-party hooks.
+"""Shared helpers for 100xprism first-party hooks.
 
 Every hook is a small python3 script invoked by Claude Code with a JSON event on
 stdin. This module centralises the three things they all need: reading that event,
@@ -20,10 +20,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Single global cache file (existing 100x-dev contract). Holds the gate-state token
+# Single global cache file (existing 100xprism contract). Holds the gate-state token
 # of the last tree /gate passed on. The token itself encodes HEAD, so it is repo- and
 # tree-specific; switching repos or dirtying the tree simply fails the match (closed).
-CACHE_FILE = Path(os.path.expanduser("~/.100x-dev/gate-cache"))
+CACHE_FILE = Path(os.path.expanduser("~/.100xprism/gate-cache"))
 
 
 def read_event() -> dict:

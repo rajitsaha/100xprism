@@ -13,7 +13,7 @@ FAIL=0
 _setup() {
   export HOME
   HOME="$(mktemp -d)"
-  mkdir -p "$HOME/.100x-dev"
+  mkdir -p "$HOME/.100xprism"
   trap '_teardown' EXIT
 }
 
@@ -50,8 +50,8 @@ _make_cache() {
   local home_dir="${1:-$HOME}"
   local has_update="${2:-false}"
   local snoozed_until="${3:-0}"
-  mkdir -p "$home_dir/.100x-dev"
-  cat > "$home_dir/.100x-dev/update-cache" << EOF
+  mkdir -p "$home_dir/.100xprism"
+  cat > "$home_dir/.100xprism/update-cache" << EOF
 last_check=9999999999
 has_update=$has_update
 local_sha=abc1234abc
@@ -65,13 +65,13 @@ EOF
 
 test_creates_state_dir() {
   _setup
-  rm -rf "$HOME/.100x-dev"
+  rm -rf "$HOME/.100xprism"
   bash "$SCRIPT" --silent || true
-  if [[ -d "$HOME/.100x-dev" ]]; then
-    echo "  PASS: creates ~/.100x-dev on first run"
+  if [[ -d "$HOME/.100xprism" ]]; then
+    echo "  PASS: creates ~/.100xprism on first run"
     (( PASS++ )) || true
   else
-    echo "  FAIL: ~/.100x-dev not created"
+    echo "  FAIL: ~/.100xprism not created"
     (( FAIL++ )) || true
   fi
   _teardown
@@ -122,7 +122,7 @@ test_silent_creates_cache_file() {
 
   HUNDRED_X_REPO_OVERRIDE="$fake_repo" bash "$SCRIPT" --silent 2>/dev/null || true
 
-  if [[ -f "$HOME/.100x-dev/update-cache" ]]; then
+  if [[ -f "$HOME/.100xprism/update-cache" ]]; then
     echo "  PASS: --silent creates cache file"
     (( PASS++ )) || true
   else
@@ -149,12 +149,12 @@ test_invalid_flag_exits_nonzero() {
 
 test_aliases_sources_cleanly() {
   _setup
-  local fake_script="$HOME/100x-dev/shell/check-update.sh"
+  local fake_script="$HOME/100xprism/shell/check-update.sh"
   mkdir -p "$(dirname "$fake_script")"
   cat > "$fake_script" << 'STUB'
 #!/usr/bin/env bash
 # fake stub — records calls, exits cleanly
-echo "called: $1" >> "$HOME/.100x-dev/calls.log" 2>/dev/null || true
+echo "called: $1" >> "$HOME/.100xprism/calls.log" 2>/dev/null || true
 STUB
   chmod +x "$fake_script"
 
@@ -197,7 +197,7 @@ test_adapter_writes_tracked_projects() {
     "
   ) 2>/dev/null || true
 
-  local tracked="$HOME/.100x-dev/tracked-projects"
+  local tracked="$HOME/.100xprism/tracked-projects"
   if grep -qxF "$project_dir" "$tracked" 2>/dev/null; then
     echo "  PASS: _run_generate writes project path to tracked-projects"
     (( PASS++ )) || true

@@ -1,18 +1,18 @@
 <div align="center">
 
-<img src="assets/100x-dev-blogo.png" alt="100x Dev Logo" width="120" />
+<img src="assets/100xprism-logo.svg" alt="100xPrism logo" width="120" />
 
-# 100x Dev
+# 100xPrism
 
 ### Stop vibe coding. Ship production-grade software.
 
-[![Version](https://img.shields.io/github/v/release/rajitsaha/100x-dev?style=flat-square&label=version&color=brightgreen)](https://github.com/rajitsaha/100x-dev/releases/latest)
-[![npm](https://img.shields.io/npm/v/100x-dev?style=flat-square&color=red)](https://www.npmjs.com/package/100x-dev)
+[![Version](https://img.shields.io/github/v/release/rajitsaha/100xprism?style=flat-square&label=version&color=brightgreen)](https://github.com/rajitsaha/100xprism/releases/latest)
+[![npm](https://img.shields.io/npm/v/100xprism?style=flat-square&color=red)](https://www.npmjs.com/package/100xprism)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 **One source of truth.** 66 modules generate native config for **Claude Code · Cursor · Codex · Windsurf · Copilot · Gemini · Antigravity**. Quality gates run on every commit.
 
-<img src="assets/postcard-stack.png" alt="100x-dev v2.3.0 — 13 plugins, 26 slash commands, 40 auto-trigger skills" width="100%" />
+<img src="assets/100xprism-hero.svg" alt="100xPrism — one config, every AI coding tool · 13 plugins, 26 slash commands, 40 auto-trigger skills" width="100%" />
 
 </div>
 
@@ -22,39 +22,39 @@
 
 **npm (any platform — macOS, Linux, Windows):**
 ```bash
-npm install -g 100x-dev && 100x-dev install
+npm install -g 100xprism && 100xprism install
 ```
 
 **curl (macOS / Linux):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
-source ~/.zshrc   # or ~/.bashrc — activates the 100x-dev command
+curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | bash
+source ~/.zshrc   # or ~/.bashrc — activates the 100xprism command
 ```
 
-Either way, `100x-dev install` clones the toolkit to `~/100x-dev` and provisions your AI tools. The npm package is a thin launcher — the modules, hooks, and plugins live in that clone, which `100x-dev update` keeps current.
+Either way, `100xprism install` clones the toolkit to `~/100xprism` and provisions your AI tools. The npm package is a thin launcher — the modules, hooks, and plugins live in that clone, which `100xprism update` keeps current.
 
-> **Windows:** plugin sync works, but native Windows module emit is being reworked ([#54](https://github.com/rajitsaha/100x-dev/issues/54)). For full module support today, install under **WSL** with either method above.
+> **Windows:** plugin sync works, but native Windows module emit is being reworked ([#54](https://github.com/rajitsaha/100xprism/issues/54)). For full module support today, install under **WSL** with either method above.
 
 **Set up a project:**
 ```bash
-cd your-project && 100x-dev init
+cd your-project && 100xprism init
 ```
 
 **Keep up to date:**
 ```bash
-100x-dev update                    # pull latest, then add/update/remove skills + plugins
-100x-dev update --plugins-only     # refresh plugins only (repo already current)
-npm install -g 100x-dev@latest     # (optional) upgrade the launcher itself
+100xprism update                    # pull latest, then add/update/remove skills + plugins
+100xprism update --plugins-only     # refresh plugins only (repo already current)
+npm install -g 100xprism@latest     # (optional) upgrade the launcher itself
 ```
 
 `install` and `update` are **fully reconciling**, not append-only — every run:
 - **adds** newly shipped skills, slash commands, and curated plugins,
 - **updates** changed ones in place, and
-- **removes** skills, slash-command aliases, and 100x-dev-managed plugins that were deleted or merged upstream.
+- **removes** skills, slash-command aliases, and 100xprism-managed plugins that were deleted or merged upstream.
 
 Your own hand-authored skills/commands and any plugins you enabled yourself are never touched. See [docs/USAGE.md](docs/USAGE.md#keeping-up-to-date) for details.
 
-> **Cloned to a custom path?** The default install lives at `~/100x-dev`. If you cloned elsewhere, update your shell + Claude Code config — see [Custom install location](docs/USAGE.md#custom-install-location).
+> **Cloned to a custom path?** The default install lives at `~/100xprism`. If you cloned elsewhere, update your shell + Claude Code config — see [Custom install location](docs/USAGE.md#custom-install-location).
 
 ---
 
@@ -180,7 +180,7 @@ Modules with `tier: core` (26) inline into single-file tools; `tier: on-demand` 
 - [Full usage guide](docs/USAGE.md) — daily patterns, multi-project setup, CI templates, project config, troubleshooting
 - [Architecture](docs/v2-refactor.md) — why modules replaced workflows + skills
 - [Token usage & optimization](docs/token-optimization.md) — audit your plugin/skill footprint and monitor token spend with the local dashboard
-- [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [Issues](https://github.com/rajitsaha/100x-dev/issues)
+- [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [Issues](https://github.com/rajitsaha/100xprism/issues)
 
 ---
 
@@ -191,6 +191,6 @@ Built by [Rajit Saha](https://www.linkedin.com/in/rajsaha/) · 20+ years in ente
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/rajsaha/)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-black?style=for-the-badge&logo=github)](https://github.com/rajitsaha)
 
-If this saves you time, **[star the repo](https://github.com/rajitsaha/100x-dev)**.
+If this saves you time, **[star the repo](https://github.com/rajitsaha/100xprism)**.
 
 </div>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 200" width="120" height="94" role="img" aria-label="100xPrism logo">
+  <title>100xPrism</title>
+  <!-- incoming white beam -->
+  <rect x="6" y="99" width="92" height="8" rx="4" fill="#e7edf3"/>
+  <!-- prism -->
+  <polygon points="128,44 198,164 58,164" fill="#cfd8e3" fill-opacity="0.08" stroke="#cfd8e3" stroke-width="6" stroke-linejoin="round"/>
+  <!-- refracted spectrum -->
+  <g stroke-width="7" stroke-linecap="round">
+    <line x1="150" y1="104" x2="250" y2="58"  stroke="#ff5c5c"/>
+    <line x1="150" y1="104" x2="250" y2="76"  stroke="#ffa23d"/>
+    <line x1="150" y1="104" x2="250" y2="94"  stroke="#ffe14d"/>
+    <line x1="150" y1="104" x2="250" y2="112" stroke="#3ddc84"/>
+    <line x1="150" y1="104" x2="250" y2="130" stroke="#3da9ff"/>
+    <line x1="150" y1="104" x2="250" y2="148" stroke="#a06bff"/>
+  </g>
+</svg>

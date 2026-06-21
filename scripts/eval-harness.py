@@ -219,7 +219,7 @@ def add_selector(p: argparse.ArgumentParser) -> None:
 
 
 def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(description="100x-dev eval harness")
+    ap = argparse.ArgumentParser(description="100xprism eval harness")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     pv = sub.add_parser("validate", help="structurally validate eval files")

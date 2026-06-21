@@ -223,10 +223,10 @@ If ANY gate fails:
 `gate-on-commit` hook will allow the next commit/push:
 
 ```bash
-python3 ~/100x-dev/hooks/gate-pass.py 2>/dev/null || true
+python3 ~/100xprism/hooks/gate-pass.py 2>/dev/null || true
 ```
 
 This writes a token for the **current tree state** (HEAD + tracked diff + untracked
-files) to `~/.100x-dev/gate-cache`. The token is invalidated the moment anything in the
+files) to `~/.100xprism/gate-cache`. The token is invalidated the moment anything in the
 tree changes, so a later edit always re-arms the gate. If a gate **failed**, do NOT run
 this — leave the cache stale so the commit stays blocked.

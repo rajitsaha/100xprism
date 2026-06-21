@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of truth for 100x-dev first-party hooks. `emit-hooks` (adapters/lib/modules.py) reads this to idempotently merge hook entries into ~/.claude/settings.json. `default` sets whether a hook is enabled unless its `toggle_env` env var overrides (1/true = on, 0/false = off). install.sh sets these toggles from its hooks menu.",
+  "_comment": "Single source of truth for 100xprism first-party hooks. `emit-hooks` (adapters/lib/modules.py) reads this to idempotently merge hook entries into ~/.claude/settings.json. `default` sets whether a hook is enabled unless its `toggle_env` env var overrides (1/true = on, 0/false = off). install.sh sets these toggles from its hooks menu.",
   "hooks": [
     {
       "id": "gate-on-commit",

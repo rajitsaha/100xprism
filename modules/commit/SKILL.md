@@ -21,15 +21,15 @@ cache is keyed on a tree token (HEAD + tracked diff + untracked files), not a ba
 HEAD, so a dirty or rebased tree never reuses a stale pass:
 
 ```bash
-TOKEN=$(python3 ~/100x-dev/hooks/gate-pass.py --print 2>/dev/null)
-CACHED=$(cat ~/.100x-dev/gate-cache 2>/dev/null)
+TOKEN=$(python3 ~/100xprism/hooks/gate-pass.py --print 2>/dev/null)
+CACHED=$(cat ~/.100xprism/gate-cache 2>/dev/null)
 [ -n "$TOKEN" ] && [ "$CACHED" = "$TOKEN" ] && echo "Gate: skipped (already passed for this tree)" && GATE_DONE=true || GATE_DONE=false
 ```
 
 If `GATE_DONE=false`: run the **gate** workflow. On pass, record it (same token the
 gate-on-commit hook checks):
 ```bash
-python3 ~/100x-dev/hooks/gate-pass.py
+python3 ~/100xprism/hooks/gate-pass.py
 ```
 
 Do NOT proceed until gate reports `✅ ALL GATES PASSED`. If any gate fails → STOP, fix, clear cache, re-run gate.
@@ -112,7 +112,7 @@ Check review cache — skip if this HEAD was already reviewed:
 
 ```bash
 HEAD=$(git rev-parse HEAD)
-REVIEWED=$(cat ~/.100x-dev/review-cache 2>/dev/null)
+REVIEWED=$(cat ~/.100xprism/review-cache 2>/dev/null)
 [ "$REVIEWED" = "$HEAD" ] && echo "Review: skipped (already done for $HEAD)" && exit 0
 ```
 
@@ -170,7 +170,7 @@ PR=$(gh pr list --head "$(git branch --show-current)" --json number -q '.[0].num
 
 On clean review, cache the result so push skips re-reviewing the same HEAD:
 ```bash
-echo "$(git rev-parse HEAD)" > ~/.100x-dev/review-cache
+echo "$(git rev-parse HEAD)" > ~/.100xprism/review-cache
 ```
 
 ---
