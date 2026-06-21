@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.3.3] — 2026-06-21
+
+### Added
+- **Token & value economics.** New `scripts/value-report.py` (what *shipped*, from CHANGELOG + git) to read next to the token dashboard's cost view. `token-dashboard.py` gains an estimated content-composition breakdown (code vs files-read vs logs vs model prose vs prompts — char-based, labelled an estimate), a machine-global **singleton** (one URL covers every session + repo; relaunching opens the running one), and a `--oneline` startup summary. `100x-tokens` / `100x-value` aliases added; opt-out startup line via `PRISM_NO_TOKEN_LINE`.
+- **Positioning** — README + landing page now frame the shift from "make agentic dev autonomous" to "measure what it costs (tokens) and what it's worth (value) — everybody's responsibility," and the landing page links the docs.
+
+### Changed
+- **Brand** — primary logo + hero reworked from the prism mark to a **leverage** mark (small effort → 100× outcome). README author credit updated.
+
+---
+
 ## [2.3.2] — 2026-06-20
 
 ### Added
