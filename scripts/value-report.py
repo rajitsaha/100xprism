@@ -23,7 +23,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import _shipped  # noqa: E402
+import _value as _shipped  # noqa: E402 — temporary alias; Task 9/10 rewrites this file
 
 
 def main():

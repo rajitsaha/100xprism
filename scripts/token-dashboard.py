@@ -44,7 +44,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import _shipped  # noqa: E402 — shared value/store helper (one source of truth)
+import _value  # noqa: E402 — shared value layer (one source of truth)
 
 HOME = os.path.expanduser("~")
 PROJECTS_DIR = os.path.join(HOME, ".claude", "projects")
@@ -196,9 +196,9 @@ def save_cache(files):
         print(f"warning: could not write cache: {e}", file=sys.stderr)
 
 
-# project_label lives in _shipped so the dashboard and the value store derive the
+# project_label lives in _value so the dashboard and the value store derive the
 # exact same join key from a path.
-project_label = _shipped.project_label
+project_label = _value.project_label
 
 
 def build(verbose=True):
@@ -274,7 +274,8 @@ def build(verbose=True):
     }
     # Re-scan the value store once per rebuild (every 5 min / on demand), not per
     # /api/value request — git subprocesses stay off the request path.
-    value_store = _shipped.refresh_store().get("repos", {})
+    # TODO(task-6): restore full value store refresh when value functions are added to _value
+    value_store = {}
 
     # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -359,13 +360,8 @@ def _window_cost(daycost, start, end):
 
 
 def _top_items(release, n=3):
-    out = []
-    for items in release.get("sections", {}).values():
-        for it in items:
-            out.append(_shipped._strip_md(it))
-            if len(out) >= n:
-                return out
-    return out
+    # TODO(task-6): deleted in a later task — stub until then
+    return {}
 
 
 def value_panel(data):
@@ -373,37 +369,8 @@ def value_panel(data):
     the estimated cost is that project's spend over (prev release date, this
     release date]. Attribution is by date window — an estimate, like composition.
     """
-    # Use the store cached by build() (refreshed each rebuild). Standalone callers
-    # that didn't go through build() fall back to a plain load — no rescan here.
-    store_repos = data.get("value_store")
-    if store_repos is None:
-        store_repos = _shipped.load_store().get("repos", {})
-    bpd = data.get("by_project_day_cost", {})
-    repos = []
-    for path, e in store_repos.items():
-        daycost = bpd.get(e.get("label"), {})
-        releases = e.get("releases", [])
-        rows = []
-        for i, r in enumerate(releases):
-            d_this = r.get("date") or None
-            d_prev = releases[i + 1].get("date") or None if i + 1 < len(releases) else None
-            rows.append({
-                "version": r.get("version"), "date": r.get("date"),
-                "items": r.get("items"), "top": _top_items(r),
-                "cost": _window_cost(daycost, d_prev, d_this) if d_this else None,
-            })
-        newest_date = releases[0].get("date") or None if releases else None
-        un = e.get("unreleased")
-        unreleased = None
-        if un:
-            unreleased = {**un, "cost": _window_cost(daycost, newest_date, None)}
-        repos.append({
-            "name": e.get("name"), "label": e.get("label"),
-            "source": e.get("source"), "scanned": e.get("scanned"),
-            "has_cost": bool(daycost), "releases": rows, "unreleased": unreleased,
-        })
-    repos.sort(key=lambda r: (r.get("source") != "registry", r.get("name") or ""))
-    return {"repos": repos, "store_path": _shipped.STORE_PATH}
+    # TODO(task-6): deleted in a later task — stub until then
+    return {}
 
 
 # ---------------------------------------------------------------- web UI
