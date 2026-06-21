@@ -388,35 +388,44 @@ def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
 PAGE = """<!doctype html><html><head><meta charset=utf-8>
 <title>Claude Code — Token Usage</title>
 <style>
-:root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--fg:#e6edf3;--mut:#8b949e;
+:root{--ink:#0E1116;--surface:#171B22;--line:#262C36;--text:#E6E9EF;--muted:#8A93A2;
+--cost:#E8B24A;--value:#5BD0A6;--warn:#E5704B;
 --in:#58a6ff;--out:#f778ba;--cr:#3fb950;--cw:#d29922}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);
-font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}
-header{padding:20px 28px;border-bottom:1px solid var(--bd);display:flex;
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--text);
+font:14px/1.55 'IBM Plex Sans',-apple-system,Segoe UI,Roboto,sans-serif}
+.num,td.n,.money{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+header{padding:20px 28px;border-bottom:1px solid var(--line);display:flex;
 align-items:baseline;gap:16px;flex-wrap:wrap}
-h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:13px}
+h1{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px}
 .wrap{padding:24px 28px;max-width:1100px;margin:0 auto}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px 18px}
-.card .lbl{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .card .val{font-size:26px;font-weight:600;margin-top:4px}
-.card .note{color:var(--mut);font-size:12px;margin-top:6px}
+.card .note{color:var(--muted);font-size:12px;margin-top:6px}
 .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
-h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);
-margin:28px 0 12px;border-bottom:1px solid var(--bd);padding-bottom:8px}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+margin:28px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px}
 table{width:100%;border-collapse:collapse}
-td,th{padding:7px 10px;text-align:right;border-bottom:1px solid var(--bd);font-variant-numeric:tabular-nums}
-th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase}
+td,th{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase}
 td:first-child,th:first-child{text-align:left}
 .bar{height:9px;border-radius:5px;display:flex;overflow:hidden;background:#21262d;min-width:120px}
 .bar span{display:block;height:100%}
 .meter{background:#21262d;border-radius:6px;height:22px;position:relative;overflow:hidden;max-width:520px}
 .meter b{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
 .meter em{position:absolute;left:10px;top:0;line-height:22px;font-style:normal;font-size:12px}
-.legend{font-size:12px;color:var(--mut);margin:10px 0}.legend span{margin-right:16px}
-button{background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:7px;
+.legend{font-size:12px;color:var(--muted);margin:10px 0}.legend span{margin-right:16px}
+button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;
 padding:6px 12px;cursor:pointer;font-size:13px}button:hover{border-color:var(--in)}
-.muted{color:var(--mut)}
+.muted{color:var(--muted)}
+section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+section h2{margin-top:0;border-bottom-color:var(--line)}
+.cards2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:8px 0 24px}
+@media(max-width:760px){.cards2{grid-template-columns:1fr}}
+.badge{display:inline-block;font:600 10px/1 'IBM Plex Mono',ui-monospace,monospace;
+padding:3px 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
 </style></head><body>
 <header><h1>Claude Code · Token Usage</h1>
 <span class=sub id=meta></span>
@@ -434,41 +443,73 @@ function legend(){return `<div class=legend>
  <span><i class=dot style=background:var(--cw)></i>cache write</span>
  <span><i class=dot style=background:var(--in)></i>input</span>
  <span><i class=dot style=background:var(--out)></i>output</span></div>`;}
-let VALUE=null;
-async function loadValue(){try{VALUE=await (await fetch('/api/value')).json();}catch(e){VALUE=null;}}
-async function load(){
- const [d]=await Promise.all([ (await fetch('/api/data')).json(), loadValue() ]); render(d);}
-async function refresh(){document.getElementById('app').innerHTML='<p class=muted>Rescanning…</p>';
- const [d]=await Promise.all([ (await fetch('/api/refresh')).json(), loadValue() ]); render(d);}
-function money(c){return c==null?'<span class=muted>—</span>':'$'+(+c).toLocaleString(undefined,{maximumFractionDigits:0});}
-function valueHTML(){
- if(!VALUE||!VALUE.repos||!VALUE.repos.length) return '';
- let h=`<h2>Value — cost vs. what shipped <span class=muted style="text-transform:none;font-weight:400">— estimate, cost attributed by date window</span></h2>`;
- for(const r of VALUE.repos){
-  h+=`<h3 style="margin:18px 0 6px;font-size:13px">${esc(r.name)} <span class=muted style="font-weight:400">· ${esc(r.label||'')} · ${r.source}</span></h3>`;
-  if(!r.has_cost) h+=`<p class=muted style=margin:0_0_6px>No token cost matched this repo's label yet — value shown without cost.</p>`;
-  h+=`<table><tr><th>release</th><th>date</th><th>what shipped</th><th>items</th><th>est $</th></tr>`;
-  if(r.unreleased&&r.unreleased.count)
-   h+=`<tr><td><em>unreleased</em></td><td class=muted>since ${esc(r.unreleased.since||'')}</td>
-     <td>${Object.entries(r.unreleased.buckets||{}).map(([k,n])=>esc(k)+' '+n).join(', ')||'—'}</td>
-     <td>${r.unreleased.count}</td><td>${money(r.unreleased.cost)}</td></tr>`;
-  for(const rel of r.releases){
-   h+=`<tr><td>v${esc(rel.version)}</td><td class=muted>${esc(rel.date||'')}</td>
-     <td>${(rel.top||[]).map(esc).join('<br>')||'—'}</td>
-     <td>${rel.items==null?'—':rel.items}</td><td>${money(rel.cost)}</td></tr>`;
-  }
-  h+='</table>';
- }
- h+=`<p class=muted style=margin-top:8px>Cost is this project's token spend over each release's date window (previous release → this release) — directional, not billed-per-feature. Repos come from the registry — run <code>100x-value</code> in a repo to add it here; auto-discovery is best-effort and skips paths it can't resolve.</p>`;
- return h;
+function emptyState(msg){return `<p class=muted style="padding:24px 0">${esc(msg)}</p>`;}
+function svgEl(w,h,inner,label){return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(label)}" style="max-width:100%">${inner}</svg>`;}
+function leverageChart(dirs){
+ const pts=dirs.filter(d=>d.cost!=null&&d.value).map(d=>({x:d.cost,
+   y:(d.value.commits||0)+3*(d.value.prs||0)+(d.value.fs_files||0?1:0), d}));
+ if(!pts.length) return emptyState('No cost-bearing directories yet.');
+ const W=520,H=300,P=36, mx=Math.max(...pts.map(p=>p.x),1), my=Math.max(...pts.map(p=>p.y),1);
+ const X=x=>P+(W-2*P)*x/mx, Y=y=>H-P-(H-2*P)*y/my;
+ const ratios=pts.map(p=>p.y/(p.x||1)).sort((a,b)=>a-b), r=ratios[ratios.length>>1]||1;
+ const bline=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(mx)}" y2="${Y(r*mx)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+ const dots=pts.map(p=>{const above=p.y>=r*p.x; const col=above?'var(--value)':'var(--warn)';
+   return `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="5" fill="${col}" fill-opacity=".85"><title>${esc(p.d.label)} · $${Math.round(p.x)} · ${p.d.value.commits||0} commits</title></circle>`;}).join('');
+ const ax=`<line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="var(--line)"/><line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="var(--line)"/>`;
+ return svgEl(W,H,ax+bline+dots,'Value versus cost by directory; points above the dashed break-even line ship more per token');
 }
+function costOverTime(d){
+ const bpd=d.by_project_day_cost||{}; const days=[...new Set(Object.values(bpd).flatMap(o=>Object.keys(o)))].sort();
+ if(!days.length) return emptyState('No dated cost yet.');
+ const labels=Object.keys(bpd); const W=520,H=200,P=28;
+ const totalByDay=days.map(day=>labels.reduce((a,l)=>a+(bpd[l][day]||0),0));
+ const mx=Math.max(...totalByDay,1); const X=i=>P+(W-2*P)*i/Math.max(days.length-1,1);
+ const Y=v=>H-P-(H-2*P)*v/mx;
+ const path=`M${days.map((day,i)=>`${X(i)},${Y(totalByDay[i])}`).join(' L')}`;
+ const area=`${path} L${X(days.length-1)},${H-P} L${X(0)},${H-P} Z`;
+ return svgEl(W,H,`<path d="${area}" fill="var(--cost)" fill-opacity=".18"/><path d="${path}" fill="none" stroke="var(--cost)" stroke-width="2"/>`,
+   `Total token cost per day over ${days.length} days`);
+}
+function purposeSplit(t){
+ const parts=[['cache_read',t.cache_read,'var(--cr)'],['cache_write',t.cache_write,'var(--cw)'],
+   ['input',t.input,'var(--in)'],['output',t.output,'var(--out)']];
+ const sum=parts.reduce((a,p)=>a+p[1],0)||1; let x=0; const W=520,H=34;
+ const segs=parts.map(([k,v,c])=>{const w=(W)*v/sum; const r=`<rect x="${x}" y="0" width="${w}" height="${H}" fill="${c}"><title>${k}: ${fmt(v)}</title></rect>`; x+=w; return r;}).join('');
+ return svgEl(W,H,segs,'Share of tokens by purpose: cache read, cache write, input, output');
+}
+function costByDir(dirs){
+ const rows=dirs.filter(d=>d.cost!=null).slice(0,12); if(!rows.length) return emptyState('No cost yet.');
+ const mx=Math.max(...rows.map(r=>r.cost),1); const H=rows.length*26+8,W=520;
+ const bars=rows.map((r,i)=>{const w=(W-160)*r.cost/mx; const y=i*26+4;
+   return `<text x="0" y="${y+14}" fill="var(--muted)" font-size="12">${esc(r.label.slice(-26))}</text>`+
+     `<rect x="150" y="${y+3}" width="${w}" height="14" rx="3" fill="var(--cost)"/>`+
+     `<text x="${156+w}" y="${y+14}" fill="var(--text)" font-size="11">$${Math.round(r.cost)}</text>`;}).join('');
+ return svgEl(W,H,bars,'Estimated token cost by directory, highest first');
+}
+function toolBadge(t){const m={'claude-code':'CC','codex':'CX'}; return `<span class=badge title="${esc(t)}">${m[t]||'?'}</span>`;}
+function dirsTable(dirs){
+ let h=`<h2>All directories <span class=muted style="text-transform:none;font-weight:400">— cost (amber) × value shipped (green); — = no local token data for that tool</span></h2>`;
+ h+=`<table><tr><th>directory</th><th>tool</th><th>est $</th><th>value (shipped)</th><th>AI note</th></tr>`;
+ for(const d of dirs){
+  const v=d.value||{}; const shipped = v.kind==='git'
+    ? `${v.commits||0} commits${v.prs?'·'+v.prs+' PRs':''}`
+    : v.kind==='fs' ? `${v.fs_files} files` : '—';
+  h+=`<tr><td>${esc(d.label)}</td><td>${toolBadge(d.tool)}</td>`+
+     `<td class=money>${d.cost==null?'<span class=muted>—</span>':'$'+Math.round(d.cost).toLocaleString()}</td>`+
+     `<td style="color:var(--value)">${esc(shipped)}</td>`+
+     `<td class=muted>${v.summary?esc(v.summary):'<span class=muted>—</span>'}</td></tr>`;
+ }
+ return h+'</table>';
+}
+async function load(){render(await (await fetch('/api/data')).json());}
+async function refresh(){document.getElementById('app').innerHTML='<p class=muted>Rescanning…</p>';render(await (await fetch('/api/refresh')).json());}
+function money(c){return c==null?'<span class=muted>—</span>':'$'+(+c).toLocaleString(undefined,{maximumFractionDigits:0});}
 function render(d){
  document.getElementById('meta').textContent=
   `${d.transcripts} transcripts · ${d.sessions} sessions · updated ${d.generated}`;
  const t=d.totals, max=Math.max(...d.bloat.window?[]:[1]);
  const card=(lbl,val,note,col)=>`<div class=card><div class=lbl>${col?`<i class=dot style=background:${col}></i>`:''}${lbl}</div>
    <div class=val>${val}</div><div class=note>${note||''}</div></div>`;
- // bloat meter: 200k window
  const W=200000, mw=Math.min(100,100*d.bloat.median/W);
  let h=`<div class=cards>
    ${card('cache read',fmt(t.cache_read),'re-sent context (cheap/token, huge volume)','var(--cr)')}
@@ -477,7 +518,13 @@ function render(d){
    ${card('input',fmt(t.input),'new uncached text','var(--in)')}
    ${card('est. cost','$'+d.total_cost.toLocaleString(),'rough, list rates (editable)')}
   </div>`;
- h+=valueHTML();
+ h+=`<div class=cards2>
+   <section><h2>Leverage — value vs cost</h2>${leverageChart(d.directories||[])}</section>
+   <section><h2>Cost over time</h2>${costOverTime(d)}</section>
+   <section><h2>Token-purpose split</h2>${purposeSplit(d.totals)}${legend()}</section>
+   <section><h2>Cost by directory</h2>${costByDir(d.directories||[])}</section>
+ </div>`;
+ h+=dirsTable(d.directories||[]);
  h+=`<h2>Startup bloat — fixed context re-sent every turn</h2>
    <div class=meter><b style="width:${mw}%;background:${mw>30?'var(--cw)':'var(--cr)'}"></b>
    <em>median ${fmt(d.bloat.median)} of 200K window (${(d.bloat.median/W*100).toFixed(1)}%)</em></div>
@@ -494,10 +541,6 @@ function render(d){
    <table><tr><th>content type</th><th>est. tokens</th><th>share</th></tr>${rows}</table>
    <p class=muted style=margin-top:8px>The API bills per-turn aggregates, so this approximates where your conversation <em>text volume</em> goes (chars÷4): code written, files read, command output/logs, model prose, prompts. Directional, not exact.</p>`;
  }
- h+=`<h2>By project</h2>${legend()}<table><tr><th>project</th><th>mix</th><th>cache read</th><th>output</th><th>est $</th></tr>`;
- for(const[name,v,c]of d.by_project){h+=`<tr><td>${esc(name)}</td><td>${bar(v)}</td>
-   <td>${fmt(v.cache_read)}</td><td>${fmt(v.output)}</td><td>$${c.toLocaleString()}</td></tr>`;}
- h+='</table>';
  h+=`<h2>By model</h2><table><tr><th>model</th><th>mix</th><th>cache read</th><th>output</th></tr>`;
  for(const[name,v]of d.by_model){h+=`<tr><td>${esc(name)}</td><td>${bar(v)}</td>
    <td>${fmt(v.cache_read)}</td><td>${fmt(v.output)}</td></tr>`;}
