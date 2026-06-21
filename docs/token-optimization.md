@@ -110,8 +110,10 @@ to you.
 ### This repo's dashboard
 
 ```bash
-python3 scripts/token-dashboard.py          # web UI at http://127.0.0.1:8787
+100x-tokens                                 # alias → web UI at http://127.0.0.1:8787
+python3 scripts/token-dashboard.py          # (same, explicit)
 python3 scripts/token-dashboard.py --print  # text summary, no server
+python3 scripts/token-dashboard.py --oneline  # one fast cache-only line (shell startup)
 ```
 
 Offline, no dependencies. Reads `~/.claude/projects/**/*.jsonl` and shows the four
@@ -119,6 +121,32 @@ token purposes, a **startup-bloat meter** (fixed context re-sent per turn), and
 breakdowns by project / model / day. First run scans all transcripts (slow); later
 runs use an incremental on-disk cache (`~/.claude/.token-dashboard-cache.json`).
 Edit the `RATES` table at the top of the script to match your plan for the cost estimate.
+
+**Machine-global + singleton.** It reads the *global* `~/.claude/projects`, so one
+instance covers **every session and every repo/directory on the machine** at one
+URL (with a by-project breakdown). Launching it again — from any repo, any session
+— just opens the already-running URL instead of failing on a port clash. The
+`100x-tokens` alias and the shell-startup one-liner are added by `install` (opt the
+line out with `export PRISM_NO_TOKEN_LINE=1`).
+
+**Content composition (estimate).** The dashboard and `--print` show where your
+conversation *text volume* goes — **code written / code & files read / command
+output & logs / model prose / your prompts / tool calls**. This is the
+"what portion is code vs logs vs output" view. It is an **estimate** (chars ÷ 4),
+*not* billed tokens: the API bills per-turn aggregates, not per content block, so
+treat it as directional. It's the closest you can get without re-tokenizing.
+
+### Value, not just cost: `value-report.py`
+
+Tokens measure *cost*; they can't tell you what you *shipped*. `value-report.py`
+fills that gap from a repo's `CHANGELOG.md` + recent git history:
+
+```bash
+100x-value                          # alias → what shipped in the current repo
+python3 scripts/value-report.py /path/to/repo --versions 8
+```
+
+Read it next to `100x-tokens` for a cost-vs-value picture.
 
 ### Other options
 - `npx ccusage@latest` and `npx ccusage@latest blocks --live` — terminal dashboards.
