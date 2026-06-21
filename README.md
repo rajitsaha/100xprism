@@ -186,7 +186,7 @@ Modules with `tier: core` (26) inline into single-file tools; `tier: on-demand` 
 
 <div align="center">
 
-Built by [Rajit Saha](https://www.linkedin.com/in/rajsaha/) · 20+ years in enterprise data at Udemy, Experian, LendingClub, VMware, Yahoo
+Built by [Rajit Saha](https://www.linkedin.com/in/rajsaha/) · 23 years in enterprise data at Udemy, Experian, LendingClub, VMware, Yahoo
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/rajsaha/)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-black?style=for-the-badge&logo=github)](https://github.com/rajitsaha)
