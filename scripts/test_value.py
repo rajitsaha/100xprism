@@ -52,5 +52,19 @@ class LabelTest(unittest.TestCase):
                          td.project_label(transcript))
 
 
+class ResolveDirTest(unittest.TestCase):
+    def test_resolves_hyphenated_segment(self):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as root:
+            # real path has a hyphen IN a segment: <root>/personal-github/100xprism
+            target = os.path.join(root, "personal-github", "100xprism")
+            os.makedirs(target)
+            mangled = target.replace("/", "-")   # lossy: every / and the hyphen are '-'
+            self.assertEqual(_shipped.resolve_real_dir(mangled), target)
+
+    def test_returns_none_when_absent(self):
+        self.assertIsNone(_shipped.resolve_real_dir("-no-such-path-xyz-123"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

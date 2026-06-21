@@ -46,3 +46,43 @@ def project_label_for_path(repo_abs_path):
     """The dashboard label a repo at this filesystem path would get."""
     abs_path = os.path.abspath(os.path.expanduser(repo_abs_path))
     return _label_from_dirname(abs_path.replace("/", "-"))
+
+
+# ----------------------------------------------------------------- path resolution
+
+def resolve_real_dir(mangled_dirname, root="/"):
+    """Best-effort un-mangle of a ~/.claude/projects dir name to a real path.
+
+    The mangling joins path parts with '-' and also turns every literal '-' in a
+    segment into '-', so it is ambiguous. We walk the tokens left-to-right and at
+    each step greedily extend the current segment with '-' as long as no child
+    directory matches by '/'. Returns an absolute existing path, or None.
+    """
+    tokens = mangled_dirname.strip("-").split("-")
+    if not tokens:
+        return None
+    cur = root.rstrip("/") or "/"
+    i = 0
+    while i < len(tokens):
+        # Try the longest run of tokens (joined by '-') that names an existing child.
+        matched = None
+        seg = tokens[i]
+        j = i
+        # Prefer a single-token '/' child; if absent, glue tokens with '-'.
+        while True:
+            cand = os.path.join(cur, seg)
+            if os.path.isdir(cand):
+                matched = (cand, j)
+            # look ahead: does gluing the next token (as a hyphen) reach a real dir?
+            if j + 1 < len(tokens) and os.path.isdir(
+                    os.path.join(cur, seg + "-" + tokens[j + 1])) or (
+                    j + 1 < len(tokens) and not os.path.isdir(cand)):
+                j += 1
+                seg = seg + "-" + tokens[j]
+                continue
+            break
+        if matched is None:
+            # No existing child at this level → can't resolve further.
+            return None
+        cur, i = matched[0], matched[1] + 1
+    return cur if os.path.isdir(cur) else None
