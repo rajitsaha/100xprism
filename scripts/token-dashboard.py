@@ -449,28 +449,43 @@ function leverageChart(dirs){
  const pts=dirs.filter(d=>d.cost!=null&&d.value).map(d=>({x:d.cost,
    y:(d.value.commits||0)+3*(d.value.prs||0)+(d.value.fs_files||0?1:0), d}));
  if(!pts.length) return emptyState('No cost-bearing directories yet.');
- const W=520,H=300,P=36, mx=Math.max(...pts.map(p=>p.x),1), my=Math.max(...pts.map(p=>p.y),1);
- const X=x=>P+(W-2*P)*x/mx, Y=y=>H-P-(H-2*P)*y/my;
+ const W=520,H=300,PL=50,PB=46,PR=36,PT=36;
+ const mx=Math.max(...pts.map(p=>p.x),1), my=Math.max(...pts.map(p=>p.y),1);
+ const X=x=>PL+(W-PL-PR)*x/mx, Y=y=>H-PB-(H-PB-PT)*y/my;
  const ratios=pts.map(p=>p.y/(p.x||1)).sort((a,b)=>a-b), r=ratios[ratios.length>>1]||1;
  const bline=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(mx)}" y2="${Y(r*mx)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
  const dots=pts.map(p=>{const above=p.y>=r*p.x; const col=above?'var(--value)':'var(--warn)';
    return `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="5" fill="${col}" fill-opacity=".85"><title>${esc(p.d.label)} · $${Math.round(p.x)} · ${p.d.value.commits||0} commits</title></circle>`;}).join('');
- const ax=`<line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="var(--line)"/><line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="var(--line)"/>`;
- return svgEl(W,H,ax+bline+dots,'Value versus cost by directory; points above the dashed break-even line ship more per token');
+ const ax=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="var(--line)"/><line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="var(--line)"/>`;
+ const tickAttrs='fill="var(--muted)" font-size="11"';
+ const xTicks=`<text x="${PL}" y="${H-PB+14}" ${tickAttrs} text-anchor="middle">$0</text>`+
+   `<text x="${W-PR}" y="${H-PB+14}" ${tickAttrs} text-anchor="middle">$${Math.round(mx)}</text>`;
+ const yTicks=`<text x="${PL-6}" y="${H-PB}" ${tickAttrs} text-anchor="end" dominant-baseline="middle">0</text>`+
+   `<text x="${PL-6}" y="${PT}" ${tickAttrs} text-anchor="end" dominant-baseline="middle">${Math.round(my)}</text>`;
+ const xLabel=`<text x="${PL+(W-PL-PR)/2}" y="${H-2}" ${tickAttrs} text-anchor="middle">token cost ($) →</text>`;
+ const yLabel=`<text x="${12}" y="${PT+(H-PB-PT)/2}" ${tickAttrs} text-anchor="middle" transform="rotate(-90,12,${PT+(H-PB-PT)/2})">↑ value shipped (commits + PRs)</text>`;
+ return svgEl(W,H,ax+bline+dots+xTicks+yTicks+xLabel+yLabel,'Value shipped (y, commits+PRs) versus token cost (x, dollars); dots above the dashed break-even line ship more per token');
 }
 function costOverTime(d){
  const bpd=d.by_project_day_cost||{}; const days=[...new Set(Object.values(bpd).flatMap(o=>Object.keys(o)))].sort();
  if(!days.length) return emptyState('No dated cost yet.');
- const labels=Object.keys(bpd); const W=520,H=200,P=28;
+ const labels=Object.keys(bpd); const W=520,H=200,PL=46,PB=30,PR=28,PT=28;
  const totalByDay=days.map(day=>labels.reduce((a,l)=>a+(bpd[l][day]||0),0));
- const mx=Math.max(...totalByDay,1); const X=i=>P+(W-2*P)*i/Math.max(days.length-1,1);
- const Y=v=>H-P-(H-2*P)*v/mx;
+ const maxC=Math.max(...totalByDay,1); const X=i=>PL+(W-PL-PR)*i/Math.max(days.length-1,1);
+ const Y=v=>H-PB-(H-PB-PT)*v/maxC;
  const path=`M${days.map((day,i)=>`${X(i)},${Y(totalByDay[i])}`).join(' L')}`;
- const area=`${path} L${X(days.length-1)},${H-P} L${X(0)},${H-P} Z`;
- return svgEl(W,H,`<path d="${area}" fill="var(--cost)" fill-opacity=".18"/><path d="${path}" fill="none" stroke="var(--cost)" stroke-width="2"/>`,
-   `Total token cost per day over ${days.length} days`);
+ const area=`${path} L${X(days.length-1)},${H-PB} L${X(0)},${H-PB} Z`;
+ const tickAttrs='fill="var(--muted)" font-size="11"';
+ const xLabels=`<text x="${PL}" y="${H-2}" ${tickAttrs} text-anchor="start">${esc(days[0].slice(5))}</text>`+
+   (days.length>1?`<text x="${W-PR}" y="${H-2}" ${tickAttrs} text-anchor="end">${esc(days[days.length-1].slice(5))}</text>`:'');
+ const yLabel=`<text x="${8}" y="${PT+(H-PB-PT)/2}" ${tickAttrs} text-anchor="middle" transform="rotate(-90,8,${PT+(H-PB-PT)/2})">$ / day</text>`;
+ const yTick=`<text x="${PL-4}" y="${PT}" ${tickAttrs} text-anchor="end" dominant-baseline="middle">$${Math.round(maxC)}</text>`;
+ const singleDot=days.length===1?`<circle cx="${X(0)}" cy="${Y(totalByDay[0])}" r="3" fill="var(--cost)"/>`:'';
+ return svgEl(W,H,`<path d="${area}" fill="var(--cost)" fill-opacity=".18"/><path d="${path}" fill="none" stroke="var(--cost)" stroke-width="2"/>${singleDot}${xLabels}${yLabel}${yTick}`,
+   'Daily token cost over time; x axis dates, y axis dollars per day');
 }
 function purposeSplit(t){
+ if((t.cache_read+t.cache_write+t.input+t.output)===0) return emptyState('No token usage yet.');
  const parts=[['cache_read',t.cache_read,'var(--cr)'],['cache_write',t.cache_write,'var(--cw)'],
    ['input',t.input,'var(--in)'],['output',t.output,'var(--out)']];
  const sum=parts.reduce((a,p)=>a+p[1],0)||1; let x=0; const W=520,H=34;
@@ -486,7 +501,7 @@ function costByDir(dirs){
      `<text x="${156+w}" y="${y+14}" fill="var(--text)" font-size="11">$${Math.round(r.cost)}</text>`;}).join('');
  return svgEl(W,H,bars,'Estimated token cost by directory, highest first');
 }
-function toolBadge(t){const m={'claude-code':'CC','codex':'CX'}; return `<span class=badge title="${esc(t)}">${m[t]||'?'}</span>`;}
+function toolBadge(t){const m={'claude-code':'CC','codex':'CX'}; return `<span class=badge title="${esc(t)}">${esc(m[t]||'?')}</span>`;}
 function dirsTable(dirs){
  let h=`<h2>All directories <span class=muted style="text-transform:none;font-weight:400">— cost (amber) × value shipped (green); — = no local token data for that tool</span></h2>`;
  h+=`<table><tr><th>directory</th><th>tool</th><th>est $</th><th>value (shipped)</th><th>AI note</th></tr>`;
