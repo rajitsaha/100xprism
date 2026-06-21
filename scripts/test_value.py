@@ -132,5 +132,26 @@ class DirValueTest(unittest.TestCase):
             self.assertIsNone(after["summary"])                 # head changed → recomputed
 
 
+class AdapterTest(unittest.TestCase):
+    def test_claude_iter_dir_days(self):
+        import importlib
+        ad = importlib.import_module("adapters.claude_code")
+        summaries = [{
+            "projdir": "-Users-rajit-x", "project": "~/x",
+            "by_day": {"2026-06-01": {"input":1,"output":2,"cache_read":3,"cache_write":4}},
+        }]
+        rows = list(ad.iter_dir_days(summaries))
+        self.assertEqual(rows[0].dir, "-Users-rajit-x")
+        self.assertEqual(rows[0].day, "2026-06-01")
+        self.assertEqual(rows[0].output, 2)
+        self.assertEqual(rows[0].tool, "claude-code")
+
+    def test_codex_stub_empty_without_sessions(self):
+        import importlib
+        cx = importlib.import_module("adapters.codex")
+        # No ~/.codex/sessions on CI → yields nothing, never raises.
+        self.assertEqual(list(cx.iter_usage()), [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
