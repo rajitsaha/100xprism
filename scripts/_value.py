@@ -59,7 +59,7 @@ def resolve_real_dir(mangled_dirname, root="/"):
     directory matches by '/'. Returns an absolute existing path, or None.
     """
     tokens = mangled_dirname.strip("-").split("-")
-    if not tokens:
+    if not tokens or tokens == [""]:
         return None
     cur = root.rstrip("/") or "/"
     i = 0
@@ -74,9 +74,11 @@ def resolve_real_dir(mangled_dirname, root="/"):
             if os.path.isdir(cand):
                 matched = (cand, j)
             # look ahead: does gluing the next token (as a hyphen) reach a real dir?
-            if j + 1 < len(tokens) and os.path.isdir(
-                    os.path.join(cur, seg + "-" + tokens[j + 1])) or (
-                    j + 1 < len(tokens) and not os.path.isdir(cand)):
+            extend = (
+                (j + 1 < len(tokens) and os.path.isdir(os.path.join(cur, seg + "-" + tokens[j + 1])))
+                or (j + 1 < len(tokens) and not os.path.isdir(cand))
+            )
+            if extend:
                 j += 1
                 seg = seg + "-" + tokens[j]
                 continue

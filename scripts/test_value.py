@@ -65,6 +65,10 @@ class ResolveDirTest(unittest.TestCase):
     def test_returns_none_when_absent(self):
         self.assertIsNone(_shipped.resolve_real_dir("-no-such-path-xyz-123"))
 
+    def test_empty_input_returns_none(self):
+        self.assertIsNone(_shipped.resolve_real_dir(""))
+        self.assertIsNone(_shipped.resolve_real_dir("-"))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
