@@ -1,10 +1,10 @@
-# How to Use 100x Dev
+# How to Use 100xPrism
 
 ---
 
 ## How it works
 
-100x Dev ships 66 modules as markdown files with YAML frontmatter. Your AI tool reads them and follows the instructions — running commands, enforcing thresholds, looping until checks pass.
+100xPrism ships 66 modules as markdown files with YAML frontmatter. Your AI tool reads them and follows the instructions — running commands, enforcing thresholds, looping until checks pass.
 
 Each module is the **single source of truth**. Adapters generate the right format for each tool:
 
@@ -23,13 +23,13 @@ Each module is the **single source of truth**. Adapters generate the right forma
 
 **Mac / Linux:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
-source ~/.zshrc   # or ~/.bashrc — reload shell to activate the 100x-dev command
+curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | bash
+source ~/.zshrc   # or ~/.bashrc — reload shell to activate the 100xprism command
 ```
 
 **Windows** (or anywhere Node.js is installed):
 ```bash
-npm install -g 100x-dev && 100x-dev install
+npm install -g 100xprism && 100xprism install
 ```
 
 The installer:
@@ -40,17 +40,17 @@ The installer:
 5. Copies 4 project templates to `~/100x-templates/`
 6. Optionally installs enforcing hooks (gate-on-commit, secret-scan)
 
-> **Terminal vs Claude Code:** `100x-dev install`, `init`, `update`, and `check` run in your **terminal**. Slash commands like `/commit` and `/gate` run **inside Claude Code**. If you see "command not found", you're in the wrong environment.
+> **Terminal vs Claude Code:** `100xprism install`, `init`, `update`, and `check` run in your **terminal**. Slash commands like `/commit` and `/gate` run **inside Claude Code**. If you see "command not found", you're in the wrong environment.
 
 ### Step 2 — Project setup (once per project)
 
 ```bash
-cd my-project && 100x-dev init
+cd my-project && 100xprism init
 ```
 
 This generates the right instruction files for each enabled tool (`.cursor/rules/`, `AGENTS.md`, `.agents/skills/`, `.codex/hooks.json`, `.windsurfrules`, etc.). **Commit the generated files** so teammates get the same modules on clone.
 
-For Codex, `AGENTS.md` stays compact and the full 100x-dev modules are emitted as repo-scoped skills under `.agents/skills/`. Use `$gate`, `$commit`, `$test`, or `/skills` in Codex to invoke them explicitly. Generated Codex hooks live in `.codex/hooks.json`; review and trust them with `/hooks` before relying on enforcement.
+For Codex, `AGENTS.md` stays compact and the full 100xprism modules are emitted as repo-scoped skills under `.agents/skills/`. Use `$gate`, `$commit`, `$test`, or `/skills` in Codex to invoke them explicitly. Generated Codex hooks live in `.codex/hooks.json`; review and trust them with `/hooks` before relying on enforcement.
 
 It also scaffolds a `CLAUDE.md` with placeholders for database, cloud, production URLs, and security exceptions — see [Project configuration](#project-configuration).
 
@@ -68,16 +68,16 @@ Open Claude Code in your project and try:
 ## Keeping up to date
 
 ```bash
-100x-dev check                  # check if a newer version is available
-100x-dev update                 # pull latest + sync plugins + regenerate tracked projects
-100x-dev update --plugins-only  # refresh plugins only (when repo is already current)
+100xprism check                  # check if a newer version is available
+100xprism update                 # pull latest + sync plugins + regenerate tracked projects
+100xprism update --plugins-only  # refresh plugins only (when repo is already current)
 ```
 
 `update` does the following:
 1. Pulls the latest code from `origin/main`
 2. Backs up `~/.claude/commands/` to `~/.claude/commands.bak.<timestamp>`
-3. Re-emits all modules to `~/.claude/skills/` and `~/.claude/commands/`, and **prunes** any skill or slash-command alias 100x-dev previously installed that no longer exists (e.g. a merged/renamed module) — your own hand-authored skills and commands are never touched
-4. Reconciles plugins in `~/.claude/settings.json`: **adds** newly-declared plugins and **removes** ones 100x-dev previously installed but has since dropped, without changing plugins you enabled or disabled yourself
+3. Re-emits all modules to `~/.claude/skills/` and `~/.claude/commands/`, and **prunes** any skill or slash-command alias 100xprism previously installed that no longer exists (e.g. a merged/renamed module) — your own hand-authored skills and commands are never touched
+4. Reconciles plugins in `~/.claude/settings.json`: **adds** newly-declared plugins and **removes** ones 100xprism previously installed but has since dropped, without changing plugins you enabled or disabled yourself
 5. Runs `claude plugin update` for each plugin (updates across all scopes)
 6. Syncs any installed hooks to their latest versions
 7. Regenerates instruction files in all tracked projects (Codex `AGENTS.md`, `.windsurfrules`, etc. are rewritten wholesale, so removed modules simply stop appearing)
@@ -92,11 +92,11 @@ Claude Code also shows an update banner at session start when a new version is a
 
 ## Custom install location
 
-The `get.sh` installer clones to `~/100x-dev` by default and writes that path into `~/.zshrc` and `~/.claude/settings.json`.
+The `get.sh` installer clones to `~/100xprism` by default and writes that path into `~/.zshrc` and `~/.claude/settings.json`.
 
-If you cloned elsewhere (e.g. `~/work/100x-dev`), you'll see errors:
+If you cloned elsewhere (e.g. `~/work/100xprism`), you'll see errors:
 ```
-.zshrc:source: no such file or directory: /Users/<you>/100x-dev/shell/aliases.sh
+.zshrc:source: no such file or directory: /Users/<you>/100xprism/shell/aliases.sh
 SessionStart:startup hook error
 ```
 
@@ -104,8 +104,8 @@ SessionStart:startup hook error
 
 1. **`~/.zshrc`** (or `~/.bashrc`):
    ```bash
-   # 100x Dev — point at wherever you cloned the repo
-   export DEV_100X_HOME="$HOME/work/100x-dev"   # adjust to your path
+   # 100xPrism — point at wherever you cloned the repo
+   export DEV_100X_HOME="$HOME/work/100xprism"   # adjust to your path
    [ -f "$DEV_100X_HOME/shell/aliases.sh" ] && source "$DEV_100X_HOME/shell/aliases.sh"
    ```
 
@@ -116,7 +116,7 @@ SessionStart:startup hook error
        {
          "matcher": "",
          "hooks": [
-           { "type": "command", "command": "$HOME/work/100x-dev/shell/check-update.sh --claude-hook" }
+           { "type": "command", "command": "$HOME/work/100xprism/shell/check-update.sh --claude-hook" }
          ]
        }
      ]
@@ -208,7 +208,7 @@ $test        # run the test skill
 $commit      # gate + stage + commit
 ```
 
-You can also type `/skills` and pick a 100x-dev skill. If you type a Claude-style workflow name like `/gate` in prose, the generated `AGENTS.md` tells Codex to treat that as the matching skill request.
+You can also type `/skills` and pick a 100xprism skill. If you type a Claude-style workflow name like `/gate` in prose, the generated `AGENTS.md` tells Codex to treat that as the matching skill request.
 
 Codex hooks are generated into `.codex/hooks.json`:
 
@@ -253,7 +253,7 @@ In Cursor, modules auto-trigger from their description (same as Claude Code). In
 
 ## Project configuration
 
-`100x-dev init` scaffolds a `CLAUDE.md` in your project. Uncomment and fill in the sections that apply:
+`100xprism init` scaffolds a `CLAUDE.md` in your project. Uncomment and fill in the sections that apply:
 
 ```markdown
 ## Database
@@ -292,14 +292,14 @@ These sections are consumed by `/db`, `/gate`, `/cloud-security`, `/launch`, `/p
 ### One project at a time
 
 ```bash
-cd ~/projects/my-app && 100x-dev init
+cd ~/projects/my-app && 100xprism init
 ```
 
 ### Batch apply to all repos
 
 ```bash
 for dir in ~/projects/*/; do
-  [ -d "$dir/.git" ] && (cd "$dir" && 100x-dev init)
+  [ -d "$dir/.git" ] && (cd "$dir" && 100xprism init)
 done
 ```
 
@@ -312,7 +312,7 @@ cat > ~/.git-templates/hooks/post-checkout << 'HOOK'
 [ "$3" = "1" ] || exit 0   # branch checkout only
 PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 [ -f "$PROJECT_ROOT/.cursorrules" ] && exit 0   # already set up
-command -v 100x-dev >/dev/null && (cd "$PROJECT_ROOT" && 100x-dev init)
+command -v 100xprism >/dev/null && (cd "$PROJECT_ROOT" && 100xprism init)
 HOOK
 chmod +x ~/.git-templates/hooks/post-checkout
 git config --global init.templateDir ~/.git-templates
@@ -325,10 +325,10 @@ Every `git clone` or `git init` now gets modules automatically.
 Add to your team's onboarding checklist:
 
 ```
-- [ ] Install: curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
-      (Windows: npm install -g 100x-dev && 100x-dev install)
+- [ ] Install: curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | bash
+      (Windows: npm install -g 100xprism && 100xprism install)
 - [ ] Reload shell: source ~/.zshrc (or ~/.bashrc)
-- [ ] Set up project: cd <your-project> && 100x-dev init
+- [ ] Set up project: cd <your-project> && 100xprism init
 - [ ] Open Claude Code and run /gate to verify
 ```
 
@@ -342,8 +342,8 @@ Copy into any project:
 
 ```bash
 mkdir -p .github/workflows
-cp ~/100x-dev/github-actions/ci.yml      .github/workflows/ci.yml
-cp ~/100x-dev/github-actions/release.yml  .github/workflows/release.yml
+cp ~/100xprism/github-actions/ci.yml      .github/workflows/ci.yml
+cp ~/100xprism/github-actions/release.yml  .github/workflows/release.yml
 ```
 
 ### ci.yml — runs on every push and PR
@@ -407,11 +407,11 @@ run: pytest tests/unit/ tests/integration/
 ## Monitoring token usage
 
 Claude Code records every session's token usage in `~/.claude/projects/**/*.jsonl`.
-100x-dev ships a local, offline dashboard to make sense of it:
+100xprism ships a local, offline dashboard to make sense of it:
 
 ```bash
-python3 ~/100x-dev/scripts/token-dashboard.py          # web UI at http://127.0.0.1:8787
-python3 ~/100x-dev/scripts/token-dashboard.py --print   # text summary, no server
+python3 ~/100xprism/scripts/token-dashboard.py          # web UI at http://127.0.0.1:8787
+python3 ~/100xprism/scripts/token-dashboard.py --print   # text summary, no server
 ```
 
 It breaks usage into the four token "purposes" — **input**, **output**,
@@ -431,11 +431,11 @@ window) and `/cost` (session total) complement the dashboard.
 
 | Problem | Solution |
 |:--------|:---------|
-| "command not found: 100x-dev" | Run `source ~/.zshrc` (or `~/.bashrc`) to reload shell aliases |
+| "command not found: 100xprism" | Run `source ~/.zshrc` (or `~/.bashrc`) to reload shell aliases |
 | Slash command not recognized in Claude Code | Restart your Claude Code session — modules load at startup |
-| "source: no such file: ~/100x-dev/shell/aliases.sh" | You cloned to a custom path — see [Custom install location](#custom-install-location) |
+| "source: no such file: ~/100xprism/shell/aliases.sh" | You cloned to a custom path — see [Custom install location](#custom-install-location) |
 | "SessionStart:startup hook error" | Update the hook path in `~/.claude/settings.json` — see [Custom install location](#custom-install-location) |
-| Modules not updating after `100x-dev update` | Restart your Claude Code session to pick up new modules |
+| Modules not updating after `100xprism update` | Restart your Claude Code session to pick up new modules |
 | Codex skill not appearing | Restart Codex, then run `/skills`; verify `.agents/skills/<slug>/SKILL.md` exists |
 | Codex hook not running | Run `/hooks` in Codex and trust the generated hook definition |
 | `/gate` hangs on Docker check | Docker Desktop must be running, or set `SKIP_DOCKER=1` in your environment |
@@ -456,10 +456,10 @@ Yes — modules are independent. In Claude Code, run only the slash commands you
 The gate adds checks before commits. Most runs complete in under 2 minutes. Catching issues locally is faster than debugging production.
 
 **How do I add a custom database engine?**
-Add a file to `modules/db/references/your-engine.md` following the pattern of existing engines, then run `100x-dev update`.
+Add a file to `modules/db/references/your-engine.md` following the pattern of existing engines, then run `100xprism update`.
 
 **How do I contribute a new module?**
-Create `modules/<slug>/SKILL.md` with the required frontmatter (`name`, `description`, `category`, `tier`), run `100x-dev update` to regenerate, and open a PR.
+Create `modules/<slug>/SKILL.md` with the required frontmatter (`name`, `description`, `category`, `tier`), run `100xprism update` to regenerate, and open a PR.
 
 **How do I contribute a new adapter?**
 Create `adapters/<tool>.sh`, call `adapters/lib/modules.py` with your tool name, add it to `install.sh`, and open a PR.

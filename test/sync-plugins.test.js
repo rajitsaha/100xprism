@@ -1,7 +1,7 @@
 'use strict'
 
 // Verifies adapters/lib/sync_plugins.py reconciles enabledPlugins with
-// plugins.json: adds new, removes 100x-dev-managed plugins dropped from
+// plugins.json: adds new, removes 100xprism-managed plugins dropped from
 // plugins.json, never flips a value the user set, and never removes a plugin
 // the user enabled themselves.
 

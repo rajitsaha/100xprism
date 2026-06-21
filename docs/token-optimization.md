@@ -72,7 +72,7 @@ Disabled globally (re-enable per-project via a project `.claude/settings.json`):
 
 ### Update propagation (so removals actually reach users)
 
-A merge/removal is only useful if `100x-dev update` cleans up the old artifacts.
+A merge/removal is only useful if `100xprism update` cleans up the old artifacts.
 Two gaps were fixed so it does:
 
 - **Claude Code skills + slash aliases now prune.** `emit-claude-code` writes a
@@ -81,14 +81,14 @@ Two gaps were fixed so it does:
   while never deleting the user's own hand-authored skills/commands. (Cursor and
   Codex emitters already pruned via markers.)
 - **Plugins now add *and* remove.** `adapters/lib/sync_plugins.py` (used by both
-  install and update) adds newly-declared plugins and removes ones 100x-dev
+  install and update) adds newly-declared plugins and removes ones 100xprism
   previously installed but has since dropped from `plugins.json`, without
   touching plugins the user enabled themselves or flipping a value they set. The
   managed set is tracked in a sidecar beside `settings.json`.
 
 Single-file tool configs (Codex `AGENTS.md`, `.windsurfrules`,
 `copilot-instructions.md`, `GEMINI.md`, `ANTIGRAVITY.md`) are regenerated
-wholesale on update, so removed modules simply stop appearing. 100x-dev does not
+wholesale on update, so removed modules simply stop appearing. 100xprism does not
 generate `CLAUDE.md` — it scaffolds an editable project file once and leaves it
 to you.
 

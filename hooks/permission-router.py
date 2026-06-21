@@ -89,7 +89,7 @@ def main() -> int:
     if not isinstance(cmd, str) or not cmd:
         return allow()
     if is_deterministically_safe(cmd):
-        return auto_approve("read-only command auto-approved by 100x-dev permission router")
+        return auto_approve("read-only command auto-approved by 100xprism permission router")
     if model_says_safe(cmd):
         return auto_approve(f"classified safe by {os.environ['HOOK_ROUTER_MODEL']} via permission router")
     return allow()  # defer to the normal prompt — never block

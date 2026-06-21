@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shared.sh — common logic for all 100x-dev adapter scripts.
+# shared.sh — common logic for all 100xprism adapter scripts.
 # Source this file; do not execute directly.
 #
 # All adapters dispatch to adapters/lib/modules.py for module reading and
@@ -67,7 +67,7 @@ _run_codex() {
 
 _track_project() {
   local project_path="$1"
-  local _tracked_file="$HOME/.100x-dev/tracked-projects"
+  local _tracked_file="$HOME/.100xprism/tracked-projects"
   mkdir -p "$(dirname "$_tracked_file")"
   local _abs_path
   _abs_path="$(cd "$project_path" && pwd)"

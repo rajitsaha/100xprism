@@ -56,7 +56,7 @@ def main() -> int:
 
     head = git(["rev-parse", "--short", "HEAD"], root).stdout.strip() or "(no commits)"
     return block(
-        "⛔ 100x-dev gate hook: the quality gate has not passed for the current tree.\n"
+        "⛔ 100xprism gate hook: the quality gate has not passed for the current tree.\n"
         f"   repo: {root}  @ {head}\n"
         "   Run /gate and let ALL gates pass, then retry the commit/push.\n"
         "   (/gate records a pass for the exact tree state; any later edit re-arms this block.)"

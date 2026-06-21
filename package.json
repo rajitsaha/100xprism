@@ -1,5 +1,5 @@
 {
-  "name": "100x-dev",
+  "name": "100xprism",
   "version": "2.3.1",
   "description": "66 cross-tool modules (workflows + skills). Quality gates on every commit. Works with Claude Code, Cursor, Codex, Windsurf, Antigravity, Copilot, Gemini.",
   "scripts": {
@@ -7,7 +7,8 @@
     "check": "node --test && python3 scripts/meta-check.py && HOME=$(mktemp -d) ./adapters/claude-code.sh"
   },
   "bin": {
-    "100x-dev": "bin/100x-dev.js"
+    "100xprism": "bin/100xprism.js",
+    "100x-dev": "bin/100xprism.js"
   },
   "files": [
     "bin/",
@@ -37,7 +38,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rajitsaha/100x-dev.git"
+    "url": "git+https://github.com/rajitsaha/100xprism.git"
   },
-  "homepage": "https://github.com/rajitsaha/100x-dev"
+  "homepage": "https://github.com/rajitsaha/100xprism"
 }

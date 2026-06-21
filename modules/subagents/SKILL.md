@@ -39,10 +39,10 @@ without self-review bias). Treat context savings as a side benefit, not the goal
 
 ### C. Permission Routing via Hook
 Auto-approve obviously-safe tool calls so they don't interrupt with a prompt, while
-anything risky still falls through to human review. 100x-dev ships this as a real,
+anything risky still falls through to human review. 100xprism ships this as a real,
 installable artifact — not just advice:
 
-- **Artifact:** `~/100x-dev/hooks/permission-router.py` (a `PreToolUse` Bash hook).
+- **Artifact:** `~/100xprism/hooks/permission-router.py` (a `PreToolUse` Bash hook).
 - **Tier 1 (offline):** a deterministic allowlist auto-approves read-only commands
   (`ls`, `cat`, `git status`, `grep`, …); destructive/network/credential commands are
   never auto-approved.
@@ -51,9 +51,9 @@ installable artifact — not just advice:
   grants permission, so escalation to a deeper model (e.g. Opus 4.8) or a human is the
   default for anything uncertain. The router **never blocks** — it only grants.
 - **Enable it:** re-run the installer and turn on the *permission-router* hook (it ships
-  off by default), or run `python3 ~/100x-dev/adapters/lib/modules.py emit-hooks` with
+  off by default), or run `python3 ~/100xprism/adapters/lib/modules.py emit-hooks` with
   `HOOK_ROUTER=1`.
-- See `~/100x-dev/hooks/README.md` and the hooks docs:
+- See `~/100xprism/hooks/README.md` and the hooks docs:
   <https://docs.claude.com/en/docs/claude-code/hooks>
 
 ## Fan-out ladder (how to parallelize)

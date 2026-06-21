@@ -2,11 +2,11 @@
 """Reconcile ~/.claude/settings.json with plugins/plugins.json.
 
 Unlike a naive add-only sync, this ADDS newly-declared plugins and REMOVES ones
-100x-dev previously installed but has since dropped from plugins.json (e.g. a
+100xprism previously installed but has since dropped from plugins.json (e.g. a
 deduplicated/removed plugin) — without ever touching plugins the user enabled
 themselves, and without flipping an entry the user explicitly turned on/off.
 
-"Managed" plugins (the set 100x-dev owns) are tracked in a sidecar state file so
+"Managed" plugins (the set 100xprism owns) are tracked in a sidecar state file so
 settings.json stays clean. On the very first run (no state yet) the managed set
 is seeded from the current intersection of declared ∧ enabled, so nothing is
 removed until a subsequent run observes an actual drop.
@@ -41,7 +41,7 @@ def main() -> int:
     settings_file = Path(args.settings)
     # State lives beside settings.json so it tracks that specific install (and so
     # tests against a temp settings file stay self-contained).
-    state_file = Path(args.state) if args.state else settings_file.parent / ".100x-dev-plugins.json"
+    state_file = Path(args.state) if args.state else settings_file.parent / ".100xprism-plugins.json"
     repo_data = _load(Path(args.plugins), {})
     settings = _load(settings_file, {})
     if not isinstance(settings, dict):

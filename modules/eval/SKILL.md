@@ -15,15 +15,15 @@ does the skill trigger on its prompts, and does its output satisfy each assertio
 The deterministic engine is `scripts/eval-harness.py` (discovery, validation, work-list,
 scorecard rendering — no model calls). **Grading is your job**: fan the cases out to
 subagents and have Haiku 4.5 judge every assertion with structured output. Installed path
-is `~/100x-dev/scripts/eval-harness.py`; in a checkout it's `scripts/eval-harness.py`.
+is `~/100xprism/scripts/eval-harness.py`; in a checkout it's `scripts/eval-harness.py`.
 
 ## Phase 0 — Pick the target
 
 ```bash
 # one module, everything, or just what changed on this branch:
-python3 ~/100x-dev/scripts/eval-harness.py validate --module <slug>
-python3 ~/100x-dev/scripts/eval-harness.py validate --all
-python3 ~/100x-dev/scripts/eval-harness.py validate --changed origin/main
+python3 ~/100xprism/scripts/eval-harness.py validate --module <slug>
+python3 ~/100xprism/scripts/eval-harness.py validate --all
+python3 ~/100xprism/scripts/eval-harness.py validate --changed origin/main
 ```
 
 Fix any structural errors before grading — a malformed eval file can't be scored.
@@ -31,7 +31,7 @@ Fix any structural errors before grading — a malformed eval file can't be scor
 ## Phase 1 — Get the work-list
 
 ```bash
-python3 ~/100x-dev/scripts/eval-harness.py plan --module <slug> --json
+python3 ~/100xprism/scripts/eval-harness.py plan --module <slug> --json
 ```
 
 This emits `{ "modules": [ { "module", "cases": [ { id, prompt, expected_output,
@@ -67,7 +67,7 @@ Write the collected array to a results file:
 ## Phase 3 — Render the scorecard
 
 ```bash
-python3 ~/100x-dev/scripts/eval-harness.py score --results results.json
+python3 ~/100xprism/scripts/eval-harness.py score --results results.json
 ```
 
 Produces a per-assertion ✓/✗ scorecard with reasons, per-case and overall tallies, and
@@ -86,8 +86,8 @@ scorecard: 41/43 assertions passed across 1 module(s)
 Catch skills that would fire on each other's prompts before they ever reach grading:
 
 ```bash
-python3 ~/100x-dev/scripts/trigger-overlap.py            # report flagged pairs
-python3 ~/100x-dev/scripts/trigger-overlap.py --strict   # fail on NEW (non-allow-listed) overlaps
+python3 ~/100xprism/scripts/trigger-overlap.py            # report flagged pairs
+python3 ~/100xprism/scripts/trigger-overlap.py --strict   # fail on NEW (non-allow-listed) overlaps
 ```
 
 Intentional overlaps live in `scripts/trigger-overlap-allow.txt`. If a real change adds a
