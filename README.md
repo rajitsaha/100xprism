@@ -83,6 +83,26 @@ Every `/commit` and `/push` runs a 5-point gate — tests, security, build, Dock
 
 ---
 
+## Token & value economics
+
+For a while, the goal was singular: make spec-driven, agentic development as **autonomous** as possible — let the agent plan, build, gate, and ship with less and less human steering.
+
+That part is mostly working. The harder, more important question is the one that comes next: **what is all this autonomy costing, and what is it worth?** Every agent run spends real money in tokens. So the question is no longer *can it ship* — it's *how much did we spend, and how much value did we add — to a business, or to humanity.*
+
+This is a first, deliberately humble attempt to **measure both — and to make it visible to everyone**, because watching it isn't one person's job. **It's everybody's responsibility.**
+
+```bash
+100x-tokens   # token economics — what every session, across every repo, is costing
+100x-value    # value economics  — what actually shipped for that spend
+```
+
+- **`100x-tokens`** — one offline, machine-wide dashboard at a single URL: the input/output/cache split, a startup-bloat meter, an *estimated* code-vs-logs-vs-output composition, and $ cost — by project, model, and day.
+- **`100x-value`** — tokens measure *cost*; this measures *value*: the features actually shipped for that spend, read side by side.
+
+Full guide: [docs/token-optimization.md](docs/token-optimization.md).
+
+---
+
 ## Slash commands
 
 The following 26 slash commands are available. Run them inside Claude Code. In Codex, use the generated repo skill by name instead, for example `$gate`, `$commit`, or `/skills`.
