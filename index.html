@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>100x Dev — Stop vibe coding. Ship production-grade software.</title>
+  <meta name="description" content="One source of truth. 66 modules generate native config for Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini and Antigravity. Quality gates run on every commit." />
+  <link rel="canonical" href="https://rajitsaha.github.io/100x-dev/" />
+  <meta property="og:title" content="100x Dev" />
+  <meta property="og:description" content="Stop vibe coding. Ship production-grade software." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://rajitsaha.github.io/100x-dev/" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/rajitsaha/100x-dev/main/assets/postcard-stack.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #14181d;
+      --border: #232a31;
+      --fg: #e7edf3;
+      --muted: #93a1ad;
+      --accent: #3ddc84;
+      --accent-2: #ff5c5c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+    header { text-align: center; padding: 80px 0 48px; }
+    header img.logo { width: 96px; height: 96px; }
+    h1 { font-size: 56px; margin: 20px 0 8px; letter-spacing: -0.02em; }
+    .tagline { font-size: 20px; color: var(--muted); margin: 0 0 28px; }
+    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
+    .badges img { height: 22px; }
+    .cta { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      display: inline-block; padding: 11px 22px; border-radius: 8px; text-decoration: none;
+      font-weight: 600; border: 1px solid var(--border);
+    }
+    .btn-primary { background: var(--accent); color: #06251a; border-color: var(--accent); }
+    .btn-ghost { color: var(--fg); background: var(--panel); }
+    .lede {
+      text-align: center; font-size: 18px; color: var(--fg); margin: 0 auto 8px; max-width: 680px;
+    }
+    .lede b { color: var(--accent); }
+    section { padding: 24px 0; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 22px 24px; margin: 16px 0;
+    }
+    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; }
+    pre {
+      background: #0d1116; border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 16px; overflow-x: auto; margin: 0 0 8px;
+    }
+    code { font: 13.5px/1.55 "SF Mono", ui-monospace, Menlo, Consolas, monospace; color: #cfe8d8; }
+    .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .grid .card { margin: 0; }
+    .grid h3 { margin: 0 0 6px; font-size: 16px; }
+    .grid p { margin: 0; color: var(--muted); font-size: 14.5px; }
+    figure { margin: 24px 0; text-align: center; }
+    figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 12px; }
+    footer { text-align: center; color: var(--muted); padding: 48px 0 64px; font-size: 14px; }
+    footer a { color: var(--accent); text-decoration: none; }
+    a { color: var(--accent); }
+    @media (max-width: 600px) { h1 { font-size: 40px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <img class="logo" src="https://raw.githubusercontent.com/rajitsaha/100x-dev/main/assets/100x-dev-blogo.png" alt="100x Dev logo" />
+      <h1>100x Dev</h1>
+      <p class="tagline">Stop vibe coding. Ship production-grade software.</p>
+      <div class="badges">
+        <img src="https://img.shields.io/github/v/release/rajitsaha/100x-dev?style=flat-square&label=version&color=brightgreen" alt="version" />
+        <img src="https://img.shields.io/npm/v/100x-dev?style=flat-square&color=red" alt="npm" />
+        <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT license" />
+      </div>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/rajitsaha/100x-dev">View on GitHub</a>
+        <a class="btn btn-ghost" href="https://www.npmjs.com/package/100x-dev">npm package</a>
+      </div>
+    </header>
+
+    <p class="lede"><b>One source of truth.</b> 66 modules generate native config for
+    Claude Code · Cursor · Codex · Windsurf · Copilot · Gemini · Antigravity.
+    Quality gates run on every commit.</p>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/rajitsaha/100x-dev/main/assets/postcard-stack.png" alt="100x-dev — 13 plugins, 26 slash commands, 40 auto-trigger skills" />
+    </figure>
+
+    <section>
+      <div class="card">
+        <h2>Install — npm (macOS · Linux · Windows)</h2>
+        <pre><code>npm install -g 100x-dev &amp;&amp; 100x-dev install</code></pre>
+        <h2 style="margin-top:18px">Install — curl (macOS / Linux)</h2>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/rajitsaha/100x-dev/main/get.sh | bash
+source ~/.zshrc   # or ~/.bashrc</code></pre>
+        <p class="note">Then set up a project: <code>cd your-project &amp;&amp; 100x-dev init</code></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>What you get</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>66 modules</h3>
+          <p>Skills, hooks, and rules authored once, emitted natively for every AI coding tool you use.</p>
+        </div>
+        <div class="card">
+          <h3>Quality gates</h3>
+          <p>Lint, test, security, and Docker checks gate every commit and push automatically.</p>
+        </div>
+        <div class="card">
+          <h3>7 tools, one config</h3>
+          <p>Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini, Antigravity — stay in sync.</p>
+        </div>
+        <div class="card">
+          <h3>Stays current</h3>
+          <p><code>100x-dev update</code> keeps your local toolkit, hooks, and plugins up to date.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        <a href="https://github.com/rajitsaha/100x-dev">GitHub</a> ·
+        <a href="https://www.npmjs.com/package/100x-dev">npm</a> ·
+        <a href="https://github.com/rajitsaha/100x-dev/releases/latest">Releases</a> ·
+        <a href="https://github.com/rajitsaha/100x-dev/blob/main/LICENSE">MIT License</a>
+      </p>
+      <p>© 100x Dev</p>
+    </footer>
+  </div>
+</body>
+</html>
