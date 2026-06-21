@@ -2,10 +2,13 @@
 """
 value-report.py — what SHIPPED, to read alongside token cost.
 
-The token dashboard measures *cost*. This measures *delivered value* — the part
-no token tool can know, because it isn't in the transcripts. It summarizes what a
-repo shipped from its CHANGELOG.md (Keep a Changelog format) and, when available,
-recent git history bucketed by conventional-commit type.
+The token dashboard measures *cost*. This measures *delivered value* — what a
+repo shipped, from its CHANGELOG.md plus the unreleased commits on top of the
+last release.
+
+Running it also REGISTERS this repo in the central store (~/.100xprism/value.json)
+so the `100x-tokens` dashboard can show this value side by side with what it
+cost in tokens — one URL, cost next to value.
 
 Offline, no third-party dependencies.
 
@@ -13,118 +16,57 @@ Usage:
     python3 scripts/value-report.py                 # current repo (cwd)
     python3 scripts/value-report.py /path/to/repo   # a specific repo
     python3 scripts/value-report.py --versions 8    # how many releases to show
+    python3 scripts/value-report.py --no-register   # print only, don't touch the store
 """
 import argparse
 import os
-import re
-import subprocess
 import sys
 
-VERSION_RE = re.compile(r"^##\s*\[([^\]]+)\]\s*(?:[—-]\s*(.+))?$")
-SECTION_RE = re.compile(r"^###\s+(.+)$")
-BULLET_RE = re.compile(r"^[-*]\s+(.+)$")
-CC_RE = re.compile(r"^([a-z]+)(?:\([^)]*\))?!?:")
-
-
-def parse_changelog(path, limit):
-    """Return [{version, date, sections:{name:[items]}}] for the newest releases."""
-    releases = []
-    cur = None
-    cur_section = None
-    try:
-        lines = open(path, encoding="utf-8", errors="ignore").read().splitlines()
-    except OSError:
-        return releases
-    for line in lines:
-        mv = VERSION_RE.match(line)
-        if mv:
-            if cur:
-                releases.append(cur)
-                if len(releases) >= limit:
-                    return releases
-            cur = {"version": mv.group(1), "date": (mv.group(2) or "").strip(), "sections": {}}
-            cur_section = None
-            continue
-        if cur is None:
-            continue
-        ms = SECTION_RE.match(line)
-        if ms:
-            cur_section = ms.group(1).strip()
-            cur["sections"].setdefault(cur_section, [])
-            continue
-        mb = BULLET_RE.match(line)
-        if mb:
-            sec = cur_section or "Notes"
-            cur["sections"].setdefault(sec, []).append(mb.group(1).strip())
-    if cur and len(releases) < limit:
-        releases.append(cur)
-    return releases
-
-
-def _strip_md(s):
-    s = re.sub(r"\*\*([^*]+)\*\*", r"\1", s)
-    s = re.sub(r"`([^`]+)`", r"\1", s)
-    s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
-    return s.strip()
-
-
-def git_summary(repo):
-    """Commits since the latest tag, bucketed by conventional-commit type."""
-    def git(*a):
-        return subprocess.run(["git", "-C", repo, *a], capture_output=True,
-                              text=True, timeout=10)
-    try:
-        if git("rev-parse", "--is-inside-work-tree").returncode != 0:
-            return None
-        tag = git("describe", "--tags", "--abbrev=0").stdout.strip()
-        rng = f"{tag}..HEAD" if tag else "HEAD"
-        out = git("log", rng, "--no-merges", "--pretty=%s").stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        return None
-    subjects = [s for s in out.splitlines() if s]
-    buckets = {}
-    for s in subjects:
-        m = CC_RE.match(s)
-        buckets.setdefault(m.group(1) if m else "other", []).append(s)
-    return {"since_tag": tag, "count": len(subjects), "buckets": buckets}
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _shipped  # noqa: E402
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("repo", nargs="?", default=os.getcwd())
     ap.add_argument("--versions", type=int, default=5)
+    ap.add_argument("--no-register", action="store_true",
+                    help="print only; do not write this repo to the central store")
     args = ap.parse_args()
 
-    repo = os.path.abspath(os.path.expanduser(args.repo))
-    name = os.path.basename(repo.rstrip("/"))
+    v = _shipped.repo_value(args.repo, versions=args.versions)
+    repo, name = v["path"], v["name"]
     print(f"\nValue report — {name}  ({repo})")
 
-    changelog = os.path.join(repo, "CHANGELOG.md")
-    releases = parse_changelog(changelog, args.versions)
-    if releases:
-        print(f"\nShipped (last {len(releases)} release(s), from CHANGELOG.md):")
-        for r in releases:
+    if v["releases"]:
+        print(f"\nShipped (last {len(v['releases'])} release(s), from CHANGELOG.md):")
+        for r in v["releases"]:
             head = f"  v{r['version']}" + (f"  ·  {r['date']}" if r["date"] else "")
-            counts = "  ".join(f"{n} {s.lower()}" for s, n in
-                               ((s, len(items)) for s, items in r["sections"].items()) if n)
+            counts = "  ".join(f"{len(items)} {sec.lower()}"
+                               for sec, items in r["sections"].items() if items)
             print(f"\n{head}" + (f"   [{counts}]" if counts else ""))
             for sec, items in r["sections"].items():
                 for it in items[:3]:
-                    line = _strip_md(it)
+                    line = _shipped._strip_md(it)
                     print(f"     • {line[:96] + ('…' if len(line) > 96 else '')}")
                 if len(items) > 3:
                     print(f"     • …+{len(items) - 3} more in {sec}")
     else:
         print("\n  No CHANGELOG.md found (or empty).")
 
-    g = git_summary(repo)
-    if g and g["count"]:
-        since = f"since {g['since_tag']}" if g["since_tag"] else "(no tags)"
-        print(f"\nUnreleased work {since}: {g['count']} commit(s)")
-        for typ, subs in sorted(g["buckets"].items(), key=lambda kv: -len(kv[1])):
-            print(f"  {len(subs):>3}  {typ}")
-    elif g is not None:
-        print("\nUnreleased work: none since the latest tag.")
+    un = v["unreleased"]
+    if un is None:
+        pass  # not a git repo
+    elif un["count"]:
+        print(f"\nUnreleased work since {un['since']}: {un['count']} commit(s)")
+        for typ, n in sorted(un["buckets"].items(), key=lambda kv: -kv[1]):
+            print(f"  {n:>3}  {typ}")
+    else:
+        print(f"\nUnreleased work: none since {un['since']}.")
+
+    if not args.no_register:
+        _shipped.save_repo(v)
+        print(f"\n  registered → {_shipped.STORE_PATH} (shows in the 100x-tokens dashboard)")
     print()
 
 

@@ -96,8 +96,8 @@ This is a first, deliberately humble attempt to **measure both — and to make i
 100x-value    # value economics  — what actually shipped for that spend
 ```
 
-- **`100x-tokens`** — one offline, machine-wide dashboard at a single URL: the input/output/cache split, a startup-bloat meter, an *estimated* code-vs-logs-vs-output composition, and $ cost — by project, model, and day.
-- **`100x-value`** — tokens measure *cost*; this measures *value*: the features actually shipped for that spend, read side by side.
+- **`100x-tokens`** — one offline, machine-wide dashboard at a single URL: the input/output/cache split, a startup-bloat meter, an *estimated* code-vs-logs-vs-output composition, and $ cost — by project, model, and day. It auto-refreshes every 5 minutes, so a tab left open never goes stale.
+- **`100x-value`** — tokens measure *cost*; this measures *value*. Run it in a repo and it summarizes what shipped (CHANGELOG + the unreleased commits on top of the last release) **and registers that repo** in a central store at `~/.100xprism/value.json`. The dashboard then renders a **"Value — cost vs. what shipped"** panel **in the same URL** — each release's *estimated* token cost (attributed by date window) sitting right next to what it delivered. Cost and value, one screen.
 
 Full guide: [docs/token-optimization.md](docs/token-optimization.md).
 
