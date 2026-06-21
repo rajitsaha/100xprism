@@ -153,5 +153,26 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual(list(cx.iter_usage()), [])
 
 
+class DirectoriesShapeTest(unittest.TestCase):
+    def test_build_directories_from_summaries(self):
+        # exercise the pure assembler with a real git repo as one dir
+        with tempfile.TemporaryDirectory() as repo:
+            git(repo, "init", "-q", "-b", "main")
+            commit(repo, "feat: a")
+            label = _shipped.project_label_for_path(repo)
+            mangled = os.path.abspath(repo).replace("/", "-")
+            by_project_day_cost = {label: {"2026-06-01": 12.0}}
+            tokens_by_label = {label: {"input":1,"output":2,"cache_read":3,"cache_write":4}}
+            window_by_label = {label: ("2026-06-01", "2026-06-01")}
+            dirs = td.assemble_directories(
+                {mangled: label}, tokens_by_label, by_project_day_cost,
+                window_by_label, tool_by_label={label: "claude-code"})
+            row = dirs[0]
+            self.assertEqual(row["label"], label)
+            self.assertEqual(row["cost"], 12.0)
+            self.assertEqual(row["value"]["kind"], "git")
+            self.assertEqual(row["dir"], os.path.abspath(repo))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

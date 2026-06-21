@@ -221,6 +221,7 @@ def build(verbose=True):
         summary["mtime"] = st.st_mtime
         summary["size"] = st.st_size
         summary["project"] = project_label(p)
+        summary["projdir"] = os.path.basename(os.path.dirname(p))
         new_cache[key] = summary
         reparsed += 1
         if verbose and reparsed % 200 == 0:
@@ -272,10 +273,23 @@ def build(verbose=True):
         lbl: {day: round(cost(dd), 4) for day, dd in days.items()}
         for lbl, days in by_project_day.items()
     }
-    # Re-scan the value store once per rebuild (every 5 min / on demand), not per
-    # /api/value request — git subprocesses stay off the request path.
-    # TODO(task-6): restore full value store refresh when value functions are added to _value
-    value_store = {}
+    # Build per-directory cost+value rows (git subprocesses run here, not on request path).
+    mangled_by_label, tokens_by_label, window_by_label, tool_by_label = {}, {}, {}, {}
+    for s in new_cache.values():
+        label = s.get("project", "?")
+        mangled = s.get("projdir", "")
+        mangled_by_label.setdefault(mangled, label)
+        tk = tokens_by_label.setdefault(label, _empty())
+        t = s["totals"]
+        _add(tk, t["input"], t["output"], t["cache_read"], t["cache_write"])
+        tool_by_label[label] = "claude-code"
+        days = sorted(d for d in s.get("by_day", {}) if d != "unknown")
+        if days:
+            lo, hi = window_by_label.get(label, (days[0], days[-1]))
+            window_by_label[label] = (min(lo, days[0]), max(hi, days[-1]))
+    directories = assemble_directories(
+        mangled_by_label, tokens_by_label, by_project_day_cost,
+        window_by_label, tool_by_label)
 
     # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -306,7 +320,7 @@ def build(verbose=True):
             key=lambda r: -(r[1]["input"] + r[1]["cache_read"] + r[1]["cache_write"]),
         ),
         "by_project_day_cost": by_project_day_cost,
-        "value_store": value_store,
+        "directories": directories,
     }
 
 
@@ -343,34 +357,29 @@ def print_summary(data):
 
 # ---------------------------------------------------------------- value × cost
 
-def _window_cost(daycost, start, end):
-    """Sum a project's daily cost over the window (start, end].
+def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
+                         window_by_label, tool_by_label):
+    """Build the unified per-directory rows (cost + tool-agnostic value).
 
-    start=None → open at the beginning; end=None → open through today. Dates are
-    "YYYY-MM-DD" strings, which sort lexicographically.
+    mangled_by_label: {mangled_dirname: label} — key is the raw Claude projects dir name,
+    value is the human-readable project label (e.g. "~/personal-github/100xprism").
     """
-    total = 0.0
-    for day, c in daycost.items():
-        if start and day <= start:
-            continue
-        if end and day > end:
-            continue
-        total += c
-    return round(total, 2)
-
-
-def _top_items(release, n=3):
-    # TODO(task-6): deleted in a later task — stub until then
-    return {}
-
-
-def value_panel(data):
-    """Join the central value store to per-project token cost: for each release,
-    the estimated cost is that project's spend over (prev release date, this
-    release date]. Attribution is by date window — an estimate, like composition.
-    """
-    # TODO(task-6): deleted in a later task — stub until then
-    return {}
+    rows = []
+    for mangled, label in mangled_by_label.items():
+        real = _value.resolve_real_dir(mangled)
+        start, end = window_by_label.get(label, (None, None))
+        daycost = by_project_day_cost.get(label, {})
+        cost = round(sum(daycost.values()), 2) if daycost else None
+        tool = tool_by_label.get(label, "claude-code")
+        value = (_value.cached_dir_value(real, label, tool, start, end)
+                 if real else _value._empty_value())
+        rows.append({
+            "dir": real, "label": label, "tool": tool,
+            "cost": cost, "tokens": tokens_by_label.get(label, _empty()),
+            "window": {"start": start, "end": end}, "value": value,
+        })
+    rows.sort(key=lambda r: -(r["cost"] or 0))
+    return rows
 
 
 # ---------------------------------------------------------------- web UI
@@ -514,9 +523,12 @@ def _rebuild():
 
 
 def _client_data(data):
-    """Token data for the browser, minus the heavy server-only fields."""
-    drop = {"by_project_day_cost", "value_store"}
-    return {k: v for k, v in data.items() if k not in drop}
+    """Token data for the browser. Trim per-day cost to the dirs we chart."""
+    top = [d["label"] for d in data.get("directories", [])[:12]]
+    bpd = {k: v for k, v in data.get("by_project_day_cost", {}).items() if k in top}
+    out = {k: v for k, v in data.items() if k != "by_project_day_cost"}
+    out["by_project_day_cost"] = bpd
+    return out
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -540,10 +552,6 @@ class Handler(BaseHTTPRequestHandler):
             if Handler.data is None:
                 _rebuild()
             self._send(json.dumps(_client_data(Handler.data)))
-        elif self.path.startswith("/api/value"):
-            if Handler.data is None:
-                _rebuild()
-            self._send(json.dumps(value_panel(Handler.data)))
         else:
             self._send(PAGE, "text/html; charset=utf-8")
 
