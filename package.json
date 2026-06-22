@@ -1,6 +1,6 @@
 {
   "name": "100xprism",
-  "version": "2.3.4",
+  "version": "2.4.0",
   "description": "66 cross-tool modules (workflows + skills). Quality gates on every commit. Works with Claude Code, Cursor, Codex, Windsurf, Antigravity, Copilot, Gemini.",
   "scripts": {
     "test": "node --test",

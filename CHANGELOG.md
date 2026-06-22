@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+---
+
+## [2.4.0] — 2026-06-22
+
 ### Added
 - **Automatic all-directory value view.** The token dashboard now shows every directory that consumed tokens (repo or not) plus every agentic project discovered machine-wide via marker files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`, `.github/copilot-instructions.md`) — even with zero Claude token spend.
 - **Machine-wide marker-file discovery** — `_value.discover_project_dirs` walks `$HOME` up to a configurable depth and surfaces project roots by marker file; `cached_discover` caches the walk in `value.json` so subsequent builds are instant.
