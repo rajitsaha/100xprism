@@ -426,7 +426,11 @@ section h2{margin-top:0;border-bottom-color:var(--line)}
 @media(max-width:760px){.cards2{grid-template-columns:1fr}}
 .badge{display:inline-block;font:600 10px/1 'IBM Plex Mono',ui-monospace,monospace;
 padding:3px 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
+#tip{position:fixed;z-index:1000;pointer-events:none;display:none;background:var(--surface);
+border:1px solid var(--line);border-radius:6px;padding:6px 9px;font:12px/1.3 'IBM Plex Mono',ui-monospace,monospace;
+color:var(--text);max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 </style></head><body>
+<div id=tip role=tooltip></div>
 <header><h1>Claude Code · Token Usage</h1>
 <span class=sub id=meta></span>
 <span style=margin-left:auto><button onclick=refresh()>↻ Rescan</button></span></header>
@@ -455,7 +459,8 @@ function leverageChart(dirs){
  const ratios=pts.map(p=>p.y/(p.x||1)).sort((a,b)=>a-b), r=ratios[ratios.length>>1]||1;
  const bline=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(mx)}" y2="${Y(r*mx)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
  const dots=pts.map(p=>{const above=p.y>=r*p.x; const col=above?'var(--value)':'var(--warn)';
-   return `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="5" fill="${col}" fill-opacity=".85"><title>${esc(p.d.label)} · $${Math.round(p.x)} · ${p.d.value.commits||0} commits</title></circle>`;}).join('');
+   const tip=`${esc(p.d.label)} — $${Math.round(p.x)} · ${p.d.value.commits||0} commits · ${p.d.value.prs||0} PRs`;
+   return `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="5" fill="${col}" fill-opacity=".85" data-tip="${tip}" tabindex="0"/>`;}).join('');
  const ax=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="var(--line)"/><line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="var(--line)"/>`;
  const tickAttrs='fill="var(--muted)" font-size="11"';
  const xTicks=`<text x="${PL}" y="${H-PB+14}" ${tickAttrs} text-anchor="middle">$0</text>`+
@@ -480,8 +485,8 @@ function costOverTime(d){
    (days.length>1?`<text x="${W-PR}" y="${H-2}" ${tickAttrs} text-anchor="end">${esc(days[days.length-1].slice(5))}</text>`:'');
  const yLabel=`<text x="${8}" y="${PT+(H-PB-PT)/2}" ${tickAttrs} text-anchor="middle" transform="rotate(-90,8,${PT+(H-PB-PT)/2})">$ / day</text>`;
  const yTick=`<text x="${PL-4}" y="${PT}" ${tickAttrs} text-anchor="end" dominant-baseline="middle">$${Math.round(maxC)}</text>`;
- const singleDot=days.length===1?`<circle cx="${X(0)}" cy="${Y(totalByDay[0])}" r="3" fill="var(--cost)"/>`:'';
- return svgEl(W,H,`<path d="${area}" fill="var(--cost)" fill-opacity=".18"/><path d="${path}" fill="none" stroke="var(--cost)" stroke-width="2"/>${singleDot}${xLabels}${yLabel}${yTick}`,
+ const dots=days.map((day,i)=>`<circle cx="${X(i)}" cy="${Y(totalByDay[i])}" r="2.5" fill="var(--cost)" data-tip="$${Math.round(totalByDay[i])} on ${esc(day)}"/>`).join('');
+ return svgEl(W,H,`<path d="${area}" fill="var(--cost)" fill-opacity=".18"/><path d="${path}" fill="none" stroke="var(--cost)" stroke-width="2"/>${dots}${xLabels}${yLabel}${yTick}`,
    'Daily token cost over time; x axis dates, y axis dollars per day');
 }
 function purposeSplit(t){
@@ -489,7 +494,8 @@ function purposeSplit(t){
  const parts=[['cache_read',t.cache_read,'var(--cr)'],['cache_write',t.cache_write,'var(--cw)'],
    ['input',t.input,'var(--in)'],['output',t.output,'var(--out)']];
  const sum=parts.reduce((a,p)=>a+p[1],0)||1; let x=0; const W=520,H=34;
- const segs=parts.map(([k,v,c])=>{const w=(W)*v/sum; const r=`<rect x="${x}" y="0" width="${w}" height="${H}" fill="${c}"><title>${k}: ${fmt(v)}</title></rect>`; x+=w; return r;}).join('');
+ const segs=parts.map(([k,v,c])=>{const w=(W)*v/sum; const pct=Math.round(100*v/sum);
+   const r=`<rect x="${x}" y="0" width="${w}" height="${H}" fill="${c}" data-tip="${esc(k)}: ${esc(fmt(v))} (${pct}%)"/>`; x+=w; return r;}).join('');
  return svgEl(W,H,segs,'Share of tokens by purpose: cache read, cache write, input, output');
 }
 function costByDir(dirs){
@@ -497,7 +503,7 @@ function costByDir(dirs){
  const mx=Math.max(...rows.map(r=>r.cost),1); const H=rows.length*26+8,W=520;
  const bars=rows.map((r,i)=>{const w=(W-160)*r.cost/mx; const y=i*26+4;
    return `<text x="0" y="${y+14}" fill="var(--muted)" font-size="12">${esc(r.label.slice(-26))}</text>`+
-     `<rect x="150" y="${y+3}" width="${w}" height="14" rx="3" fill="var(--cost)"/>`+
+     `<rect x="150" y="${y+3}" width="${w}" height="14" rx="3" fill="var(--cost)" data-tip="${esc(r.label)}: $${Math.round(r.cost)}" tabindex="0"/>`+
      `<text x="${156+w}" y="${y+14}" fill="var(--text)" font-size="11">$${Math.round(r.cost)}</text>`;}).join('');
  return svgEl(W,H,bars,'Estimated token cost by directory, highest first');
 }
@@ -569,6 +575,14 @@ function render(d){
 }
 load();
 setInterval(load, 300000);  // auto-refresh every 5 min so the tab never goes stale
+document.addEventListener('mousemove',e=>{const el=e.target.closest('[data-tip]');const tip=document.getElementById('tip');
+  if(el){tip.textContent=el.getAttribute('data-tip');tip.style.display='block';
+    let x=e.clientX+12,y=e.clientY+12;tip.style.left=Math.min(x,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=y+'px';}
+  else{tip.style.display='none';}});
+document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');const tip=document.getElementById('tip');
+  if(el){const r=el.getBoundingClientRect();tip.textContent=el.getAttribute('data-tip');tip.style.display='block';
+    tip.style.left=r.left+'px';tip.style.top=(r.bottom+6)+'px';}});
+document.addEventListener('focusout',()=>{document.getElementById('tip').style.display='none';});
 </script></body></html>"""
 
 
