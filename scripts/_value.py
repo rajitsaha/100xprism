@@ -215,6 +215,45 @@ def save_store(store):
         print(f"warning: could not write value store ({STORE_PATH}): {e}", file=sys.stderr)
 
 
+AGENT_MARKERS = ("CLAUDE.md", "AGENTS.md", "GEMINI.md", ".cursorrules",
+                 ".windsurfrules", ".clinerules", ".github/copilot-instructions.md")
+_DISCOVER_SKIP = _SKIP_DIRS | {"Library", "Movies", "Music", "Pictures", "Applications"}
+
+
+def discover_project_dirs(root=None, max_depth=6):
+    """Walk `root` (default $HOME) for dirs containing any agent marker file.
+    Returns {real_abs_dir: label}. Prunes heavy/hidden dirs; depth-capped."""
+    root = os.path.abspath(os.path.expanduser(root or HOME))
+    base = root.rstrip("/").count("/")
+    found = {}
+    for dp, dirs, files in os.walk(root):
+        if dp.rstrip("/").count("/") - base > max_depth:
+            dirs[:] = []
+            continue
+        dirs[:] = [d for d in dirs if d not in _DISCOVER_SKIP and not d.startswith(".")]
+        fs = set(files)
+        if any((m in fs) or (os.sep in m and os.path.exists(os.path.join(dp, m)))
+               for m in AGENT_MARKERS):
+            found[dp] = project_label_for_path(dp)
+    return found
+
+
+def cached_discover(root=None, ttl=1800):
+    """Discovery cached in the value store (re-walked only when older than ttl
+    seconds). Returns {real_abs_dir: label}."""
+    import time
+    store = load_store()
+    now = time.time()
+    if store.get("discovered_at") and (now - store["discovered_at"]) < ttl \
+            and isinstance(store.get("discovered"), dict):
+        return store["discovered"]
+    disc = discover_project_dirs(root)
+    store["discovered"] = disc
+    store["discovered_at"] = now
+    save_store(store)
+    return disc
+
+
 def cached_dir_value(real_dir, label, tool, start, end):
     """Return cached value if HEAD+window unchanged, else recompute and cache.
     Preserves a previously-written AI `summary` across cache hits."""

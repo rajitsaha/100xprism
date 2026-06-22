@@ -174,6 +174,68 @@ class DirectoriesShapeTest(unittest.TestCase):
             self.assertEqual(row["dir"], os.path.abspath(repo))
 
 
+class DiscoverTest(unittest.TestCase):
+    def _make_tree(self, root):
+        """Helper: create a temp tree with specific layout."""
+        proj = os.path.join(root, "proj")
+        os.makedirs(proj)
+        write(os.path.join(proj, "CLAUDE.md"), "# proj")
+        sub = os.path.join(proj, "sub")
+        os.makedirs(sub)
+        write(os.path.join(sub, "normal.txt"), "no marker here")
+        hidden = os.path.join(root, ".hidden")
+        os.makedirs(hidden)
+        write(os.path.join(hidden, "CLAUDE.md"), "# hidden")
+        return proj
+
+    def test_discovers_marker_dir(self):
+        with tempfile.TemporaryDirectory() as root:
+            proj = self._make_tree(root)
+            found = _shipped.discover_project_dirs(root)
+            self.assertIn(proj, found, "proj/ with CLAUDE.md should be discovered")
+            hidden = os.path.join(root, ".hidden")
+            self.assertNotIn(hidden, found, ".hidden/ should be pruned")
+
+    def test_depth_cap(self):
+        with tempfile.TemporaryDirectory() as root:
+            # Create a marker at depth 3 (a/b/c/CLAUDE.md)
+            deep = os.path.join(root, "a", "b", "c")
+            os.makedirs(deep)
+            write(os.path.join(deep, "CLAUDE.md"), "# deep")
+            # With max_depth=2, depth-3 dir should NOT be found
+            found = _shipped.discover_project_dirs(root, max_depth=2)
+            self.assertNotIn(deep, found, "dir at depth 3 with max_depth=2 should be pruned")
+            # With max_depth=3, it should be found
+            found2 = _shipped.discover_project_dirs(root, max_depth=3)
+            self.assertIn(deep, found2, "dir at depth 3 with max_depth=3 should be found")
+
+    def test_cached_discover_uses_store(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orig_dir = _shipped.STORE_DIR
+            orig_path = _shipped.STORE_PATH
+            try:
+                _shipped.STORE_DIR = tmp
+                _shipped.STORE_PATH = os.path.join(tmp, "value.json")
+                # Set up a real project tree to discover
+                proj_root = os.path.join(tmp, "projects")
+                os.makedirs(proj_root)
+                proj = os.path.join(proj_root, "myrepo")
+                os.makedirs(proj)
+                write(os.path.join(proj, "CLAUDE.md"), "# myrepo")
+                # First call: does the walk
+                result1 = _shipped.cached_discover(root=proj_root)
+                self.assertIn(proj, result1)
+                # Second call: should use cache (store has discovered_at)
+                result2 = _shipped.cached_discover(root=proj_root)
+                self.assertEqual(result1, result2)
+                store = _shipped.load_store()
+                self.assertIn("discovered_at", store)
+                self.assertIsInstance(store.get("discovered"), dict)
+            finally:
+                _shipped.STORE_DIR = orig_dir
+                _shipped.STORE_PATH = orig_path
+
+
 class SummariesTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

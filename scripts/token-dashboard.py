@@ -288,9 +288,14 @@ def build(verbose=True):
         if days:
             lo, hi = window_by_label.get(label, (days[0], days[-1]))
             window_by_label[label] = (min(lo, days[0]), max(hi, days[-1]))
+    discovered = _value.cached_discover()            # {real_dir: label}
+    realdir_by_label = {}
+    for real_dir, label in discovered.items():
+        realdir_by_label.setdefault(label, real_dir)
     directories = assemble_directories(
         mangled_by_label, tokens_by_label, by_project_day_cost,
-        window_by_label, tool_by_label)
+        window_by_label, tool_by_label,
+        discovered=discovered, realdir_by_label=realdir_by_label)
 
     # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -359,15 +364,39 @@ def print_summary(data):
 # ---------------------------------------------------------------- value × cost
 
 def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
-                         window_by_label, tool_by_label):
+                         window_by_label, tool_by_label,
+                         discovered=None, realdir_by_label=None):
     """Build the unified per-directory rows (cost + tool-agnostic value).
 
     mangled_by_label: {mangled_dirname: label} — key is the raw Claude projects dir name,
     value is the human-readable project label (e.g. "~/personal-github/100xprism").
+    discovered: {real_abs_dir: label} from cached_discover() — optional, default empty.
+    realdir_by_label: {label: real_abs_dir} inverted from discovered — optional.
+
+    The directory set is the UNION of transcript-derived labels and discovered dirs,
+    joined on label. Discovery provides authoritative real paths where available.
     """
-    rows = []
+    if discovered is None:
+        discovered = {}
+    if realdir_by_label is None:
+        realdir_by_label = {}
+
+    # Build label→mangled map (invert mangled_by_label: {mangled: label})
+    label_to_mangled = {}
     for mangled, label in mangled_by_label.items():
-        real = _value.resolve_real_dir(mangled)
+        label_to_mangled.setdefault(label, mangled)
+
+    # Union of all labels from transcripts and discovery
+    all_labels = set(mangled_by_label.values()) | set(discovered.values())
+
+    rows = []
+    for label in all_labels:
+        # Resolve real dir: discovery wins (authoritative), fallback to mangled resolve
+        real = realdir_by_label.get(label)
+        if real is None:
+            mangled = label_to_mangled.get(label)
+            if mangled:
+                real = _value.resolve_real_dir(mangled)
         start, end = window_by_label.get(label, (None, None))
         daycost = by_project_day_cost.get(label, {})
         cost = round(sum(daycost.values()), 2) if daycost else None
