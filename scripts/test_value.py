@@ -173,6 +173,28 @@ class DirectoriesShapeTest(unittest.TestCase):
             self.assertEqual(row["value"]["kind"], "git")
             self.assertEqual(row["dir"], os.path.abspath(repo))
 
+    def test_zero_cost_renders_none(self):
+        """Fix 1: daycost values that sum to 0.0 must yield cost=None (renders —, not $0)."""
+        label = "~/zero-cost-proj"
+        # Put label in discovered so it enters all_labels; real=None avoids cached_dir_value
+        dirs = td.assemble_directories(
+            {}, {}, {label: {"2026-06-01": 0.0}},
+            {label: (None, None)}, tool_by_label={label: "claude-code"},
+            discovered={"ignored_real": label}, realdir_by_label={})
+        self.assertEqual(len(dirs), 1)
+        self.assertIsNone(dirs[0]["cost"])
+
+    def test_discovery_only_tool_is_none(self):
+        """Fix 2: labels that appear only in discovered (no token cost) must have tool=None."""
+        label = "~/discovery-only-proj"
+        dirs = td.assemble_directories(
+            {}, {}, {},
+            {}, tool_by_label={},
+            discovered={"ignored": label}, realdir_by_label={})
+        self.assertEqual(len(dirs), 1)
+        self.assertIsNone(dirs[0]["tool"])
+        self.assertIsNone(dirs[0]["cost"])
+
 
 class DiscoverTest(unittest.TestCase):
     def _make_tree(self, root):

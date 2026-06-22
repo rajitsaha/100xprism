@@ -209,8 +209,10 @@ def load_store():
 def save_store(store):
     try:
         os.makedirs(STORE_DIR, exist_ok=True)
-        with open(STORE_PATH, "w", encoding="utf-8") as f:
+        tmp = STORE_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(store, f, indent=2)
+        os.replace(tmp, STORE_PATH)
     except OSError as e:
         print(f"warning: could not write value store ({STORE_PATH}): {e}", file=sys.stderr)
 

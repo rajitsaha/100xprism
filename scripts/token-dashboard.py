@@ -399,8 +399,9 @@ def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
                 real = _value.resolve_real_dir(mangled)
         start, end = window_by_label.get(label, (None, None))
         daycost = by_project_day_cost.get(label, {})
-        cost = round(sum(daycost.values()), 2) if daycost else None
-        tool = tool_by_label.get(label, "claude-code")
+        _c = round(sum(daycost.values()), 2) if daycost else 0.0
+        cost = _c if _c else None
+        tool = tool_by_label.get(label)        # None for discovery-only dirs
         value = (_value.cached_dir_value(real, label, tool, start, end)
                  if real else _value._empty_value())
         rows.append({
