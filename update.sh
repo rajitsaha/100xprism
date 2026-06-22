@@ -8,6 +8,7 @@ SKILLS_DIR="$CLAUDE_DIR/skills"
 SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 CHECK_ONLY=false
 PLUGINS_ONLY=false
+ASSUME_YES=false
 # Overridable so tests can stub the CLI (see test/update-plugins.test.js).
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
@@ -20,6 +21,7 @@ NC='\033[0m'
 for _arg in "$@"; do
   [ "$_arg" = "--check-only"   ] && CHECK_ONLY=true
   [ "$_arg" = "--plugins-only" ] && PLUGINS_ONLY=true
+  { [ "$_arg" = "--yes" ] || [ "$_arg" = "-y" ]; } && ASSUME_YES=true
 done
 
 # ── Plugin update function (always available) ─────────────────────────────────
@@ -136,8 +138,14 @@ if [ "$CHECK_ONLY" = true ]; then
   exit 0
 fi
 
-read -rp "Apply updates? (Y/n): " confirm
-confirm=${confirm:-Y}
+if [ "$ASSUME_YES" = true ]; then
+  confirm=Y
+else
+  # `|| confirm=n` keeps `set -e` from aborting on EOF (non-interactive without
+  # --yes): no TTY to answer the prompt → treat as "skip" rather than crash.
+  read -rp "Apply updates? (Y/n): " confirm || confirm=n
+  confirm=${confirm:-Y}
+fi
 
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
   echo "Skipped."
@@ -226,6 +234,7 @@ echo ""
 NEW_VERSION="$(cat "$REPO_DIR/VERSION" 2>/dev/null | tr -d '[:space:]')"
 echo -e "${GREEN}✓ 100x Dev updated to v${NEW_VERSION}! Restart Claude Code to activate new modules and plugins.${NC}"
 echo ""
-echo -e "${CYAN}Tip: Add this to your crontab to get notified weekly:${NC}"
-echo "  0 9 * * 1 $REPO_DIR/update.sh --check-only"
+echo -e "${CYAN}Tip: Add this to your crontab — notify weekly, or auto-apply with --yes:${NC}"
+echo "  0 9 * * 1 $REPO_DIR/update.sh --check-only   # notify only"
+echo "  0 9 * * 1 $REPO_DIR/update.sh --yes          # auto-apply (no prompt)"
 echo ""

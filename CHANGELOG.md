@@ -9,6 +9,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.4.2] — 2026-06-22
+
+### Added
+- **`update.sh --yes` / `-y`** — apply updates without the interactive `Apply updates? (Y/n)` prompt, so `update.sh` can run unattended (cron, CI, scripts). A non-interactive run *without* `--yes` (no TTY) now safely **skips** instead of aborting silently under `set -e`. The crontab tip shows both `--check-only` (notify) and `--yes` (auto-apply).
+
+---
+
 ## [2.4.1] — 2026-06-22
 
 ### Fixed
