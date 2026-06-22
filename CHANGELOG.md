@@ -9,6 +9,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.4.3] — 2026-06-22
+
+### Changed
+- **Housekeeping (no behavior change).** Extracted the duplicated `kickDashboard()` daemon-launch helper into `lib/dashboard.js` (shared by install / init / update); closed the daemon log file descriptor in `ensure_daemon`; hoisted an in-function `import`; clarified the reverse-mangle index's last-writer-wins behavior; parenthesized a ternary; fixed a `(removed)`-dir tool badge tooltip; and refreshed stale `cached_discover`→`cached_scan` docstrings.
+
+---
+
 ## [2.4.2] — 2026-06-22
 
 ### Added

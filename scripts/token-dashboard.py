@@ -371,7 +371,7 @@ def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
 
     mangled_by_label: {mangled_dirname: label} — key is the raw Claude projects dir name,
     value is the human-readable project label (e.g. "~/personal-github/100xprism").
-    discovered: {real_abs_dir: label} from cached_discover() — optional, default empty.
+    discovered: {real_abs_dir: label} from cached_scan() — optional, default empty.
     realdir_by_label: {label: real_abs_dir} inverted from discovered — optional.
 
     The directory set is the UNION of transcript-derived labels and discovered dirs,
@@ -540,7 +540,7 @@ function costByDir(dirs){
      `<text x="${156+w}" y="${y+14}" fill="var(--text)" font-size="11">$${Math.round(r.cost)}</text>`;}).join('');
  return svgEl(W,H,bars,'Estimated token cost by directory, highest first');
 }
-function toolBadge(t){const m={'claude-code':'CC','codex':'CX'}; return `<span class=badge title="${esc(t)}">${esc(m[t]||'?')}</span>`;}
+function toolBadge(t){const m={'claude-code':'CC','codex':'CX'}; return `<span class=badge title="${esc(t||'unknown')}">${esc(m[t]||'?')}</span>`;}
 function dirsTable(dirs){
  let h=`<h2>All directories <span class=muted style="text-transform:none;font-weight:400">— cost (amber) × value shipped (green); — = no local token data for that tool</span></h2>`;
  h+=`<details class=howto><summary>How this is calculated</summary>
@@ -723,10 +723,12 @@ def ensure_daemon(port: int) -> str | None:
         # Not running — spawn a detached background process
         import subprocess
         logpath = os.path.join(HOME, ".claude", ".token-dashboard.log")
+        log = open(logpath, "a")
         subprocess.Popen(
             [sys.executable, os.path.abspath(__file__), "--no-open", "--port", str(port)],
-            stdout=open(logpath, "a"), stderr=subprocess.STDOUT,
+            stdout=log, stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL, start_new_session=True)
+        log.close()
         return f"📊 token + value dashboard starting → {url}{suffix}  (first scan runs in the background)"
     except Exception:
         return None

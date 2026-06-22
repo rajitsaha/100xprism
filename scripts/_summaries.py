@@ -24,7 +24,7 @@ def run_claude(prompt, cli="claude", timeout=60):
         r = subprocess.run([cli, "-p", prompt], capture_output=True, text=True,
                            timeout=timeout)
         out = (r.stdout or "").strip()
-        return out or None if r.returncode == 0 else None
+        return (out or None) if r.returncode == 0 else None
     except (OSError, subprocess.SubprocessError):
         return None
 
