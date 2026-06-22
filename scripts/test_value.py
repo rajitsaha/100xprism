@@ -288,5 +288,45 @@ class SummariesTest(unittest.TestCase):
         self.assertIsNone(_value.load_store()["dirs"]["/x"]["value"]["summary"])
 
 
+class EnsureDaemonTest(unittest.TestCase):
+    def test_already_running_no_spawn(self):
+        """When port is already in use, ensure_daemon must NOT spawn a new process."""
+        import unittest.mock as mock
+        # Monkeypatch _port_in_use to simulate "already running"
+        orig = td._port_in_use
+        td._port_in_use = lambda port: True
+        spawned = []
+        orig_popen = __import__('subprocess').Popen
+        try:
+            import subprocess
+            subprocess.Popen = lambda *a, **kw: spawned.append((a, kw)) or mock.MagicMock()
+            # Clear opt-out env var if set
+            env_backup = os.environ.pop("PRISM_NO_DASHBOARD", None)
+            result = td.ensure_daemon(8787)
+        finally:
+            td._port_in_use = orig
+            subprocess.Popen = orig_popen
+            if env_backup is not None:
+                os.environ["PRISM_NO_DASHBOARD"] = env_backup
+        self.assertEqual(len(spawned), 0, "Must not spawn when port is already in use")
+        self.assertIn("live", result)
+        self.assertIn("http://127.0.0.1:8787", result)
+
+    def test_opt_out_returns_none(self):
+        """PRISM_NO_DASHBOARD=1 → ensure_daemon returns None and never spawns."""
+        import subprocess
+        orig_popen = subprocess.Popen
+        spawned = []
+        try:
+            subprocess.Popen = lambda *a, **kw: spawned.append((a, kw)) or None
+            os.environ["PRISM_NO_DASHBOARD"] = "1"
+            result = td.ensure_daemon(8787)
+        finally:
+            subprocess.Popen = orig_popen
+            del os.environ["PRISM_NO_DASHBOARD"]
+        self.assertIsNone(result)
+        self.assertEqual(len(spawned), 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

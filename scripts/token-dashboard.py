@@ -670,21 +670,28 @@ class Handler(BaseHTTPRequestHandler):
             self._send(PAGE, "text/html; charset=utf-8")
 
 
-def _oneline():
-    """Fast cache-only summary line for shell startup. Silent if no cache yet."""
+def _token_summary() -> str | None:
+    """Return a short cached-token summary string, or None if no cache."""
     files = load_cache()
     if not files:
-        return
+        return None
     tot = _empty()
     for s in files.values():
         t = s.get("totals", {})
         _add(tot, t.get("input", 0), t.get("output", 0),
              t.get("cache_read", 0), t.get("cache_write", 0))
     if not any(tot.values()):
-        return
+        return None
     cost = sum(tot[k] / 1_000_000 * RATES[k] for k in RATES)
-    print(f"100xPrism tokens (as of last scan): {fmt(tot['output'])} out · "
-          f"{fmt(tot['cache_read'])} ctx · ~${cost:,.0f} · run `100x-tokens` for the dashboard")
+    return (f"{fmt(tot['output'])} out · "
+            f"{fmt(tot['cache_read'])} ctx · ~${cost:,.0f}")
+
+
+def _oneline():
+    """Fast cache-only summary line for shell startup. Silent if no cache yet."""
+    s = _token_summary()
+    if s:
+        print(f"100xPrism tokens (as of last scan): {s} · run `100x-tokens` for the dashboard")
 
 
 def _port_in_use(port):
@@ -696,17 +703,51 @@ def _port_in_use(port):
         return False
 
 
+def ensure_daemon(port: int) -> str | None:
+    """
+    Ensure the dashboard is running as a background daemon.
+    Returns a one-line status string, or None if opt-out is set.
+    Never raises.
+    """
+    try:
+        if os.environ.get("PRISM_NO_DASHBOARD"):
+            return None
+        url = f"http://127.0.0.1:{port}"
+        s = _token_summary()
+        suffix = f"  · {s}" if s else ""
+        if _port_in_use(port):
+            return f"📊 token + value dashboard live → {url}{suffix}"
+        # Not running — spawn a detached background process
+        import subprocess
+        logpath = os.path.join(HOME, ".claude", ".token-dashboard.log")
+        subprocess.Popen(
+            [sys.executable, os.path.abspath(__file__), "--no-open", "--port", str(port)],
+            stdout=open(logpath, "a"), stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL, start_new_session=True)
+        return f"📊 token + value dashboard starting → {url}{suffix}  (first scan runs in the background)"
+    except Exception:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8787)
     ap.add_argument("--print", action="store_true", dest="text")
     ap.add_argument("--oneline", action="store_true",
                     help="one fast summary line from cache (no rescan) — for shell startup")
+    ap.add_argument("--ensure-daemon", action="store_true",
+                    help="ensure dashboard is running as a background daemon; print URL + status")
     ap.add_argument("--no-open", action="store_true")
     args = ap.parse_args()
 
     if args.oneline:
         _oneline()
+        return
+
+    if args.ensure_daemon:
+        line = ensure_daemon(args.port)
+        if line:
+            print(line)
         return
 
     if not os.path.isdir(PROJECTS_DIR):

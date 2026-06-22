@@ -31,8 +31,10 @@ if [[ -x "$HOME/100xprism/shell/check-update.sh" ]]; then
   ("$HOME/100xprism/shell/check-update.sh" --silent &) 2>/dev/null
 fi
 
-# ── Token-usage line (cache-only, fast; silent until you've run 100x-tokens once) ──
-# Opt out any time:  export PRISM_NO_TOKEN_LINE=1
-if [[ -z "${PRISM_NO_TOKEN_LINE:-}" && -f "$HOME/100xprism/scripts/token-dashboard.py" ]]; then
-  python3 "$HOME/100xprism/scripts/token-dashboard.py" --oneline 2>/dev/null
+# ── Auto-start the token+value dashboard (machine-wide singleton; detached) ──
+# Opt out any time:  export PRISM_NO_DASHBOARD=1
+# The --ensure-daemon flag surfaces the live URL + cached token summary in one line.
+# PRISM_NO_TOKEN_LINE no longer applies here (--ensure-daemon always shows the URL).
+if [[ -z "${PRISM_NO_DASHBOARD:-}" && -f "$HOME/100xprism/scripts/token-dashboard.py" ]]; then
+  python3 "$HOME/100xprism/scripts/token-dashboard.py" --ensure-daemon 2>/dev/null
 fi
