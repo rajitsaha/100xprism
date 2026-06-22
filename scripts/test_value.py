@@ -12,7 +12,7 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import _value as _shipped  # noqa: E402 — temporary alias; Task 9/10 rewrites this file
+import _value  # noqa: E402
 
 # token-dashboard.py has a hyphen → load it by path.
 _spec = importlib.util.spec_from_file_location(
@@ -44,11 +44,11 @@ class LabelTest(unittest.TestCase):
     def test_path_label_matches_dashboard(self):
         """The label the CLI registers must equal the label the dashboard derives
         from the same repo's transcript dir — otherwise cost never joins value."""
-        repo = os.path.join(_shipped.HOME, "personal-github", "100xprism")
+        repo = os.path.join(_value.HOME, "personal-github", "100xprism")
         transcript = os.path.join(
-            _shipped.PROJECTS_DIR,
+            _value.PROJECTS_DIR,
             repo.replace("/", "-"), "session.jsonl")
-        self.assertEqual(_shipped.project_label_for_path(repo),
+        self.assertEqual(_value.project_label_for_path(repo),
                          td.project_label(transcript))
 
 
@@ -60,14 +60,14 @@ class ResolveDirTest(unittest.TestCase):
             target = os.path.join(root, "personal-github", "100xprism")
             os.makedirs(target)
             mangled = target.replace("/", "-")   # lossy: every / and the hyphen are '-'
-            self.assertEqual(_shipped.resolve_real_dir(mangled), target)
+            self.assertEqual(_value.resolve_real_dir(mangled), target)
 
     def test_returns_none_when_absent(self):
-        self.assertIsNone(_shipped.resolve_real_dir("-no-such-path-xyz-123"))
+        self.assertIsNone(_value.resolve_real_dir("-no-such-path-xyz-123"))
 
     def test_empty_input_returns_none(self):
-        self.assertIsNone(_shipped.resolve_real_dir(""))
-        self.assertIsNone(_shipped.resolve_real_dir("-"))
+        self.assertIsNone(_value.resolve_real_dir(""))
+        self.assertIsNone(_value.resolve_real_dir("-"))
 
 
 class GitValueTest(unittest.TestCase):
@@ -77,8 +77,8 @@ class GitValueTest(unittest.TestCase):
             commit(repo, "feat: a (#1)")
             commit(repo, "fix: b")
             commit(repo, "docs: c (#2)")
-            self.assertNotEqual(_shipped.git_head(repo), "")
-            v = _shipped.git_value(repo, None, None)
+            self.assertNotEqual(_value.git_head(repo), "")
+            v = _value.git_value(repo, None, None)
             self.assertEqual(v["commits"], 3)
             self.assertEqual(v["prs"], 2)               # (#1) and (#2)
             self.assertGreaterEqual(v["files"], 1)
@@ -86,25 +86,25 @@ class GitValueTest(unittest.TestCase):
 
     def test_not_a_repo_returns_none(self):
         with tempfile.TemporaryDirectory() as d:
-            self.assertIsNone(_shipped.git_value(d, None, None))
+            self.assertIsNone(_value.git_value(d, None, None))
 
 
 class DirValueTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self._orig = (_shipped.STORE_DIR, _shipped.STORE_PATH)
-        _shipped.STORE_DIR = self.tmp.name
-        _shipped.STORE_PATH = os.path.join(self.tmp.name, "value.json")
+        self._orig = (_value.STORE_DIR, _value.STORE_PATH)
+        _value.STORE_DIR = self.tmp.name
+        _value.STORE_PATH = os.path.join(self.tmp.name, "value.json")
 
     def tearDown(self):
-        _shipped.STORE_DIR, _shipped.STORE_PATH = self._orig
+        _value.STORE_DIR, _value.STORE_PATH = self._orig
         self.tmp.cleanup()
 
     def test_git_dir_value_kind_git(self):
         with tempfile.TemporaryDirectory() as repo:
             git(repo, "init", "-q", "-b", "main")
             commit(repo, "feat: a")
-            v = _shipped.dir_value(repo, "~/x", "claude-code", None, None)
+            v = _value.dir_value(repo, "~/x", "claude-code", None, None)
             self.assertEqual(v["kind"], "git")
             self.assertEqual(v["commits"], 1)
 
@@ -112,7 +112,7 @@ class DirValueTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "note.md"), "w") as f:
                 f.write("x")
-            v = _shipped.dir_value(d, "~/d", "claude-code", None, None)
+            v = _value.dir_value(d, "~/d", "claude-code", None, None)
             self.assertEqual(v["kind"], "fs")
             self.assertGreaterEqual(v["fs_files"], 1)
 
@@ -120,15 +120,15 @@ class DirValueTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo:
             git(repo, "init", "-q", "-b", "main")
             commit(repo, "feat: a")
-            _shipped.cached_dir_value(repo, "~/x", "claude-code", None, None)
+            _value.cached_dir_value(repo, "~/x", "claude-code", None, None)
             # inject a summary as the background pass would
-            store = _shipped.load_store()
+            store = _value.load_store()
             store["dirs"][os.path.abspath(repo)]["value"]["summary"] = "did a thing"
-            _shipped.save_store(store)
-            again = _shipped.cached_dir_value(repo, "~/x", "claude-code", None, None)
+            _value.save_store(store)
+            again = _value.cached_dir_value(repo, "~/x", "claude-code", None, None)
             self.assertEqual(again["summary"], "did a thing")   # head unchanged → kept
             commit(repo, "fix: b")
-            after = _shipped.cached_dir_value(repo, "~/x", "claude-code", None, None)
+            after = _value.cached_dir_value(repo, "~/x", "claude-code", None, None)
             self.assertIsNone(after["summary"])                 # head changed → recomputed
 
 
@@ -159,7 +159,7 @@ class DirectoriesShapeTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo:
             git(repo, "init", "-q", "-b", "main")
             commit(repo, "feat: a")
-            label = _shipped.project_label_for_path(repo)
+            label = _value.project_label_for_path(repo)
             mangled = os.path.abspath(repo).replace("/", "-")
             by_project_day_cost = {label: {"2026-06-01": 12.0}}
             tokens_by_label = {label: {"input":1,"output":2,"cache_read":3,"cache_write":4}}
@@ -191,7 +191,7 @@ class DiscoverTest(unittest.TestCase):
     def test_discovers_marker_dir(self):
         with tempfile.TemporaryDirectory() as root:
             proj = self._make_tree(root)
-            found = _shipped.discover_project_dirs(root)
+            found = _value.discover_project_dirs(root)
             self.assertIn(proj, found, "proj/ with CLAUDE.md should be discovered")
             hidden = os.path.join(root, ".hidden")
             self.assertNotIn(hidden, found, ".hidden/ should be pruned")
@@ -203,19 +203,19 @@ class DiscoverTest(unittest.TestCase):
             os.makedirs(deep)
             write(os.path.join(deep, "CLAUDE.md"), "# deep")
             # With max_depth=2, depth-3 dir should NOT be found
-            found = _shipped.discover_project_dirs(root, max_depth=2)
+            found = _value.discover_project_dirs(root, max_depth=2)
             self.assertNotIn(deep, found, "dir at depth 3 with max_depth=2 should be pruned")
             # With max_depth=3, it should be found
-            found2 = _shipped.discover_project_dirs(root, max_depth=3)
+            found2 = _value.discover_project_dirs(root, max_depth=3)
             self.assertIn(deep, found2, "dir at depth 3 with max_depth=3 should be found")
 
     def test_cached_discover_uses_store(self):
         with tempfile.TemporaryDirectory() as tmp:
-            orig_dir = _shipped.STORE_DIR
-            orig_path = _shipped.STORE_PATH
+            orig_dir = _value.STORE_DIR
+            orig_path = _value.STORE_PATH
             try:
-                _shipped.STORE_DIR = tmp
-                _shipped.STORE_PATH = os.path.join(tmp, "value.json")
+                _value.STORE_DIR = tmp
+                _value.STORE_PATH = os.path.join(tmp, "value.json")
                 # Set up a real project tree to discover
                 proj_root = os.path.join(tmp, "projects")
                 os.makedirs(proj_root)
@@ -223,47 +223,47 @@ class DiscoverTest(unittest.TestCase):
                 os.makedirs(proj)
                 write(os.path.join(proj, "CLAUDE.md"), "# myrepo")
                 # First call: does the walk
-                result1 = _shipped.cached_discover(root=proj_root)
+                result1 = _value.cached_discover(root=proj_root)
                 self.assertIn(proj, result1)
                 # Second call: should use cache (store has discovered_at)
-                result2 = _shipped.cached_discover(root=proj_root)
+                result2 = _value.cached_discover(root=proj_root)
                 self.assertEqual(result1, result2)
-                store = _shipped.load_store()
+                store = _value.load_store()
                 self.assertIn("discovered_at", store)
                 self.assertIsInstance(store.get("discovered"), dict)
             finally:
-                _shipped.STORE_DIR = orig_dir
-                _shipped.STORE_PATH = orig_path
+                _value.STORE_DIR = orig_dir
+                _value.STORE_PATH = orig_path
 
 
 class SummariesTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self._orig = (_shipped.STORE_DIR, _shipped.STORE_PATH)
-        _shipped.STORE_DIR = self.tmp.name
-        _shipped.STORE_PATH = os.path.join(self.tmp.name, "value.json")
+        self._orig = (_value.STORE_DIR, _value.STORE_PATH)
+        _value.STORE_DIR = self.tmp.name
+        _value.STORE_PATH = os.path.join(self.tmp.name, "value.json")
         import importlib
         self.sm = importlib.import_module("_summaries")
-        _shipped.save_store({"version": 2, "dirs": {"/x": {
+        _value.save_store({"version": 2, "dirs": {"/x": {
             "label": "~/x", "tool": "claude-code", "head": "abc",
             "window": {"start": None, "end": None},
             "value": {"kind": "git", "commits": 1, "subjects": ["feat: a"],
                       "fs_files": 0, "summary": None}, "scanned": "t"}}})
 
     def tearDown(self):
-        _shipped.STORE_DIR, _shipped.STORE_PATH = self._orig
+        _value.STORE_DIR, _value.STORE_PATH = self._orig
         self.tmp.cleanup()
 
     def test_backfill_writes_summary(self):
         n = self.sm.backfill(runner=lambda prompt: "shipped feature a")
         self.assertEqual(n, 1)
-        v = _shipped.load_store()["dirs"]["/x"]["value"]
+        v = _value.load_store()["dirs"]["/x"]["value"]
         self.assertEqual(v["summary"], "shipped feature a")
 
     def test_backfill_graceful_when_cli_absent(self):
         n = self.sm.backfill(runner=lambda prompt: None)  # CLI absent / failed
         self.assertEqual(n, 0)
-        self.assertIsNone(_shipped.load_store()["dirs"]["/x"]["value"]["summary"])
+        self.assertIsNone(_value.load_store()["dirs"]["/x"]["value"]["summary"])
 
 
 if __name__ == "__main__":

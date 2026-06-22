@@ -5,6 +5,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Automatic all-directory value view.** The token dashboard now shows every directory that consumed tokens (repo or not) plus every agentic project discovered machine-wide via marker files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md`) — even with zero Claude token spend.
+- **Machine-wide marker-file discovery** — `_value.discover_project_dirs` walks `$HOME` up to a configurable depth and surfaces project roots by marker file; `cached_discover` caches the walk in `value.json` so subsequent builds are instant.
+- **Four inline-SVG charts** (zero-dependency, fully offline): a **leverage** scatter (value vs cost with a break-even line), cost-over-time, token-purpose split, and cost-by-directory — all with axis labels and interactive value tooltips.
+- **Cached AI one-liners** per directory via the local `claude` CLI (non-blocking background pass; degrades silently when absent).
+- **Pluggable cost adapters** (`scripts/adapters/`): `claude_code` is real; `codex` is a documented stub for when the Codex CLI is used locally.
+
+### Changed
+- **Value is now tool-agnostic** — derived from git history (commits / PRs / files / churn) with a filesystem-mtime fallback for non-repos; no CHANGELOG or manual registration needed.
+- **Cost stays Claude-Code-only** (the only tool with local token accounting); directories from other tools show value with `—` cost, never $0.
+- **`value.json` is an automatic cache**, keyed by dir + git HEAD + date window — not a manual registry. Cache version bumped to 2 so every transcript carries its project directory.
+
+### Removed
+- **`_shipped.py`** — superseded by `_value.py` for all CLI and dashboard parsing.
+- **The `100x-value` registration step** and the manual `100x-value`-in-a-repo workflow — value is now derived automatically for every directory.
+- **The registry `source` field** and the old "Value — cost vs. what shipped" registry panel — replaced by the automatic per-directory view.
+
+---
+
 ## [2.3.4] — 2026-06-21
 
 ### Added

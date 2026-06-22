@@ -136,26 +136,21 @@ output & logs / model prose / your prompts / tool calls**. This is the
 *not* billed tokens: the API bills per-turn aggregates, not per content block, so
 treat it as directional. It's the closest you can get without re-tokenizing.
 
-### Value, not just cost: `value-report.py`
+### Value, not just cost
 
-Tokens measure *cost*; they can't tell you what you *shipped*. `value-report.py`
-fills that gap from a repo's `CHANGELOG.md` + the unreleased commits on top of the
-last release (the "unreleased" boundary is the most recent `chore(release):`
-commit, so versions already in the CHANGELOG don't double-count):
+Tokens measure *cost*; the `100x-tokens` dashboard measures *value* in the same view — no registration step needed.
 
-```bash
-100x-value                          # what shipped in the current repo — and register it
-python3 scripts/value-report.py /path/to/repo --versions 8
-python3 scripts/value-report.py --no-register   # print only, don't touch the store
-```
+The dashboard shows **every directory that consumed tokens** (repo or not) plus every agentic project discovered machine-wide by marker files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md`) — even directories with zero Claude token spend. Value is derived tool-agnostically from git history (commits / PRs / files / churn) with a filesystem-mtime fallback for non-repos, plus cached AI one-line summaries generated via the local `claude` CLI (non-blocking, degrades silently when absent).
 
-Running it also **registers the repo** in a central store at
-`~/.100xprism/value.json`. The `100x-tokens` dashboard reads that store and renders
-a **"Value — cost vs. what shipped"** panel **in the same URL**: each release's
-*estimated* token cost — that project's spend over the release's date window —
-next to what it delivered. The estimate is directional (attributed by date, not
-billed per feature), like the composition meter. The CLI and the dashboard share
-one parser (`scripts/_shipped.py`), so they never disagree.
+Cost is Claude-Code-only (the only tool that writes local token accounting). Directories worked on by Cursor, Codex, or other tools appear with their value and `—` in the cost column — never $0, because $0 would be misleading.
+
+Four inline-SVG charts (zero dependency, fully offline) render in the dashboard:
+- **Leverage scatter** — value vs cost with a break-even line
+- **Cost over time** — spend by day
+- **Token-purpose split** — input / output / cache-read / cache-write
+- **Cost by directory** — ranked bar
+
+`~/.100xprism/value.json` is an automatic per-directory cache (keyed by dir + git HEAD + date window), not a manual registry. Cost attribution lives in pluggable per-tool adapters (`scripts/adapters/`): `claude_code` is real; `codex` is a documented stub.
 
 ### Other options
 - `npx ccusage@latest` and `npx ccusage@latest blocks --live` — terminal dashboards.
