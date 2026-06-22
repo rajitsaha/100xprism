@@ -288,14 +288,15 @@ def build(verbose=True):
         if days:
             lo, hi = window_by_label.get(label, (days[0], days[-1]))
             window_by_label[label] = (min(lo, days[0]), max(hi, days[-1]))
-    discovered = _value.cached_discover()            # {real_dir: label}
+    discovered, dir_index = _value.cached_scan()     # markers + reverse-mangle index
     realdir_by_label = {}
     for real_dir, label in discovered.items():
         realdir_by_label.setdefault(label, real_dir)
     directories = assemble_directories(
         mangled_by_label, tokens_by_label, by_project_day_cost,
         window_by_label, tool_by_label,
-        discovered=discovered, realdir_by_label=realdir_by_label)
+        discovered=discovered, realdir_by_label=realdir_by_label,
+        dir_index=dir_index)
 
     # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -365,7 +366,7 @@ def print_summary(data):
 
 def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
                          window_by_label, tool_by_label,
-                         discovered=None, realdir_by_label=None):
+                         discovered=None, realdir_by_label=None, dir_index=None):
     """Build the unified per-directory rows (cost + tool-agnostic value).
 
     mangled_by_label: {mangled_dirname: label} — key is the raw Claude projects dir name,
@@ -391,12 +392,10 @@ def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
 
     rows = []
     for label in all_labels:
-        # Resolve real dir: discovery wins (authoritative), fallback to mangled resolve
-        real = realdir_by_label.get(label)
-        if real is None:
-            mangled = label_to_mangled.get(label)
-            if mangled:
-                real = _value.resolve_real_dir(mangled)
+        mangled = label_to_mangled.get(label)
+        real = realdir_by_label.get(label) \
+               or (dir_index.get(mangled) if (dir_index and mangled) else None) \
+               or (_value.resolve_real_dir(mangled) if mangled else None)
         start, end = window_by_label.get(label, (None, None))
         daycost = by_project_day_cost.get(label, {})
         _c = round(sum(daycost.values()), 2) if daycost else 0.0
@@ -552,12 +551,16 @@ function dirsTable(dirs){
    </ul></details>`;
  h+=`<table><tr><th>directory</th><th>tool</th><th>est $</th><th>value (shipped)</th><th>AI note</th></tr>`;
  for(const d of dirs){
-  const v=d.value||{}; const shipped = v.kind==='git'
-    ? `${v.commits||0} commits${v.prs?'·'+v.prs+' PRs':''}`
-    : v.kind==='fs' ? `${v.fs_files} files` : '—';
-  h+=`<tr><td>${esc(d.label)}</td><td>${toolBadge(d.tool)}</td>`+
+  const v=d.value||{}; const removed=!d.dir;
+  const shipped = removed ? '<span class=muted>(removed)</span>'
+    : v.kind==='git' ? esc(`${v.commits||0} commits${v.prs?'·'+v.prs+' PRs':''}`)
+    : v.kind==='fs' ? esc(`${v.fs_files} files`) : '—';
+  const lbl = removed
+    ? `<span class=muted title="directory no longer on disk — value can't be computed">${esc(d.label)}</span>`
+    : esc(d.label);
+  h+=`<tr><td>${lbl}</td><td>${toolBadge(d.tool)}</td>`+
      `<td class=money>${d.cost==null?'<span class=muted>—</span>':'$'+Math.round(d.cost).toLocaleString()}</td>`+
-     `<td style="color:var(--value)">${esc(shipped)}</td>`+
+     `<td style="color:var(--value)">${shipped}</td>`+
      `<td class=muted>${v.summary?esc(v.summary):'<span class=muted>—</span>'}</td></tr>`;
  }
  return h+'</table>';
