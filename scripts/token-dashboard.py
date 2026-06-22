@@ -44,12 +44,13 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import _shipped  # noqa: E402 — shared value/store helper (one source of truth)
+import _value  # noqa: E402 — shared value layer (one source of truth)
+import _summaries  # noqa: E402
 
 HOME = os.path.expanduser("~")
 PROJECTS_DIR = os.path.join(HOME, ".claude", "projects")
 CACHE_FILE = os.path.join(HOME, ".claude", ".token-dashboard-cache.json")
-CACHE_VERSION = 2
+CACHE_VERSION = 3  # bump → re-parse all transcripts so every summary carries `projdir`
 REFRESH_SECONDS = 300  # auto-rebuild cadence so a long-lived tab never goes stale
 
 # $ per 1M tokens — rough Opus-tier list prices; edit to match your plan/model.
@@ -196,9 +197,9 @@ def save_cache(files):
         print(f"warning: could not write cache: {e}", file=sys.stderr)
 
 
-# project_label lives in _shipped so the dashboard and the value store derive the
+# project_label lives in _value so the dashboard and the value store derive the
 # exact same join key from a path.
-project_label = _shipped.project_label
+project_label = _value.project_label
 
 
 def build(verbose=True):
@@ -221,6 +222,7 @@ def build(verbose=True):
         summary["mtime"] = st.st_mtime
         summary["size"] = st.st_size
         summary["project"] = project_label(p)
+        summary["projdir"] = os.path.basename(os.path.dirname(p))
         new_cache[key] = summary
         reparsed += 1
         if verbose and reparsed % 200 == 0:
@@ -272,9 +274,28 @@ def build(verbose=True):
         lbl: {day: round(cost(dd), 4) for day, dd in days.items()}
         for lbl, days in by_project_day.items()
     }
-    # Re-scan the value store once per rebuild (every 5 min / on demand), not per
-    # /api/value request — git subprocesses stay off the request path.
-    value_store = _shipped.refresh_store().get("repos", {})
+    # Build per-directory cost+value rows (git subprocesses run here, not on request path).
+    mangled_by_label, tokens_by_label, window_by_label, tool_by_label = {}, {}, {}, {}
+    for s in new_cache.values():
+        label = s.get("project", "?")
+        mangled = s.get("projdir", "")
+        mangled_by_label.setdefault(mangled, label)
+        tk = tokens_by_label.setdefault(label, _empty())
+        t = s["totals"]
+        _add(tk, t["input"], t["output"], t["cache_read"], t["cache_write"])
+        tool_by_label[label] = "claude-code"
+        days = sorted(d for d in s.get("by_day", {}) if d != "unknown")
+        if days:
+            lo, hi = window_by_label.get(label, (days[0], days[-1]))
+            window_by_label[label] = (min(lo, days[0]), max(hi, days[-1]))
+    discovered = _value.cached_discover()            # {real_dir: label}
+    realdir_by_label = {}
+    for real_dir, label in discovered.items():
+        realdir_by_label.setdefault(label, real_dir)
+    directories = assemble_directories(
+        mangled_by_label, tokens_by_label, by_project_day_cost,
+        window_by_label, tool_by_label,
+        discovered=discovered, realdir_by_label=realdir_by_label)
 
     # Composition estimate: chars ÷ 4 ≈ tokens. Labelled an estimate in the UI.
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -305,7 +326,7 @@ def build(verbose=True):
             key=lambda r: -(r[1]["input"] + r[1]["cache_read"] + r[1]["cache_write"]),
         ),
         "by_project_day_cost": by_project_day_cost,
-        "value_store": value_store,
+        "directories": directories,
     }
 
 
@@ -342,68 +363,54 @@ def print_summary(data):
 
 # ---------------------------------------------------------------- value × cost
 
-def _window_cost(daycost, start, end):
-    """Sum a project's daily cost over the window (start, end].
+def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
+                         window_by_label, tool_by_label,
+                         discovered=None, realdir_by_label=None):
+    """Build the unified per-directory rows (cost + tool-agnostic value).
 
-    start=None → open at the beginning; end=None → open through today. Dates are
-    "YYYY-MM-DD" strings, which sort lexicographically.
+    mangled_by_label: {mangled_dirname: label} — key is the raw Claude projects dir name,
+    value is the human-readable project label (e.g. "~/personal-github/100xprism").
+    discovered: {real_abs_dir: label} from cached_discover() — optional, default empty.
+    realdir_by_label: {label: real_abs_dir} inverted from discovered — optional.
+
+    The directory set is the UNION of transcript-derived labels and discovered dirs,
+    joined on label. Discovery provides authoritative real paths where available.
     """
-    total = 0.0
-    for day, c in daycost.items():
-        if start and day <= start:
-            continue
-        if end and day > end:
-            continue
-        total += c
-    return round(total, 2)
+    if discovered is None:
+        discovered = {}
+    if realdir_by_label is None:
+        realdir_by_label = {}
 
+    # Build label→mangled map (invert mangled_by_label: {mangled: label})
+    label_to_mangled = {}
+    for mangled, label in mangled_by_label.items():
+        label_to_mangled.setdefault(label, mangled)
 
-def _top_items(release, n=3):
-    out = []
-    for items in release.get("sections", {}).values():
-        for it in items:
-            out.append(_shipped._strip_md(it))
-            if len(out) >= n:
-                return out
-    return out
+    # Union of all labels from transcripts and discovery
+    all_labels = set(mangled_by_label.values()) | set(discovered.values())
 
-
-def value_panel(data):
-    """Join the central value store to per-project token cost: for each release,
-    the estimated cost is that project's spend over (prev release date, this
-    release date]. Attribution is by date window — an estimate, like composition.
-    """
-    # Use the store cached by build() (refreshed each rebuild). Standalone callers
-    # that didn't go through build() fall back to a plain load — no rescan here.
-    store_repos = data.get("value_store")
-    if store_repos is None:
-        store_repos = _shipped.load_store().get("repos", {})
-    bpd = data.get("by_project_day_cost", {})
-    repos = []
-    for path, e in store_repos.items():
-        daycost = bpd.get(e.get("label"), {})
-        releases = e.get("releases", [])
-        rows = []
-        for i, r in enumerate(releases):
-            d_this = r.get("date") or None
-            d_prev = releases[i + 1].get("date") or None if i + 1 < len(releases) else None
-            rows.append({
-                "version": r.get("version"), "date": r.get("date"),
-                "items": r.get("items"), "top": _top_items(r),
-                "cost": _window_cost(daycost, d_prev, d_this) if d_this else None,
-            })
-        newest_date = releases[0].get("date") or None if releases else None
-        un = e.get("unreleased")
-        unreleased = None
-        if un:
-            unreleased = {**un, "cost": _window_cost(daycost, newest_date, None)}
-        repos.append({
-            "name": e.get("name"), "label": e.get("label"),
-            "source": e.get("source"), "scanned": e.get("scanned"),
-            "has_cost": bool(daycost), "releases": rows, "unreleased": unreleased,
+    rows = []
+    for label in all_labels:
+        # Resolve real dir: discovery wins (authoritative), fallback to mangled resolve
+        real = realdir_by_label.get(label)
+        if real is None:
+            mangled = label_to_mangled.get(label)
+            if mangled:
+                real = _value.resolve_real_dir(mangled)
+        start, end = window_by_label.get(label, (None, None))
+        daycost = by_project_day_cost.get(label, {})
+        _c = round(sum(daycost.values()), 2) if daycost else 0.0
+        cost = _c if _c else None
+        tool = tool_by_label.get(label)        # None for discovery-only dirs
+        value = (_value.cached_dir_value(real, label, tool, start, end)
+                 if real else _value._empty_value())
+        rows.append({
+            "dir": real, "label": label, "tool": tool,
+            "cost": cost, "tokens": tokens_by_label.get(label, _empty()),
+            "window": {"start": start, "end": end}, "value": value,
         })
-    repos.sort(key=lambda r: (r.get("source") != "registry", r.get("name") or ""))
-    return {"repos": repos, "store_path": _shipped.STORE_PATH}
+    rows.sort(key=lambda r: -(r["cost"] or 0))
+    return rows
 
 
 # ---------------------------------------------------------------- web UI
@@ -411,36 +418,53 @@ def value_panel(data):
 PAGE = """<!doctype html><html><head><meta charset=utf-8>
 <title>Claude Code — Token Usage</title>
 <style>
-:root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--fg:#e6edf3;--mut:#8b949e;
+:root{--ink:#0E1116;--surface:#171B22;--line:#262C36;--text:#E6E9EF;--muted:#8A93A2;
+--cost:#E8B24A;--value:#5BD0A6;--warn:#E5704B;
 --in:#58a6ff;--out:#f778ba;--cr:#3fb950;--cw:#d29922}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);
-font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}
-header{padding:20px 28px;border-bottom:1px solid var(--bd);display:flex;
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--text);
+font:14px/1.55 'IBM Plex Sans',-apple-system,Segoe UI,Roboto,sans-serif}
+.num,td.n,.money{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+header{padding:20px 28px;border-bottom:1px solid var(--line);display:flex;
 align-items:baseline;gap:16px;flex-wrap:wrap}
-h1{font-size:18px;margin:0}.sub{color:var(--mut);font-size:13px}
+h1{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px}
 .wrap{padding:24px 28px;max-width:1100px;margin:0 auto}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px 18px}
-.card .lbl{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .card .val{font-size:26px;font-weight:600;margin-top:4px}
-.card .note{color:var(--mut);font-size:12px;margin-top:6px}
+.card .note{color:var(--muted);font-size:12px;margin-top:6px}
 .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
-h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);
-margin:28px 0 12px;border-bottom:1px solid var(--bd);padding-bottom:8px}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+margin:28px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px}
 table{width:100%;border-collapse:collapse}
-td,th{padding:7px 10px;text-align:right;border-bottom:1px solid var(--bd);font-variant-numeric:tabular-nums}
-th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase}
+td,th{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase}
 td:first-child,th:first-child{text-align:left}
 .bar{height:9px;border-radius:5px;display:flex;overflow:hidden;background:#21262d;min-width:120px}
 .bar span{display:block;height:100%}
 .meter{background:#21262d;border-radius:6px;height:22px;position:relative;overflow:hidden;max-width:520px}
 .meter b{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
 .meter em{position:absolute;left:10px;top:0;line-height:22px;font-style:normal;font-size:12px}
-.legend{font-size:12px;color:var(--mut);margin:10px 0}.legend span{margin-right:16px}
-button{background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:7px;
+.legend{font-size:12px;color:var(--muted);margin:10px 0}.legend span{margin-right:16px}
+button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;
 padding:6px 12px;cursor:pointer;font-size:13px}button:hover{border-color:var(--in)}
-.muted{color:var(--mut)}
+.muted{color:var(--muted)}
+section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+section h2{margin-top:0;border-bottom-color:var(--line)}
+.cards2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:8px 0 24px}
+@media(max-width:760px){.cards2{grid-template-columns:1fr}}
+.howto{margin:-4px 0 14px;font-size:13px;color:var(--muted)}
+.howto summary{cursor:pointer;color:var(--text);user-select:none}
+.howto ul{margin:10px 0 0;padding-left:18px;line-height:1.6}
+.howto code{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.badge{display:inline-block;font:600 10px/1 'IBM Plex Mono',ui-monospace,monospace;
+padding:3px 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
+#tip{position:fixed;z-index:1000;pointer-events:none;display:none;background:var(--surface);
+border:1px solid var(--line);border-radius:6px;padding:6px 9px;font:12px/1.3 'IBM Plex Mono',ui-monospace,monospace;
+color:var(--text);max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 </style></head><body>
+<div id=tip role=tooltip></div>
 <header><h1>Claude Code · Token Usage</h1>
 <span class=sub id=meta></span>
 <span style=margin-left:auto><button onclick=refresh()>↻ Rescan</button></span></header>
@@ -457,41 +481,96 @@ function legend(){return `<div class=legend>
  <span><i class=dot style=background:var(--cw)></i>cache write</span>
  <span><i class=dot style=background:var(--in)></i>input</span>
  <span><i class=dot style=background:var(--out)></i>output</span></div>`;}
-let VALUE=null;
-async function loadValue(){try{VALUE=await (await fetch('/api/value')).json();}catch(e){VALUE=null;}}
-async function load(){
- const [d]=await Promise.all([ (await fetch('/api/data')).json(), loadValue() ]); render(d);}
-async function refresh(){document.getElementById('app').innerHTML='<p class=muted>Rescanning…</p>';
- const [d]=await Promise.all([ (await fetch('/api/refresh')).json(), loadValue() ]); render(d);}
-function money(c){return c==null?'<span class=muted>—</span>':'$'+(+c).toLocaleString(undefined,{maximumFractionDigits:0});}
-function valueHTML(){
- if(!VALUE||!VALUE.repos||!VALUE.repos.length) return '';
- let h=`<h2>Value — cost vs. what shipped <span class=muted style="text-transform:none;font-weight:400">— estimate, cost attributed by date window</span></h2>`;
- for(const r of VALUE.repos){
-  h+=`<h3 style="margin:18px 0 6px;font-size:13px">${esc(r.name)} <span class=muted style="font-weight:400">· ${esc(r.label||'')} · ${r.source}</span></h3>`;
-  if(!r.has_cost) h+=`<p class=muted style=margin:0_0_6px>No token cost matched this repo's label yet — value shown without cost.</p>`;
-  h+=`<table><tr><th>release</th><th>date</th><th>what shipped</th><th>items</th><th>est $</th></tr>`;
-  if(r.unreleased&&r.unreleased.count)
-   h+=`<tr><td><em>unreleased</em></td><td class=muted>since ${esc(r.unreleased.since||'')}</td>
-     <td>${Object.entries(r.unreleased.buckets||{}).map(([k,n])=>esc(k)+' '+n).join(', ')||'—'}</td>
-     <td>${r.unreleased.count}</td><td>${money(r.unreleased.cost)}</td></tr>`;
-  for(const rel of r.releases){
-   h+=`<tr><td>v${esc(rel.version)}</td><td class=muted>${esc(rel.date||'')}</td>
-     <td>${(rel.top||[]).map(esc).join('<br>')||'—'}</td>
-     <td>${rel.items==null?'—':rel.items}</td><td>${money(rel.cost)}</td></tr>`;
-  }
-  h+='</table>';
- }
- h+=`<p class=muted style=margin-top:8px>Cost is this project's token spend over each release's date window (previous release → this release) — directional, not billed-per-feature. Repos come from the registry — run <code>100x-value</code> in a repo to add it here; auto-discovery is best-effort and skips paths it can't resolve.</p>`;
- return h;
+function emptyState(msg){return `<p class=muted style="padding:24px 0">${esc(msg)}</p>`;}
+function svgEl(w,h,inner,label){return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(label)}" style="max-width:100%">${inner}</svg>`;}
+function leverageChart(dirs){
+ const pts=dirs.filter(d=>d.cost!=null&&d.value).map(d=>({x:d.cost,
+   y:(d.value.commits||0)+3*(d.value.prs||0)+(d.value.fs_files||0?1:0), d}));
+ if(!pts.length) return emptyState('No cost-bearing directories yet.');
+ const W=520,H=300,PL=50,PB=46,PR=36,PT=36;
+ const mx=Math.max(...pts.map(p=>p.x),1), my=Math.max(...pts.map(p=>p.y),1);
+ const X=x=>PL+(W-PL-PR)*x/mx, Y=y=>H-PB-(H-PB-PT)*y/my;
+ const ratios=pts.map(p=>p.y/(p.x||1)).sort((a,b)=>a-b), r=ratios[ratios.length>>1]||1;
+ const bline=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(mx)}" y2="${Y(r*mx)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+ const dots=pts.map(p=>{const above=p.y>=r*p.x; const col=above?'var(--value)':'var(--warn)';
+   const tip=`${esc(p.d.label)} — $${Math.round(p.x)} · ${p.d.value.commits||0} commits · ${p.d.value.prs||0} PRs`;
+   return `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="5" fill="${col}" fill-opacity=".85" data-tip="${tip}" tabindex="0"/>`;}).join('');
+ const ax=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="var(--line)"/><line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="var(--line)"/>`;
+ const tickAttrs='fill="var(--muted)" font-size="11"';
+ const xTicks=`<text x="${PL}" y="${H-PB+14}" ${tickAttrs} text-anchor="middle">$0</text>`+
+   `<text x="${W-PR}" y="${H-PB+14}" ${tickAttrs} text-anchor="middle">$${Math.round(mx)}</text>`;
+ const yTicks=`<text x="${PL-6}" y="${H-PB}" ${tickAttrs} text-anchor="end" dominant-baseline="middle">0</text>`+
+   `<text x="${PL-6}" y="${PT}" ${tickAttrs} text-anchor="end" dominant-baseline="middle">${Math.round(my)}</text>`;
+ const xLabel=`<text x="${PL+(W-PL-PR)/2}" y="${H-2}" ${tickAttrs} text-anchor="middle">token cost ($) →</text>`;
+ const yLabel=`<text x="${12}" y="${PT+(H-PB-PT)/2}" ${tickAttrs} text-anchor="middle" transform="rotate(-90,12,${PT+(H-PB-PT)/2})">↑ value shipped (commits + PRs)</text>`;
+ return svgEl(W,H,ax+bline+dots+xTicks+yTicks+xLabel+yLabel,'Value shipped (y, commits+PRs) versus token cost (x, dollars); dots above the dashed break-even line ship more per token');
 }
+function costOverTime(d){
+ const bpd=d.by_project_day_cost||{}; const days=[...new Set(Object.values(bpd).flatMap(o=>Object.keys(o)))].sort();
+ if(!days.length) return emptyState('No dated cost yet.');
+ const labels=Object.keys(bpd); const W=520,H=200,PL=46,PB=30,PR=28,PT=28;
+ const totalByDay=days.map(day=>labels.reduce((a,l)=>a+(bpd[l][day]||0),0));
+ const maxC=Math.max(...totalByDay,1); const X=i=>PL+(W-PL-PR)*i/Math.max(days.length-1,1);
+ const Y=v=>H-PB-(H-PB-PT)*v/maxC;
+ const path=`M${days.map((day,i)=>`${X(i)},${Y(totalByDay[i])}`).join(' L')}`;
+ const area=`${path} L${X(days.length-1)},${H-PB} L${X(0)},${H-PB} Z`;
+ const tickAttrs='fill="var(--muted)" font-size="11"';
+ const xLabels=`<text x="${PL}" y="${H-2}" ${tickAttrs} text-anchor="start">${esc(days[0].slice(5))}</text>`+
+   (days.length>1?`<text x="${W-PR}" y="${H-2}" ${tickAttrs} text-anchor="end">${esc(days[days.length-1].slice(5))}</text>`:'');
+ const yLabel=`<text x="${8}" y="${PT+(H-PB-PT)/2}" ${tickAttrs} text-anchor="middle" transform="rotate(-90,8,${PT+(H-PB-PT)/2})">$ / day</text>`;
+ const yTick=`<text x="${PL-4}" y="${PT}" ${tickAttrs} text-anchor="end" dominant-baseline="middle">$${Math.round(maxC)}</text>`;
+ const dots=days.map((day,i)=>`<circle cx="${X(i)}" cy="${Y(totalByDay[i])}" r="2.5" fill="var(--cost)" data-tip="$${Math.round(totalByDay[i])} on ${esc(day)}"/>`).join('');
+ return svgEl(W,H,`<path d="${area}" fill="var(--cost)" fill-opacity=".18"/><path d="${path}" fill="none" stroke="var(--cost)" stroke-width="2"/>${dots}${xLabels}${yLabel}${yTick}`,
+   'Daily token cost over time; x axis dates, y axis dollars per day');
+}
+function purposeSplit(t){
+ if((t.cache_read+t.cache_write+t.input+t.output)===0) return emptyState('No token usage yet.');
+ const parts=[['cache_read',t.cache_read,'var(--cr)'],['cache_write',t.cache_write,'var(--cw)'],
+   ['input',t.input,'var(--in)'],['output',t.output,'var(--out)']];
+ const sum=parts.reduce((a,p)=>a+p[1],0)||1; let x=0; const W=520,H=34;
+ const segs=parts.map(([k,v,c])=>{const w=(W)*v/sum; const pct=Math.round(100*v/sum);
+   const r=`<rect x="${x}" y="0" width="${w}" height="${H}" fill="${c}" data-tip="${esc(k)}: ${esc(fmt(v))} (${pct}%)"/>`; x+=w; return r;}).join('');
+ return svgEl(W,H,segs,'Share of tokens by purpose: cache read, cache write, input, output');
+}
+function costByDir(dirs){
+ const rows=dirs.filter(d=>d.cost!=null).slice(0,12); if(!rows.length) return emptyState('No cost yet.');
+ const mx=Math.max(...rows.map(r=>r.cost),1); const H=rows.length*26+8,W=520;
+ const bars=rows.map((r,i)=>{const w=(W-160)*r.cost/mx; const y=i*26+4;
+   return `<text x="0" y="${y+14}" fill="var(--muted)" font-size="12">${esc(r.label.slice(-26))}</text>`+
+     `<rect x="150" y="${y+3}" width="${w}" height="14" rx="3" fill="var(--cost)" data-tip="${esc(r.label)}: $${Math.round(r.cost)}" tabindex="0"/>`+
+     `<text x="${156+w}" y="${y+14}" fill="var(--text)" font-size="11">$${Math.round(r.cost)}</text>`;}).join('');
+ return svgEl(W,H,bars,'Estimated token cost by directory, highest first');
+}
+function toolBadge(t){const m={'claude-code':'CC','codex':'CX'}; return `<span class=badge title="${esc(t)}">${esc(m[t]||'?')}</span>`;}
+function dirsTable(dirs){
+ let h=`<h2>All directories <span class=muted style="text-transform:none;font-weight:400">— cost (amber) × value shipped (green); — = no local token data for that tool</span></h2>`;
+ h+=`<details class=howto><summary>How this is calculated</summary>
+   <ul>
+     <li><b style="color:var(--cost)">Cost</b> — each directory's token spend over its <em>active days</em>, priced at editable list rates (output $75/M, input $15/M, cache-write $18.75/M, cache-read $1.5/M). Directional, not your actual bill. Only Claude Code records local token data, so other tools show <span class=muted>—</span>.</li>
+     <li><b style="color:var(--value)">Value</b> — tool-agnostic, over the same date window. Git repos: commits, merged PRs (counted from <code>(#n)</code> in commit subjects), files changed, lines added/removed. Non-repos: count of files modified (an estimate). The <em>AI note</em> is a one-line summary from your local <code>claude</code> CLI.</li>
+     <li><b>Which directories</b> — every dir that spent Claude tokens, <em>plus</em> a machine-wide scan for agent files (CLAUDE.md, AGENTS.md, GEMINI.md, .cursorrules, …), so projects built with any tool — or no tokens at all — still appear.</li>
+   </ul></details>`;
+ h+=`<table><tr><th>directory</th><th>tool</th><th>est $</th><th>value (shipped)</th><th>AI note</th></tr>`;
+ for(const d of dirs){
+  const v=d.value||{}; const shipped = v.kind==='git'
+    ? `${v.commits||0} commits${v.prs?'·'+v.prs+' PRs':''}`
+    : v.kind==='fs' ? `${v.fs_files} files` : '—';
+  h+=`<tr><td>${esc(d.label)}</td><td>${toolBadge(d.tool)}</td>`+
+     `<td class=money>${d.cost==null?'<span class=muted>—</span>':'$'+Math.round(d.cost).toLocaleString()}</td>`+
+     `<td style="color:var(--value)">${esc(shipped)}</td>`+
+     `<td class=muted>${v.summary?esc(v.summary):'<span class=muted>—</span>'}</td></tr>`;
+ }
+ return h+'</table>';
+}
+async function load(){render(await (await fetch('/api/data')).json());}
+async function refresh(){document.getElementById('app').innerHTML='<p class=muted>Rescanning…</p>';render(await (await fetch('/api/refresh')).json());}
+function money(c){return c==null?'<span class=muted>—</span>':'$'+(+c).toLocaleString(undefined,{maximumFractionDigits:0});}
 function render(d){
  document.getElementById('meta').textContent=
   `${d.transcripts} transcripts · ${d.sessions} sessions · updated ${d.generated}`;
  const t=d.totals, max=Math.max(...d.bloat.window?[]:[1]);
  const card=(lbl,val,note,col)=>`<div class=card><div class=lbl>${col?`<i class=dot style=background:${col}></i>`:''}${lbl}</div>
    <div class=val>${val}</div><div class=note>${note||''}</div></div>`;
- // bloat meter: 200k window
  const W=200000, mw=Math.min(100,100*d.bloat.median/W);
  let h=`<div class=cards>
    ${card('cache read',fmt(t.cache_read),'re-sent context (cheap/token, huge volume)','var(--cr)')}
@@ -500,7 +579,13 @@ function render(d){
    ${card('input',fmt(t.input),'new uncached text','var(--in)')}
    ${card('est. cost','$'+d.total_cost.toLocaleString(),'rough, list rates (editable)')}
   </div>`;
- h+=valueHTML();
+ h+=`<div class=cards2>
+   <section><h2>Leverage — value vs cost</h2>${leverageChart(d.directories||[])}</section>
+   <section><h2>Cost over time</h2>${costOverTime(d)}</section>
+   <section><h2>Token-purpose split</h2>${purposeSplit(d.totals)}${legend()}</section>
+   <section><h2>Cost by directory</h2>${costByDir(d.directories||[])}</section>
+ </div>`;
+ h+=dirsTable(d.directories||[]);
  h+=`<h2>Startup bloat — fixed context re-sent every turn</h2>
    <div class=meter><b style="width:${mw}%;background:${mw>30?'var(--cw)':'var(--cr)'}"></b>
    <em>median ${fmt(d.bloat.median)} of 200K window (${(d.bloat.median/W*100).toFixed(1)}%)</em></div>
@@ -517,10 +602,6 @@ function render(d){
    <table><tr><th>content type</th><th>est. tokens</th><th>share</th></tr>${rows}</table>
    <p class=muted style=margin-top:8px>The API bills per-turn aggregates, so this approximates where your conversation <em>text volume</em> goes (chars÷4): code written, files read, command output/logs, model prose, prompts. Directional, not exact.</p>`;
  }
- h+=`<h2>By project</h2>${legend()}<table><tr><th>project</th><th>mix</th><th>cache read</th><th>output</th><th>est $</th></tr>`;
- for(const[name,v,c]of d.by_project){h+=`<tr><td>${esc(name)}</td><td>${bar(v)}</td>
-   <td>${fmt(v.cache_read)}</td><td>${fmt(v.output)}</td><td>$${c.toLocaleString()}</td></tr>`;}
- h+='</table>';
  h+=`<h2>By model</h2><table><tr><th>model</th><th>mix</th><th>cache read</th><th>output</th></tr>`;
  for(const[name,v]of d.by_model){h+=`<tr><td>${esc(name)}</td><td>${bar(v)}</td>
    <td>${fmt(v.cache_read)}</td><td>${fmt(v.output)}</td></tr>`;}
@@ -534,6 +615,14 @@ function render(d){
 }
 load();
 setInterval(load, 300000);  // auto-refresh every 5 min so the tab never goes stale
+document.addEventListener('mousemove',e=>{const el=e.target.closest('[data-tip]');const tip=document.getElementById('tip');
+  if(el){tip.textContent=el.getAttribute('data-tip');tip.style.display='block';
+    let x=e.clientX+12,y=e.clientY+12;tip.style.left=Math.min(x,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=y+'px';}
+  else{tip.style.display='none';}});
+document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');const tip=document.getElementById('tip');
+  if(el){const r=el.getBoundingClientRect();tip.textContent=el.getAttribute('data-tip');tip.style.display='block';
+    tip.style.left=r.left+'px';tip.style.top=(r.bottom+6)+'px';}});
+document.addEventListener('focusout',()=>{document.getElementById('tip').style.display='none';});
 </script></body></html>"""
 
 
@@ -543,13 +632,17 @@ _build_lock = threading.Lock()
 def _rebuild():
     with _build_lock:
         Handler.data = build(verbose=False)
+    threading.Thread(target=lambda: _summaries.backfill(), daemon=True).start()
     return Handler.data
 
 
 def _client_data(data):
-    """Token data for the browser, minus the heavy server-only fields."""
-    drop = {"by_project_day_cost", "value_store"}
-    return {k: v for k, v in data.items() if k not in drop}
+    """Token data for the browser. Trim per-day cost to the dirs we chart."""
+    top = [d["label"] for d in data.get("directories", [])[:12]]
+    bpd = {k: v for k, v in data.get("by_project_day_cost", {}).items() if k in top}
+    out = {k: v for k, v in data.items() if k != "by_project_day_cost"}
+    out["by_project_day_cost"] = bpd
+    return out
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -573,29 +666,32 @@ class Handler(BaseHTTPRequestHandler):
             if Handler.data is None:
                 _rebuild()
             self._send(json.dumps(_client_data(Handler.data)))
-        elif self.path.startswith("/api/value"):
-            if Handler.data is None:
-                _rebuild()
-            self._send(json.dumps(value_panel(Handler.data)))
         else:
             self._send(PAGE, "text/html; charset=utf-8")
 
 
-def _oneline():
-    """Fast cache-only summary line for shell startup. Silent if no cache yet."""
+def _token_summary() -> str | None:
+    """Return a short cached-token summary string, or None if no cache."""
     files = load_cache()
     if not files:
-        return
+        return None
     tot = _empty()
     for s in files.values():
         t = s.get("totals", {})
         _add(tot, t.get("input", 0), t.get("output", 0),
              t.get("cache_read", 0), t.get("cache_write", 0))
     if not any(tot.values()):
-        return
+        return None
     cost = sum(tot[k] / 1_000_000 * RATES[k] for k in RATES)
-    print(f"100xPrism tokens (as of last scan): {fmt(tot['output'])} out · "
-          f"{fmt(tot['cache_read'])} ctx · ~${cost:,.0f} · run `100x-tokens` for the dashboard")
+    return (f"{fmt(tot['output'])} out · "
+            f"{fmt(tot['cache_read'])} ctx · ~${cost:,.0f}")
+
+
+def _oneline():
+    """Fast cache-only summary line for shell startup. Silent if no cache yet."""
+    s = _token_summary()
+    if s:
+        print(f"100xPrism tokens (as of last scan): {s} · run `100x-tokens` for the dashboard")
 
 
 def _port_in_use(port):
@@ -607,17 +703,51 @@ def _port_in_use(port):
         return False
 
 
+def ensure_daemon(port: int) -> str | None:
+    """
+    Ensure the dashboard is running as a background daemon.
+    Returns a one-line status string, or None if opt-out is set.
+    Never raises.
+    """
+    try:
+        if os.environ.get("PRISM_NO_DASHBOARD"):
+            return None
+        url = f"http://127.0.0.1:{port}"
+        s = _token_summary()
+        suffix = f"  · {s}" if s else ""
+        if _port_in_use(port):
+            return f"📊 token + value dashboard live → {url}{suffix}"
+        # Not running — spawn a detached background process
+        import subprocess
+        logpath = os.path.join(HOME, ".claude", ".token-dashboard.log")
+        subprocess.Popen(
+            [sys.executable, os.path.abspath(__file__), "--no-open", "--port", str(port)],
+            stdout=open(logpath, "a"), stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL, start_new_session=True)
+        return f"📊 token + value dashboard starting → {url}{suffix}  (first scan runs in the background)"
+    except Exception:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8787)
     ap.add_argument("--print", action="store_true", dest="text")
     ap.add_argument("--oneline", action="store_true",
                     help="one fast summary line from cache (no rescan) — for shell startup")
+    ap.add_argument("--ensure-daemon", action="store_true",
+                    help="ensure dashboard is running as a background daemon; print URL + status")
     ap.add_argument("--no-open", action="store_true")
     args = ap.parse_args()
 
     if args.oneline:
         _oneline()
+        return
+
+    if args.ensure_daemon:
+        line = ensure_daemon(args.port)
+        if line:
+            print(line)
         return
 
     if not os.path.isdir(PROJECTS_DIR):

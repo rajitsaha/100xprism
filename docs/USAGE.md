@@ -414,11 +414,17 @@ python3 ~/100xprism/scripts/token-dashboard.py          # web UI at http://127.0
 python3 ~/100xprism/scripts/token-dashboard.py --print   # text summary, no server
 ```
 
+You rarely run it by hand: it **auto-starts** as a detached singleton on shell startup
+and on `install` / `init` / `update`, and the startup line prints the live URL (opt out
+with `export PRISM_NO_DASHBOARD=1`).
+
 It breaks usage into the four token "purposes" — **input**, **output**,
 **cache-read** (re-sent context, usually the largest), and **cache-write** — and
 shows a **startup-bloat meter** (the fixed context re-sent every turn) plus
-per-project / per-model / per-day breakdowns. The first run scans all transcripts;
-later runs use an incremental cache.
+per-project / per-model / per-day breakdowns, **every directory you build in**
+(token-spend dirs plus agentic projects discovered machine-wide via marker files),
+and **value vs cost** charts. The first run scans all transcripts; later runs use an
+incremental cache.
 
 To shrink token spend, audit your installed plugins/skills/MCP servers for
 duplication and trim the fixed context — see
