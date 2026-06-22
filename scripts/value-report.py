@@ -1,72 +1,44 @@
 #!/usr/bin/env python3
 """
-value-report.py — what SHIPPED, to read alongside token cost.
+value-report.py — what a directory SHIPPED, to read alongside its token cost.
 
-The token dashboard measures *cost*. This measures *delivered value* — what a
-repo shipped, from its CHANGELOG.md plus the unreleased commits on top of the
-last release.
-
-Running it also REGISTERS this repo in the central store (~/.100xprism/value.json)
-so the `100x-tokens` dashboard can show this value side by side with what it
-cost in tokens — one URL, cost next to value.
-
-Offline, no third-party dependencies.
+Tool-agnostic: derives value from git history (or filesystem activity for non-repos)
+in a date window. No CHANGELOG requirement, no registration — the token dashboard
+discovers directories automatically.
 
 Usage:
-    python3 scripts/value-report.py                 # current repo (cwd)
-    python3 scripts/value-report.py /path/to/repo   # a specific repo
-    python3 scripts/value-report.py --versions 8    # how many releases to show
-    python3 scripts/value-report.py --no-register   # print only, don't touch the store
+    python3 scripts/value-report.py                 # current dir (cwd)
+    python3 scripts/value-report.py /path/to/dir    # a specific directory
+    python3 scripts/value-report.py --since 2026-06-01 --until 2026-06-21
 """
 import argparse
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import _value as _shipped  # noqa: E402 — temporary alias; Task 9/10 rewrites this file
+import _value  # noqa: E402
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("repo", nargs="?", default=os.getcwd())
-    ap.add_argument("--versions", type=int, default=5)
-    ap.add_argument("--no-register", action="store_true",
-                    help="print only; do not write this repo to the central store")
+    ap.add_argument("directory", nargs="?", default=os.getcwd())
+    ap.add_argument("--since", default=None)
+    ap.add_argument("--until", default=None)
     args = ap.parse_args()
-
-    v = _shipped.repo_value(args.repo, versions=args.versions)
-    repo, name = v["path"], v["name"]
-    print(f"\nValue report — {name}  ({repo})")
-
-    if v["releases"]:
-        print(f"\nShipped (last {len(v['releases'])} release(s), from CHANGELOG.md):")
-        for r in v["releases"]:
-            head = f"  v{r['version']}" + (f"  ·  {r['date']}" if r["date"] else "")
-            counts = "  ".join(f"{len(items)} {sec.lower()}"
-                               for sec, items in r["sections"].items() if items)
-            print(f"\n{head}" + (f"   [{counts}]" if counts else ""))
-            for sec, items in r["sections"].items():
-                for it in items[:3]:
-                    line = _shipped._strip_md(it)
-                    print(f"     • {line[:96] + ('…' if len(line) > 96 else '')}")
-                if len(items) > 3:
-                    print(f"     • …+{len(items) - 3} more in {sec}")
+    d = os.path.abspath(os.path.expanduser(args.directory))
+    label = _value.project_label_for_path(d)
+    v = _value.dir_value(d, label, "claude-code", args.since, args.until)
+    print(f"\nValue report — {os.path.basename(d) or d}  ({d})")
+    print(f"  label: {label}")
+    if v["kind"] == "git":
+        print(f"  git: {v['commits']} commits · {v['prs']} PRs · {v['files']} files "
+              f"(+{v['insertions']}/-{v['deletions']})")
+        for s in v["subjects"]:
+            print(f"     • {s}")
+    elif v["kind"] == "fs":
+        print(f"  files touched (mtime): {v['fs_files']}  (not a git repo — estimate)")
     else:
-        print("\n  No CHANGELOG.md found (or empty).")
-
-    un = v["unreleased"]
-    if un is None:
-        pass  # not a git repo
-    elif un["count"]:
-        print(f"\nUnreleased work since {un['since']}: {un['count']} commit(s)")
-        for typ, n in sorted(un["buckets"].items(), key=lambda kv: -kv[1]):
-            print(f"  {n:>3}  {typ}")
-    else:
-        print(f"\nUnreleased work: none since {un['since']}.")
-
-    if not args.no_register:
-        _shipped.save_repo(v)
-        print(f"\n  registered → {_shipped.STORE_PATH} (shows in the 100x-tokens dashboard)")
+        print("  no git history or recent file activity in window")
     print()
 
 
