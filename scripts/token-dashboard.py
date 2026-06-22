@@ -50,7 +50,7 @@ import _summaries  # noqa: E402
 HOME = os.path.expanduser("~")
 PROJECTS_DIR = os.path.join(HOME, ".claude", "projects")
 CACHE_FILE = os.path.join(HOME, ".claude", ".token-dashboard-cache.json")
-CACHE_VERSION = 2
+CACHE_VERSION = 3  # bump → re-parse all transcripts so every summary carries `projdir`
 REFRESH_SECONDS = 300  # auto-rebuild cadence so a long-lived tab never goes stale
 
 # $ per 1M tokens — rough Opus-tier list prices; edit to match your plan/model.
