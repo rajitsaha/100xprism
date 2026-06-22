@@ -113,8 +113,12 @@ to you.
 100x-tokens                                 # alias → web UI at http://127.0.0.1:8787
 python3 scripts/token-dashboard.py          # (same, explicit)
 python3 scripts/token-dashboard.py --print  # text summary, no server
-python3 scripts/token-dashboard.py --oneline  # one fast cache-only line (shell startup)
+python3 scripts/token-dashboard.py --ensure-daemon  # start it detached if not already running (shell startup / install)
 ```
+
+**Auto-start.** You normally don't run anything: a detached singleton launches on shell
+startup and on `100xprism install` / `init` / `update`, and the startup line prints the
+live URL. Opt out with `export PRISM_NO_DASHBOARD=1`.
 
 Offline, no dependencies. Reads `~/.claude/projects/**/*.jsonl` and shows the four
 token purposes, a **startup-bloat meter** (fixed context re-sent per turn), and

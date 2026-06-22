@@ -13,11 +13,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - **Four inline-SVG charts** (zero-dependency, fully offline): a **leverage** scatter (value vs cost with a break-even line), cost-over-time, token-purpose split, and cost-by-directory — all with axis labels and interactive value tooltips.
 - **Cached AI one-liners** per directory via the local `claude` CLI (non-blocking background pass; degrades silently when absent).
 - **Pluggable cost adapters** (`scripts/adapters/`): `claude_code` is real; `codex` is a documented stub for when the Codex CLI is used locally.
+- **Auto-start daemon** — the token + value dashboard launches itself (detached, machine-wide singleton) on shell startup and on `100xprism install` / `init` / `update`, so it's always live without running a command. The startup line surfaces the URL; opt out with `export PRISM_NO_DASHBOARD=1`.
+- **"How this is calculated" explainer** on the dashboard, plus **axis labels and interactive value tooltips** on every chart.
 
 ### Changed
 - **Value is now tool-agnostic** — derived from git history (commits / PRs / files / churn) with a filesystem-mtime fallback for non-repos; no CHANGELOG or manual registration needed.
 - **Cost stays Claude-Code-only** (the only tool with local token accounting); directories from other tools show value with `—` cost, never $0.
-- **`value.json` is an automatic cache**, keyed by dir + git HEAD + date window — not a manual registry. Cache version bumped to 2 so every transcript carries its project directory.
+- **`value.json` is an automatic cache** of per-directory value snapshots, keyed by dir + git HEAD + date window — not a manual registry (store schema v2). The dashboard's transcript cache version was also bumped so every cached summary carries its project directory — fixing directories that previously collapsed into a single bucket.
 
 ### Removed
 - **`_shipped.py`** — superseded by `_value.py` for all CLI and dashboard parsing.
