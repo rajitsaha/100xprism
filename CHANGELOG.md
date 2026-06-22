@@ -9,6 +9,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.4.1] — 2026-06-22
+
+### Fixed
+- **Hidden & hyphenated directories now resolve.** Added an exact reverse-mangle index (`_value.scan_home` / `mangle_path`) built from one cached `$HOME` walk using Claude Code's real transcript-dir naming rule (`[^a-zA-Z0-9]` → `-`), so directories the old heuristic missed — hidden roots like `.claude-mem` and hyphenated names like `100x-dev` — resolve to their real path and show git/fs value. Marker-file discovery and the index now share a single walk (denylist pruning instead of a blanket dotdir skip).
+- **Deleted directories are labelled.** Token-spend directories whose path no longer exists on disk (renamed repos, cleaned-up agent worktrees, temp dirs) now render as **(removed)** with a dimmed label instead of a bare `—`, making clear the directory is gone rather than the value being broken.
+
+---
+
 ## [2.4.0] — 2026-06-22
 
 ### Added
