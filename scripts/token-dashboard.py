@@ -453,6 +453,10 @@ section{background:var(--surface);border:1px solid var(--line);border-radius:10p
 section h2{margin-top:0;border-bottom-color:var(--line)}
 .cards2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:8px 0 24px}
 @media(max-width:760px){.cards2{grid-template-columns:1fr}}
+.howto{margin:-4px 0 14px;font-size:13px;color:var(--muted)}
+.howto summary{cursor:pointer;color:var(--text);user-select:none}
+.howto ul{margin:10px 0 0;padding-left:18px;line-height:1.6}
+.howto code{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px}
 .badge{display:inline-block;font:600 10px/1 'IBM Plex Mono',ui-monospace,monospace;
 padding:3px 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
 #tip{position:fixed;z-index:1000;pointer-events:none;display:none;background:var(--surface);
@@ -539,6 +543,12 @@ function costByDir(dirs){
 function toolBadge(t){const m={'claude-code':'CC','codex':'CX'}; return `<span class=badge title="${esc(t)}">${esc(m[t]||'?')}</span>`;}
 function dirsTable(dirs){
  let h=`<h2>All directories <span class=muted style="text-transform:none;font-weight:400">— cost (amber) × value shipped (green); — = no local token data for that tool</span></h2>`;
+ h+=`<details class=howto><summary>How this is calculated</summary>
+   <ul>
+     <li><b style="color:var(--cost)">Cost</b> — each directory's token spend over its <em>active days</em>, priced at editable list rates (output $75/M, input $15/M, cache-write $18.75/M, cache-read $1.5/M). Directional, not your actual bill. Only Claude Code records local token data, so other tools show <span class=muted>—</span>.</li>
+     <li><b style="color:var(--value)">Value</b> — tool-agnostic, over the same date window. Git repos: commits, merged PRs (counted from <code>(#n)</code> in commit subjects), files changed, lines added/removed. Non-repos: count of files modified (an estimate). The <em>AI note</em> is a one-line summary from your local <code>claude</code> CLI.</li>
+     <li><b>Which directories</b> — every dir that spent Claude tokens, <em>plus</em> a machine-wide scan for agent files (CLAUDE.md, AGENTS.md, GEMINI.md, .cursorrules, …), so projects built with any tool — or no tokens at all — still appear.</li>
+   </ul></details>`;
  h+=`<table><tr><th>directory</th><th>tool</th><th>est $</th><th>value (shipped)</th><th>AI note</th></tr>`;
  for(const d of dirs){
   const v=d.value||{}; const shipped = v.kind==='git'

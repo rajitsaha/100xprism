@@ -205,3 +205,19 @@ cost+value snapshot; no "register" step).
 
 None blocking. Both prior decisions resolved: unified table with `—` for cost-less
 dirs; leverage scatter as hero.
+
+---
+
+## Addendum (2026-06-22): Machine-wide marker-file discovery
+
+**Problem:** Directories were sourced only from `~/.claude/projects` transcript dirs, and un-mangling those lossy names fails for ~⅔ of them (hyphenated real dirs). So many projects show no value, and projects worked on with *other* tools (or where transcripts were pruned) never appear at all.
+
+**Fix:** Discover agentic project directories by walking the filesystem for **agent marker files** — tool-agnostic, authoritative real paths, no un-mangling.
+
+- `_value.AGENT_MARKERS = ("CLAUDE.md","AGENTS.md","GEMINI.md",".cursorrules",".windsurfrules",".clinerules",".github/copilot-instructions.md")`
+- `discover_project_dirs(root=$HOME, max_depth=6) -> {real_abs_dir: label}` — `os.walk` pruning `_SKIP_DIRS` + dotdirs + `Library`, depth-capped. A dir qualifies if it contains any marker.
+- `cached_discover(ttl=1800)` — caches the walk in the value store (`discovered`, `discovered_at` epoch); re-walks only when stale or on manual Rescan. Keeps the expensive walk off most rebuild ticks.
+
+**Directory set becomes the UNION** of transcript-derived dirs (carry token cost) and marker-discovered dirs (real path → git/fs value; `cost=None` if no token spend). Join on `project_label`: a discovered real path supplies the authoritative path for a token-spend label (fixing the unresolved-resolution gap) and also surfaces zero-token projects with `—` cost.
+
+**Scope (decided):** scan under `$HOME`, prune heavy/hidden dirs, depth ≤6.
