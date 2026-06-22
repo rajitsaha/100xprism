@@ -27,6 +27,12 @@ STORE_VERSION = 2
 _HOME_DASH = HOME.replace("/", "-") + "-"  # e.g. "-Users-rajit-"
 
 
+def mangle_path(abs_path):
+    """The ~/.claude/projects transcript-dir name for a path: every
+    non-alphanumeric character becomes '-' (Claude Code's exact rule)."""
+    return re.sub(r"[^a-zA-Z0-9]", "-", abs_path)
+
+
 # ----------------------------------------------------------------- labels
 
 def _label_from_dirname(dirname):
@@ -219,7 +225,12 @@ def save_store(store):
 
 AGENT_MARKERS = ("CLAUDE.md", "AGENTS.md", "GEMINI.md", ".cursorrules",
                  ".windsurfrules", ".clinerules", ".github/copilot-instructions.md")
-_DISCOVER_SKIP = _SKIP_DIRS | {"Library", "Movies", "Music", "Pictures", "Applications"}
+_DISCOVER_SKIP = _SKIP_DIRS | {
+    "Library", "Movies", "Music", "Pictures", "Applications", "go",
+    ".git", ".cache", ".npm", ".cargo", ".rustup", ".gradle", ".m2",
+    ".nvm", ".pyenv", ".rbenv", ".vscode", ".vscode-server", ".Trash",
+    ".cursor", ".docker", ".ollama", ".terraform.d",
+}
 
 
 def discover_project_dirs(root=None, max_depth=6):
@@ -240,20 +251,50 @@ def discover_project_dirs(root=None, max_depth=6):
     return found
 
 
-def cached_discover(root=None, ttl=1800):
-    """Discovery cached in the value store (re-walked only when older than ttl
-    seconds). Returns {real_abs_dir: label}."""
+def scan_home(root=None, max_depth=6):
+    """One $HOME walk → (markers {real_dir: label}, index {mangled: real_dir}).
+
+    Unlike discover_project_dirs, does NOT blanket-prune dotdirs — it uses the
+    explicit _DISCOVER_SKIP denylist instead, so hidden project roots like
+    .claude-mem are indexed and appear in the reverse-mangle index."""
+    root = os.path.abspath(os.path.expanduser(root or HOME))
+    base = root.rstrip("/").count("/")
+    markers, index = {}, {}
+    for dp, dirs, files in os.walk(root):
+        if dp.rstrip("/").count("/") - base >= max_depth:
+            dirs[:] = []
+        dirs[:] = [d for d in dirs if d not in _DISCOVER_SKIP]
+        index[mangle_path(dp)] = dp
+        fs = set(files)
+        if any((m in fs) or (os.sep in m and os.path.exists(os.path.join(dp, m)))
+               for m in AGENT_MARKERS):
+            markers[dp] = project_label_for_path(dp)
+    return markers, index
+
+
+def cached_scan(root=None, ttl=1800):
+    """Discovery cached in the value store. Returns (markers, index).
+    markers = {real_abs_dir: label}
+    index   = {mangled_dirname: real_abs_dir}  — the reverse-mangle lookup table."""
     import time
     store = load_store()
     now = time.time()
-    if store.get("discovered_at") and (now - store["discovered_at"]) < ttl \
-            and isinstance(store.get("discovered"), dict):
-        return store["discovered"]
-    disc = discover_project_dirs(root)
-    store["discovered"] = disc
+    if (store.get("discovered_at") and (now - store["discovered_at"]) < ttl
+            and isinstance(store.get("discovered"), dict)
+            and isinstance(store.get("dir_index"), dict)):
+        return store["discovered"], store["dir_index"]
+    markers, index = scan_home(root)
+    store["discovered"] = markers
+    store["dir_index"] = index
     store["discovered_at"] = now
     save_store(store)
-    return disc
+    return markers, index
+
+
+def cached_discover(root=None, ttl=1800):
+    """Discovery cached in the value store (re-walked only when older than ttl
+    seconds). Returns {real_abs_dir: label}. Delegates to cached_scan."""
+    return cached_scan(root, ttl)[0]
 
 
 def cached_dir_value(real_dir, label, tool, start, end):

@@ -196,6 +196,61 @@ class DirectoriesShapeTest(unittest.TestCase):
         self.assertIsNone(dirs[0]["cost"])
 
 
+class ScanHomeTest(unittest.TestCase):
+    def test_mangle_path_non_alnum_to_dash(self):
+        """mangle_path replaces every non-alphanumeric char with '-'."""
+        self.assertEqual(_value.mangle_path("/Users/rajit/100x-dev"),
+                         "-Users-rajit-100x-dev")
+        self.assertEqual(_value.mangle_path("/Users/rajit/.claude-mem/observer"),
+                         "-Users-rajit--claude-mem-observer")
+
+    def test_scan_home_indexes_hidden_and_hyphenated(self):
+        """scan_home index contains mangled keys for hidden + hyphenated dirs."""
+        with tempfile.TemporaryDirectory() as root:
+            # hyphenated dir
+            hyph = os.path.join(root, "100x-dev")
+            os.makedirs(hyph)
+            # hidden dir (not in _DISCOVER_SKIP)
+            hidden = os.path.join(root, ".my-proj")
+            os.makedirs(hidden)
+            write(os.path.join(hidden, "CLAUDE.md"), "# hidden-proj")
+            _, index = _value.scan_home(root)
+            # Both dirs must be in the index
+            self.assertIn(_value.mangle_path(hyph), index)
+            self.assertEqual(index[_value.mangle_path(hyph)], hyph)
+            self.assertIn(_value.mangle_path(hidden), index)
+            self.assertEqual(index[_value.mangle_path(hidden)], hidden)
+
+    def test_scan_home_markers_still_finds_claude_md(self):
+        """scan_home markers finds dirs with CLAUDE.md (no regression on discovery)."""
+        with tempfile.TemporaryDirectory() as root:
+            proj = os.path.join(root, "myproj")
+            os.makedirs(proj)
+            write(os.path.join(proj, "CLAUDE.md"), "# myproj")
+            markers, _ = _value.scan_home(root)
+            self.assertIn(proj, markers)
+
+    def test_resolution_via_index_beats_heuristic(self):
+        """assemble_directories resolves a mangled name via dir_index even when
+        resolve_real_dir would fail (hidden dir the heuristic can't un-mangle)."""
+        with tempfile.TemporaryDirectory() as root:
+            hidden_proj = os.path.join(root, ".claude-mem", "my-proj")
+            os.makedirs(hidden_proj)
+            label = _value.project_label_for_path(hidden_proj)
+            mangled = _value.mangle_path(hidden_proj)
+            dir_index = {mangled: hidden_proj}
+            rows = td.assemble_directories(
+                {mangled: label},
+                {label: {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}},
+                {},
+                {label: (None, None)},
+                {label: "claude-code"},
+                dir_index=dir_index,
+            )
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["dir"], hidden_proj)
+
+
 class DiscoverTest(unittest.TestCase):
     def _make_tree(self, root):
         """Helper: create a temp tree with specific layout."""
