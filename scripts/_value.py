@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 HOME = os.path.expanduser("~")
@@ -156,7 +157,6 @@ _SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__",
 
 
 def _day_bounds(start, end):
-    import time
     lo = time.mktime(time.strptime(start + " 00:00:00", "%Y-%m-%d %H:%M:%S")) if start else None
     hi = time.mktime(time.strptime(end + " 23:59:59", "%Y-%m-%d %H:%M:%S")) if end else None
     return lo, hi
@@ -264,6 +264,8 @@ def scan_home(root=None, max_depth=6):
         if dp.rstrip("/").count("/") - base >= max_depth:
             dirs[:] = []
         dirs[:] = [d for d in dirs if d not in _DISCOVER_SKIP]
+        # last-writer-wins for paths that mangle identically (e.g. .claude-mem/observer
+        # vs .claude/mem/observer); the loser falls back to resolve_real_dir.
         index[mangle_path(dp)] = dp
         fs = set(files)
         if any((m in fs) or (os.sep in m and os.path.exists(os.path.join(dp, m)))
@@ -276,7 +278,6 @@ def cached_scan(root=None, ttl=1800):
     """Discovery cached in the value store. Returns (markers, index).
     markers = {real_abs_dir: label}
     index   = {mangled_dirname: real_abs_dir}  — the reverse-mangle lookup table."""
-    import time
     store = load_store()
     now = time.time()
     if (store.get("discovered_at") and (now - store["discovered_at"]) < ttl
