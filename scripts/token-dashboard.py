@@ -551,12 +551,16 @@ function dirsTable(dirs){
    </ul></details>`;
  h+=`<table><tr><th>directory</th><th>tool</th><th>est $</th><th>value (shipped)</th><th>AI note</th></tr>`;
  for(const d of dirs){
-  const v=d.value||{}; const shipped = v.kind==='git'
-    ? `${v.commits||0} commits${v.prs?'·'+v.prs+' PRs':''}`
-    : v.kind==='fs' ? `${v.fs_files} files` : '—';
-  h+=`<tr><td>${esc(d.label)}</td><td>${toolBadge(d.tool)}</td>`+
+  const v=d.value||{}; const removed=!d.dir;
+  const shipped = removed ? '<span class=muted>(removed)</span>'
+    : v.kind==='git' ? esc(`${v.commits||0} commits${v.prs?'·'+v.prs+' PRs':''}`)
+    : v.kind==='fs' ? esc(`${v.fs_files} files`) : '—';
+  const lbl = removed
+    ? `<span class=muted title="directory no longer on disk — value can't be computed">${esc(d.label)}</span>`
+    : esc(d.label);
+  h+=`<tr><td>${lbl}</td><td>${toolBadge(d.tool)}</td>`+
      `<td class=money>${d.cost==null?'<span class=muted>—</span>':'$'+Math.round(d.cost).toLocaleString()}</td>`+
-     `<td style="color:var(--value)">${esc(shipped)}</td>`+
+     `<td style="color:var(--value)">${shipped}</td>`+
      `<td class=muted>${v.summary?esc(v.summary):'<span class=muted>—</span>'}</td></tr>`;
  }
  return h+'</table>';
