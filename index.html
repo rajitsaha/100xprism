@@ -3,14 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>100xPrism — Stop vibe coding. Ship production-grade software.</title>
-  <meta name="description" content="One source of truth. 66 modules generate native config for Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini and Antigravity. Quality gates run on every commit." />
-  <meta name="keywords" content="100xprism, AI coding config, Claude Code, Cursor, Codex, Windsurf, GitHub Copilot, Gemini CLI, Antigravity, one config for AI coding tools, cross-tool AI workflows, quality gates, agentic coding" />
+  <title>100xPrism — Token &amp; value economics for AI coding: cost vs value, fully offline</title>
+  <meta name="description" content="100xPrism auto-discovers every AI coding session across Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini and Antigravity — showing cost vs value. One config, 7 tools, quality gates. MIT, fully offline." />
+  <meta name="keywords" content="100xprism, AI coding cost, token economics, value economics, Claude Code, Cursor, Codex, Windsurf, GitHub Copilot, Gemini CLI, Antigravity, cost vs value AI, one config for AI coding tools, cross-tool AI workflows, quality gates, agentic coding, offline AI dashboard" />
   <link rel="canonical" href="https://rajitsaha.github.io/100xprism/" />
   <meta property="og:title" content="100xPrism" />
-  <meta property="og:description" content="Stop vibe coding. Ship production-grade software." />
+  <meta property="og:description" content="100xPrism auto-discovers every AI coding session across Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini and Antigravity — showing what each session cost in tokens next to what it shipped. Fully offline." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://rajitsaha.github.io/100xprism/" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/rajitsaha/100xprism/main/assets/100xprism-hero.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -19,7 +22,7 @@
     "alternateName": "100xPrism",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "macOS, Linux, Windows (WSL)",
-    "description": "One source of truth. 66 modules generate native config for Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini and Antigravity. Quality gates run on every commit.",
+    "description": "100xPrism auto-discovers every AI coding session across Claude Code, Cursor, Codex, Windsurf, Copilot, Gemini and Antigravity — showing what each session cost in tokens next to what it shipped. One config, 7 tools, quality gates. Fully offline.",
     "url": "https://rajitsaha.github.io/100xprism/",
     "downloadUrl": "https://www.npmjs.com/package/100xprism",
     "codeRepository": "https://github.com/rajitsaha/100xprism",
@@ -27,106 +30,509 @@
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
   }
   </script>
-  <meta property="og:image" content="https://raw.githubusercontent.com/rajitsaha/100xprism/main/assets/100xprism-hero.svg" />
-  <meta name="twitter:card" content="summary_large_image" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is 100xPrism?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "100xPrism is a machine-wide, fully-offline developer toolkit that auto-discovers every AI coding session you run across Claude Code, Cursor, Codex, Windsurf, GitHub Copilot, Gemini CLI, and Antigravity. It shows what each session cost in tokens next to what it shipped, so you can see cost and value side by side."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does 100xPrism measure cost?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "It reads Claude Code transcript files (and equivalent agent logs for other tools) from your local machine. It counts input tokens, output tokens, and cache tokens, then maps them to estimated dollar cost using published model pricing. All computation is local — no data is uploaded anywhere."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does 100xPrism measure value?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "It reads your git history for each discovered project directory — commits landed, pull requests merged, and files changed. If git is not available for a directory, it falls back to filesystem metrics. The result is a per-project value score you can compare against cost."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which AI coding tools does it support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Claude Code, Cursor, Codex, Windsurf, GitHub Copilot, Gemini CLI, and Antigravity — 7 tools in total. The one-config system keeps all of them in sync from a single source of truth."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does 100xPrism send my data anywhere?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. 100xPrism is fully local and offline. It reads transcript files and git history on your own machine and opens a local dashboard in your browser. Nothing is uploaded to any server."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is this different from my AI provider's billing page?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Your provider's billing page shows aggregate spend. 100xPrism breaks it down per project directory, per day, and per session — and crucially, shows what was delivered for each unit of spend. It is the only view that connects cost to value."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is 100xPrism free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. 100xPrism is MIT-licensed and free to use, modify, and distribute. There is no paid tier, no telemetry, and no account required."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I install 100xPrism?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Run npm install -g 100xprism && 100xprism install (macOS, Linux, Windows). Or use the curl installer: curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | bash. Then cd your-project && 100xprism init."
+        }
+      }
+    ]
+  }
+  </script>
+
   <style>
     :root {
-      --bg: #0b0d10;
-      --panel: #14181d;
-      --border: #232a31;
-      --fg: #e7edf3;
-      --muted: #93a1ad;
-      --accent: #3ddc84;
-      --accent-2: #ff5c5c;
+      --ink: #0E1116;
+      --surface: #171B22;
+      --line: #262C36;
+      --text: #E6E9EF;
+      --muted: #8A93A2;
+      --cost: #E8B24A;
+      --value: #5BD0A6;
+      --warn: #E5704B;
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      background: var(--bg);
-      color: var(--fg);
+      background: var(--ink);
+      color: var(--text);
       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
-    .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
-    header { text-align: center; padding: 80px 0 48px; }
-    header img.logo { width: 96px; height: 96px; }
-    h1 { font-size: 56px; margin: 20px 0 8px; letter-spacing: -0.02em; }
-    .tagline { font-size: 20px; color: var(--muted); margin: 0 0 28px; }
-    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
-    .badges img { height: 22px; }
-    .cta { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-    .btn {
-      display: inline-block; padding: 11px 22px; border-radius: 8px; text-decoration: none;
-      font-weight: 600; border: 1px solid var(--border);
+
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Focus states ── */
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid var(--value);
+      outline-offset: 3px;
+      border-radius: 4px;
     }
-    .btn-primary { background: var(--accent); color: #06251a; border-color: var(--accent); }
-    .btn-ghost { color: var(--fg); background: var(--panel); }
-    .lede {
-      text-align: center; font-size: 18px; color: var(--fg); margin: 0 auto 8px; max-width: 680px;
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 52px;
+      margin: 20px 0 16px;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
     }
-    .lede b { color: var(--accent); }
-    section { padding: 24px 0; }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 16px;
+      color: var(--text);
+    }
+
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 0 0 8px;
+      color: var(--text);
+    }
+
+    a { color: var(--value); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    section { padding: 56px 0; border-top: 1px solid var(--line); }
+
     .card {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-      padding: 22px 24px; margin: 16px 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin: 16px 0;
     }
-    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; }
-    pre {
-      background: #0d1116; border: 1px solid var(--border); border-radius: 8px;
-      padding: 14px 16px; overflow-x: auto; margin: 0 0 8px;
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
     }
-    code { font: 13.5px/1.55 "SF Mono", ui-monospace, Menlo, Consolas, monospace; color: #cfe8d8; }
-    .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+
     .grid .card { margin: 0; }
-    .grid h3 { margin: 0 0 6px; font-size: 16px; }
-    .grid p { margin: 0; color: var(--muted); font-size: 14.5px; }
-    figure { margin: 24px 0; text-align: center; }
-    figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 12px; }
-    footer { text-align: center; color: var(--muted); padding: 48px 0 64px; font-size: 14px; }
-    footer a { color: var(--accent); text-decoration: none; }
-    a { color: var(--accent); }
-    @media (max-width: 600px) { h1 { font-size: 40px; } }
+    .grid .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+    /* ── Hero ── */
+    header {
+      text-align: center;
+      padding: 80px 0 56px;
+    }
+
+    header img.logo { width: 88px; height: 88px; }
+
+    .subhead {
+      font-size: 18px;
+      color: var(--muted);
+      margin: 0 auto 28px;
+      max-width: 640px;
+      line-height: 1.55;
+    }
+
+    .badges {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .badges img { height: 22px; }
+
+    .cta {
+      display: inline-flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      border: 1px solid var(--line);
+      transition: opacity 0.15s ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn { transition: none; }
+    }
+
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--cost); color: #1a0f00; border-color: var(--cost); }
+    .btn-ghost { color: var(--text); background: var(--surface); }
+
+    /* ── Dashboard mock ── */
+    .dash-mock {
+      margin: 0 auto;
+      max-width: 820px;
+    }
+
+    .dash-mock-inner {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .dash-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .dash-panel-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+
+    .dash-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .dash-table th {
+      text-align: left;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 4px 8px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .dash-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    }
+
+    .dash-table tr:last-child td { border-bottom: none; }
+
+    .dash-table td:first-child {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+    }
+
+    .col-cost { color: var(--cost); }
+    .col-value { color: var(--value); }
+    .col-note { color: var(--muted); font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+    .dash-caption {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin: 10px 0 0;
+      font-style: italic;
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #0d1116;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 18px;
+      overflow-x: auto;
+      margin: 0 0 12px;
+    }
+
+    code {
+      font: 13.5px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      color: #cfe8d8;
+    }
+
+    pre code { font-size: 13px; }
+
+    .inline-code {
+      font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 13px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--text);
+    }
+
+    .note { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+
+    /* ── Bullets ── */
+    ul {
+      padding-left: 20px;
+      margin: 12px 0 0;
+    }
+
+    ul li {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    ul li b { color: var(--text); }
+
+    /* ── Install section ── */
+    .install-group { margin-bottom: 20px; }
+    .install-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 0 0 6px;
+      font-weight: 600;
+    }
+
+    /* ── FAQ ── */
+    .faq-item { margin-bottom: 32px; }
+    .faq-item h3 { color: var(--text); font-size: 18px; margin: 0 0 8px; }
+    .faq-item p { color: var(--muted); margin: 0; font-size: 15px; line-height: 1.65; }
+
+    /* ── Section intro text ── */
+    .section-intro {
+      font-size: 16px;
+      color: var(--muted);
+      margin: 0 0 24px;
+      max-width: 680px;
+      line-height: 1.6;
+    }
+
+    .quote-line {
+      font-size: 17px;
+      font-style: italic;
+      color: var(--muted);
+      border-left: 3px solid var(--line);
+      padding-left: 16px;
+      margin: 16px 0 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 48px 0 64px;
+      font-size: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    footer a { color: var(--value); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Color semantics helpers ── */
+    .cost-label { color: var(--cost); }
+    .value-label { color: var(--value); }
+
+    /* ── Responsive ── */
+    @media (max-width: 680px) {
+      h1 { font-size: 36px; }
+      h2 { font-size: 22px; }
+      .dash-mock-inner { grid-template-columns: 1fr; }
+      header { padding: 48px 0 40px; }
+      section { padding: 40px 0; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
+
+    <!-- ══════════════════════════════════════════ HERO ══════════════════════════════════════════ -->
     <header>
       <img class="logo" src="https://raw.githubusercontent.com/rajitsaha/100xprism/main/assets/100xprism-logo.svg" alt="100xPrism logo" />
-      <h1>100xPrism</h1>
-      <p class="tagline">Stop vibe coding. Ship production-grade software.</p>
+      <h1>Know what AI costs.<br>Know what it's worth.</h1>
+      <p class="subhead">100xPrism auto-discovers every project you build across every AI coding tool and shows what each session cost in tokens next to what it actually shipped — cost and value, automatically, fully offline.</p>
+
       <div class="badges">
         <img src="https://img.shields.io/github/v/release/rajitsaha/100xprism?style=flat-square&label=version&color=brightgreen" alt="version" />
         <img src="https://img.shields.io/npm/v/100xprism?style=flat-square&color=red" alt="npm" />
         <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT license" />
       </div>
+
       <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/rajitsaha/100xprism">View on GitHub</a>
-        <a class="btn btn-ghost" href="https://www.npmjs.com/package/100xprism">npm package</a>
+        <a class="btn btn-primary" href="#install">Install ↓</a>
+        <a class="btn btn-ghost" href="https://github.com/rajitsaha/100xprism">GitHub</a>
       </div>
+
+      <!-- Dashboard mock illustration -->
+      <figure class="dash-mock" aria-label="Illustration of 100xPrism dashboard">
+        <div class="dash-mock-inner">
+
+          <!-- Part A: Leverage scatter SVG -->
+          <div class="dash-panel">
+            <p class="dash-panel-label">Leverage scatter — value vs cost</p>
+            <svg viewBox="0 0 220 140" width="100%" role="img" aria-label="Scatter plot showing project value versus cost with a break-even diagonal line">
+              <title>Leverage scatter: value vs cost</title>
+              <!-- Axes -->
+              <line x1="28" y1="8" x2="28" y2="118" stroke="#262C36" stroke-width="1.5"/>
+              <line x1="28" y1="118" x2="212" y2="118" stroke="#262C36" stroke-width="1.5"/>
+              <!-- Break-even dashed diagonal -->
+              <line x1="28" y1="118" x2="212" y2="8" stroke="#8A93A2" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+              <!-- Axis labels -->
+              <text x="14" y="64" fill="#5BD0A6" font-size="9" font-family="-apple-system,sans-serif" transform="rotate(-90,14,64)" text-anchor="middle">value ↑</text>
+              <text x="120" y="132" fill="#E8B24A" font-size="9" font-family="-apple-system,sans-serif" text-anchor="middle">cost →</text>
+              <!-- Green dots: high-value projects (above the line) -->
+              <circle cx="60" cy="42" r="6" fill="#5BD0A6" opacity="0.9"/>
+              <circle cx="100" cy="30" r="6" fill="#5BD0A6" opacity="0.9"/>
+              <circle cx="160" cy="28" r="6" fill="#5BD0A6" opacity="0.9"/>
+              <!-- Amber/warn dot: low-value project (below the line) -->
+              <circle cx="180" cy="100" r="6" fill="#E8B24A" opacity="0.85"/>
+              <!-- Subtle grid lines -->
+              <line x1="28" y1="88" x2="212" y2="88" stroke="#262C36" stroke-width="0.75" stroke-dasharray="2,4"/>
+              <line x1="28" y1="58" x2="212" y2="58" stroke="#262C36" stroke-width="0.75" stroke-dasharray="2,4"/>
+              <line x1="88" y1="8" x2="88" y2="118" stroke="#262C36" stroke-width="0.75" stroke-dasharray="2,4"/>
+              <line x1="148" y1="8" x2="148" y2="118" stroke="#262C36" stroke-width="0.75" stroke-dasharray="2,4"/>
+            </svg>
+          </div>
+
+          <!-- Part B: All directories mini-table -->
+          <div class="dash-panel">
+            <p class="dash-panel-label">All directories</p>
+            <table class="dash-table" aria-label="Project cost and value breakdown by directory">
+              <thead>
+                <tr>
+                  <th>Directory</th>
+                  <th class="col-cost">Cost</th>
+                  <th class="col-value">Value</th>
+                  <th>AI note</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>acme-api</td>
+                  <td class="col-cost">$0.42</td>
+                  <td class="col-value">12 commits · 3 PRs</td>
+                  <td class="col-note">Feature-dense sprint</td>
+                </tr>
+                <tr>
+                  <td>web-app</td>
+                  <td class="col-cost">$1.18</td>
+                  <td class="col-value">8 commits · 1 PR</td>
+                  <td class="col-note">High token use</td>
+                </tr>
+                <tr>
+                  <td>billing-service</td>
+                  <td class="col-cost">$0.08</td>
+                  <td class="col-value">4 commits · 0 PRs</td>
+                  <td class="col-note">Exploratory</td>
+                </tr>
+                <tr>
+                  <td>data-pipeline</td>
+                  <td class="col-cost">$2.31</td>
+                  <td class="col-value">18 commits · 5 PRs</td>
+                  <td class="col-note">Strong leverage</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+        <figcaption class="dash-caption">Illustration — not real data</figcaption>
+      </figure>
+
     </header>
 
-    <p class="lede"><b>One source of truth.</b> 66 modules generate native config for
-    Claude Code · Cursor · Codex · Windsurf · Copilot · Gemini · Antigravity.
-    Quality gates run on every commit.</p>
-
-    <figure>
-      <img src="https://raw.githubusercontent.com/rajitsaha/100xprism/main/assets/100xprism-hero.svg" alt="100xprism — 13 plugins, 26 slash commands, 40 auto-trigger skills" />
-    </figure>
-
+    <!-- ══════════════════════════════════════ WHAT IS 100xPRISM ════════════════════════════════ -->
     <section>
-      <div class="card">
-        <h2>Install — npm (macOS · Linux · Windows)</h2>
-        <pre><code>npm install -g 100xprism &amp;&amp; 100xprism install</code></pre>
-        <h2 style="margin-top:18px">Install — curl (macOS / Linux)</h2>
-        <pre><code>curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | bash
-source ~/.zshrc   # or ~/.bashrc</code></pre>
-        <p class="note">Then set up a project: <code>cd your-project &amp;&amp; 100xprism init</code></p>
-      </div>
+      <h2>What is 100xPrism?</h2>
+      <p class="section-intro">100xPrism is a fully-offline, machine-wide developer toolkit that auto-discovers every AI coding session across Claude Code, Cursor, Codex, Windsurf, GitHub Copilot, Gemini CLI, and Antigravity. It measures what each session cost in tokens and what it actually delivered — commits, pull requests, files changed — so you can see <span class="cost-label">cost</span> and <span class="value-label">value</span> side by side, automatically, without uploading anything to any server.</p>
+      <p class="quote-line">"Not 'can it ship', but 'what did it cost, and what was it worth' — and that's everybody's responsibility, not one person's job."</p>
     </section>
 
+    <!-- ══════════════════════════════════════ THE DASHBOARD ════════════════════════════════════ -->
     <section>
-      <h2>What you get</h2>
+      <h2>The Token &amp; Value Dashboard</h2>
+      <p class="section-intro">Run <code class="inline-code">100x-tokens</code> or <code class="inline-code">100x-value</code>. A daemon auto-starts and the dashboard opens in your browser — no setup required.</p>
+      <ul>
+        <li><b>Auto-discovery</b> — reads Claude Code transcripts and does a machine-wide scan for agent files (<code class="inline-code">CLAUDE.md</code>, <code class="inline-code">AGENTS.md</code>, <code class="inline-code">GEMINI.md</code>, <code class="inline-code">.cursorrules</code>) to find every directory you build in.</li>
+        <li><b>Tool-agnostic value measurement</b> — reads git history for commits, PRs, and files changed, with a filesystem fallback for directories not in git.</li>
+        <li><b>Four charts</b> — leverage scatter (<span class="value-label">value</span> vs <span class="cost-label">cost</span>), cost over time, token-purpose split (input/output/cache), cost by directory.</li>
+        <li><b>AI one-line summaries</b> per project — a quick characterisation of what the session delivered.</li>
+        <li><b>Fully offline</b> — no data leaves your machine. Everything is computed locally and displayed in your browser.</li>
+        <li><b>Two commands:</b> <code class="inline-code">100x-tokens</code> for the <span class="cost-label">cost dashboard</span> and <code class="inline-code">100x-value</code> for the <span class="value-label">value report</span> — both auto-start the daemon.</li>
+      </ul>
+    </section>
+
+    <!-- ══════════════════════════════════════ ONE CONFIG ═══════════════════════════════════════ -->
+    <section>
+      <h2>One Config, Every Tool</h2>
+      <p class="section-intro">The quality-gates and configuration story: 66 modules authored once, emitted natively for 7 tools.</p>
       <div class="grid">
         <div class="card">
           <h3>66 modules</h3>
@@ -142,31 +548,76 @@ source ~/.zshrc   # or ~/.bashrc</code></pre>
         </div>
         <div class="card">
           <h3>Stays current</h3>
-          <p><code>100xprism update</code> keeps your local toolkit, hooks, and plugins up to date.</p>
+          <p><code class="inline-code">100xprism update</code> keeps your local toolkit, hooks, and plugins up to date.</p>
         </div>
       </div>
     </section>
 
-    <section>
-      <h2>Token &amp; value economics</h2>
-      <p class="lede" style="text-align:left;font-size:17px;max-width:none">
-        For a while the goal was singular: make spec-driven, agentic development as
-        <b>autonomous</b> as possible. That part mostly works. The harder, more important
-        question is the one that comes next — <b>what is all this autonomy costing, and what
-        is it worth?</b> Not <em>can it ship</em>, but <em>how much did we spend, and how much
-        value did we add — to a business, or to humanity.</em> This is a first, humble attempt
-        to measure both, and to make it visible to everyone — because watching it isn't one
-        person's job. <b>It's everybody's responsibility.</b>
-      </p>
-      <div class="card">
-        <pre><code>100x-tokens   # token economics — what every session, across every repo, is costing
-100x-value    # value economics  — what actually shipped for that spend</code></pre>
-        <p class="note"><b>100x-tokens</b> — one offline, machine-wide dashboard at a single URL: the input/output/cache split, a startup-bloat meter, an <em>estimated</em> code-vs-logs-vs-output composition, and $ cost by project, model, and day.</p>
-        <p class="note"><b>100x-value</b> — tokens measure <em>cost</em>; this measures <em>value</em>: the features actually shipped for that spend, read side by side.</p>
-        <p class="note">Full guide → <a href="https://github.com/rajitsaha/100xprism/blob/main/docs/token-optimization.md">docs/token-optimization.md</a></p>
+    <!-- ══════════════════════════════════════ INSTALL ══════════════════════════════════════════ -->
+    <section id="install">
+      <h2>Install</h2>
+
+      <div class="install-group">
+        <p class="install-label">npm — macOS · Linux · Windows</p>
+        <pre><code>npm install -g 100xprism &amp;&amp; 100xprism install</code></pre>
       </div>
+
+      <div class="install-group">
+        <p class="install-label">curl — macOS / Linux</p>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | bash
+source ~/.zshrc   # or ~/.bashrc</code></pre>
+      </div>
+
+      <p class="note">Then set up a project: <code class="inline-code">cd your-project &amp;&amp; 100xprism init</code></p>
     </section>
 
+    <!-- ══════════════════════════════════════ FAQ ══════════════════════════════════════════════ -->
+    <section>
+      <h2>Frequently Asked Questions</h2>
+
+      <div class="faq-item">
+        <h3>What is 100xPrism?</h3>
+        <p>100xPrism is a machine-wide, fully-offline developer toolkit that auto-discovers every AI coding session you run across Claude Code, Cursor, Codex, Windsurf, GitHub Copilot, Gemini CLI, and Antigravity. It shows what each session cost in tokens next to what it shipped, so you can see cost and value side by side.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How does 100xPrism measure cost?</h3>
+        <p>It reads Claude Code transcript files (and equivalent agent logs for other tools) from your local machine. It counts input tokens, output tokens, and cache tokens, then maps them to estimated dollar cost using published model pricing. All computation is local — no data is uploaded anywhere.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How does 100xPrism measure value?</h3>
+        <p>It reads your git history for each discovered project directory — commits landed, pull requests merged, and files changed. If git is not available for a directory, it falls back to filesystem metrics. The result is a per-project value score you can compare against cost.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Which AI coding tools does it support?</h3>
+        <p>Claude Code, Cursor, Codex, Windsurf, GitHub Copilot, Gemini CLI, and Antigravity — 7 tools in total. The one-config system keeps all of them in sync from a single source of truth.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Does 100xPrism send my data anywhere?</h3>
+        <p>No. 100xPrism is fully local and offline. It reads transcript files and git history on your own machine and opens a local dashboard in your browser. Nothing is uploaded to any server.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How is this different from my AI provider's billing page?</h3>
+        <p>Your provider's billing page shows aggregate spend. 100xPrism breaks it down per project directory, per day, and per session — and crucially, shows what was delivered for each unit of spend. It is the only view that connects cost to value.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Is 100xPrism free?</h3>
+        <p>Yes. 100xPrism is MIT-licensed and free to use, modify, and distribute. There is no paid tier, no telemetry, and no account required.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How do I install 100xPrism?</h3>
+        <p>Run <code class="inline-code">npm install -g 100xprism &amp;&amp; 100xprism install</code> (macOS, Linux, Windows). Or use the curl installer: <code class="inline-code">curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | bash</code>. Then <code class="inline-code">cd your-project &amp;&amp; 100xprism init</code>.</p>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════════════════════════ DOCS ═════════════════════════════════════════════ -->
     <section>
       <h2>Docs</h2>
       <div class="grid">
@@ -189,6 +640,7 @@ source ~/.zshrc   # or ~/.bashrc</code></pre>
       </div>
     </section>
 
+    <!-- ══════════════════════════════════════ FOOTER ═══════════════════════════════════════════ -->
     <footer>
       <p>
         <a href="https://github.com/rajitsaha/100xprism">GitHub</a> ·
@@ -198,6 +650,7 @@ source ~/.zshrc   # or ~/.bashrc</code></pre>
       </p>
       <p>© 100xPrism</p>
     </footer>
+
   </div>
 </body>
 </html>
