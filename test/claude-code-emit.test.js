@@ -109,3 +109,22 @@ test('emit-claude-code migrates legacy 100x-dev markers so removed skills still 
   assert.ok(!fs.existsSync(path.join(skills, '.100x-dev-manifest.json')), 'legacy manifest renamed')
   assert.ok(fs.existsSync(path.join(skills, '.100xprism-manifest.json')), 'new manifest present')
 })
+
+test('emit-hooks keeps Claude Code hook commands pointed at installed hook scripts', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), '100x-cc-hooks-'))
+  const settings = path.join(home, '.claude', 'settings.json')
+  const r = spawnSync('python3', [MODULES_PY, 'emit-hooks'], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, SETTINGS_FILE: settings },
+  })
+  assert.equal(r.status, 0, r.stderr)
+
+  const config = JSON.parse(fs.readFileSync(settings, 'utf8'))
+  const commands = Object.values(config.hooks)
+    .flatMap((entries) => entries)
+    .flatMap((entry) => entry.hooks || [])
+    .map((hook) => hook.command)
+
+  assert.ok(commands.some((cmd) => cmd.includes(path.join(REPO, 'hooks', 'pretooluse-gate.py'))))
+  assert.ok(commands.every((cmd) => !cmd.includes('.codex/100xprism-hooks/run-hook.py')))
+})

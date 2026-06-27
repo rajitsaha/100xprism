@@ -10,6 +10,7 @@ const {
   scaffoldClaudeMd,
   mergePluginsJson,
   generateCombinedConfig,
+  emitCodexProject,
   addTrackedProject,
 } = require('../lib/adapters/windows')
 
@@ -147,6 +148,36 @@ test('generateCombinedConfig inlines core module bodies and indexes on-demand on
   assert.ok(result.includes('GATE BODY'), 'core body inlined')
   assert.ok(!result.includes('COPY BODY'), 'on-demand body not inlined')
   assert.ok(result.includes('`copywriting`'), 'on-demand module indexed')
+})
+
+test('emitCodexProject emits Codex-native repo skills and portable hooks', () => {
+  const modulesDir = makeTmpDir()
+  const projectDir = makeTmpDir()
+  const hooksDir = makeTmpDir()
+  fakeModules(modulesDir, [
+    { slug: 'gate', fm: { name: 'gate', category: 'quality', tier: 'core', slash_command: '/gate', description: 'Quality gate.' }, body: 'GATE BODY' },
+    { slug: 'copywriting', fm: { name: 'copywriting', category: 'marketing', tier: 'on-demand', description: 'Write copy.' }, body: 'COPY BODY' },
+  ])
+  fs.writeFileSync(path.join(hooksDir, 'hooks.manifest.json'), JSON.stringify({
+    hooks: [{
+      id: 'gate-on-commit',
+      event: 'PreToolUse',
+      matcher: 'Bash',
+      script: 'pretooluse-gate.py',
+      default: true,
+      description: 'Block git commit/push unless /gate passed.',
+    }],
+  }))
+
+  const r = emitCodexProject(modulesDir, projectDir, hooksDir)
+
+  assert.equal(r.skills, 2)
+  assert.ok(fs.existsSync(path.join(projectDir, 'AGENTS.md')))
+  assert.ok(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'gate', 'SKILL.md')))
+  const hooksText = fs.readFileSync(path.join(projectDir, '.codex', 'hooks.json'), 'utf8')
+  assert.match(hooksText, /\.codex\/100xprism-hooks\/run-hook\.py/)
+  assert.doesNotMatch(hooksText, new RegExp(modulesDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.ok(fs.existsSync(path.join(projectDir, '.codex', '100xprism-hooks', 'run-hook.py')))
 })
 
 test('addTrackedProject writes path to file', () => {
