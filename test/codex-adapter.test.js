@@ -75,6 +75,37 @@ test('codex hook wrapper fails clearly when 100xprism install cannot be resolved
   assert.match(r.stderr, /could not find the 100xprism install/i)
 })
 
+test('codex hook wrapper reports version skew when install exists without requested hook', () => {
+  const tmp = makeTmpDir()
+  const install = path.join(tmp, 'install')
+  fs.mkdirSync(path.join(install, 'hooks'), { recursive: true })
+  fs.writeFileSync(path.join(install, 'hooks', 'hooks.manifest.json'), JSON.stringify({ hooks: [] }))
+  fs.writeFileSync(path.join(install, 'hooks', 'pretooluse-gate.py'), 'print("unused")\n')
+  emitCodex(tmp)
+
+  const wrapper = path.join(tmp, '.codex', '100xprism-hooks', 'run-hook.py')
+  const r = spawnSync('python3', [wrapper, 'pretooluse-gate.py'], {
+    cwd: tmp,
+    env: { PATH: process.env.PATH, HOME: tmp, DEV_100X_HOME: install, HUNDRED_X_HOME: '' },
+    input: '{}',
+    encoding: 'utf8',
+  })
+
+  assert.equal(r.status, 2)
+  assert.match(r.stderr, /found a 100xprism install/i)
+  assert.match(r.stderr, /does not provide hook pretooluse-gate\.py/i)
+})
+
+test('codex hook wrapper reuses its current Python interpreter for hook execution', () => {
+  const tmp = makeTmpDir()
+  emitCodex(tmp)
+
+  const wrapper = fs.readFileSync(path.join(tmp, '.codex', '100xprism-hooks', 'run-hook.py'), 'utf8')
+  assert.match(wrapper, /subprocess\.run\(\[sys\.executable, str\(hook\)\]\)/)
+  assert.doesNotMatch(wrapper, /subprocess\.run\(\["python3", str\(hook\)\]\)/)
+  assert.match(wrapper, /allowlist is intentionally baked into generated projects/)
+})
+
 test('codex adapter preserves non-100xprism repo skills', () => {
   const tmp = makeTmpDir()
   const custom = path.join(tmp, '.agents', 'skills', 'custom-skill')

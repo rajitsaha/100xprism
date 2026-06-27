@@ -28,6 +28,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 MODULES_DIR = REPO / "modules"
+CODEX_HOOK_TEMPLATE = REPO / "adapters" / "templates" / "codex-run-hook.py"
 
 # Markers + manifest let `emit-claude-code` prune ONLY 100xprism's own artifacts
 # (never the user's hand-authored skills/commands) when a module is removed or
@@ -494,91 +495,10 @@ def _codex_hook_wrapper(manifest: dict) -> str:
         for hook in manifest.get("hooks", [])
         if isinstance(hook, dict) and hook.get("script")
     )
-    return f'''#!/usr/bin/env python3
-"""Project-local Codex wrapper for first-party 100xprism hooks."""
-from __future__ import annotations
-
-import json
-import os
-import subprocess
-import sys
-from pathlib import Path
-
-ALLOWED_HOOKS = {allowed!r}
-
-
-def _candidate_homes() -> list[Path]:
-    candidates: list[Path] = []
-    for name in ("DEV_100X_HOME", "HUNDRED_X_HOME"):
-        value = os.environ.get(name)
-        if value:
-            candidates.append(Path(value).expanduser())
-
-    home = os.environ.get("HOME")
-    if home:
-        candidates.append(Path(home).expanduser() / "100xprism")
-
-    project_root = Path(os.environ.get("CODEX_PROJECT_ROOT", os.getcwd())).resolve()
-    for parent in [project_root, *project_root.parents]:
-        candidates.append(parent)
-
-    seen: set[Path] = set()
-    unique: list[Path] = []
-    for candidate in candidates:
-        resolved = candidate.resolve()
-        if resolved not in seen:
-            seen.add(resolved)
-            unique.append(resolved)
-    return unique
-
-
-def _has_manifest(root: Path, script: str) -> bool:
-    manifest = root / "hooks" / "hooks.manifest.json"
-    try:
-        data = json.loads(manifest.read_text())
-    except (OSError, json.JSONDecodeError):
-        return False
-    scripts = {{
-        hook.get("script")
-        for hook in data.get("hooks", [])
-        if isinstance(hook, dict)
-    }}
-    return script in scripts
-
-
-def _resolve_hook(script: str):
-    for root in _candidate_homes():
-        hook = root / "hooks" / script
-        if hook.is_file() and _has_manifest(root, script):
-            return hook
-    return None
-
-
-def main() -> int:
-    if len(sys.argv) != 2:
-        print("usage: run-hook.py <hook-script>", file=sys.stderr)
-        return 2
-
-    script = sys.argv[1]
-    if script not in ALLOWED_HOOKS:
-        print(f"100xprism Codex hook rejected unknown hook: {{script}}", file=sys.stderr)
-        return 2
-
-    hook = _resolve_hook(script)
-    if hook is None:
-        print(
-            "100xprism Codex hook could not find the 100xprism install.\\n"
-            "Set DEV_100X_HOME=/path/to/100xprism or run `100xprism install`, then retry.",
-            file=sys.stderr,
-        )
-        return 2
-
-    return subprocess.run(["python3", str(hook)]).returncode
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''
+    return CODEX_HOOK_TEMPLATE.read_text().replace(
+        "__ALLOWED_HOOKS_JSON__",
+        json.dumps(allowed, separators=(",", ":")),
+    )
 
 
 def _hook_enabled(hook: dict) -> bool:

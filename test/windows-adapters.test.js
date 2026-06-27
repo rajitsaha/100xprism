@@ -180,6 +180,25 @@ test('emitCodexProject emits Codex-native repo skills and portable hooks', () =>
   assert.ok(fs.existsSync(path.join(projectDir, '.codex', '100xprism-hooks', 'run-hook.py')))
 })
 
+test('Windows and Python Codex emitters write the same hook wrapper template', () => {
+  const repo = path.join(__dirname, '..')
+  const modulesDir = path.join(repo, 'modules')
+  const projectDir = makeTmpDir()
+  const pyProjectDir = makeTmpDir()
+  const hooksDir = path.join(repo, 'hooks')
+
+  emitCodexProject(modulesDir, projectDir, hooksDir)
+  require('node:child_process').execFileSync(
+    'python3',
+    [path.join(repo, 'adapters', 'lib', 'modules.py'), 'emit-codex', pyProjectDir],
+    { cwd: repo, encoding: 'utf8' },
+  )
+
+  const jsWrapper = fs.readFileSync(path.join(projectDir, '.codex', '100xprism-hooks', 'run-hook.py'), 'utf8')
+  const pyWrapper = fs.readFileSync(path.join(pyProjectDir, '.codex', '100xprism-hooks', 'run-hook.py'), 'utf8')
+  assert.equal(jsWrapper, pyWrapper)
+})
+
 test('addTrackedProject writes path to file', () => {
   const trackedFile = path.join(makeTmpDir(), 'tracked-projects')
   addTrackedProject('/some/project', trackedFile)
