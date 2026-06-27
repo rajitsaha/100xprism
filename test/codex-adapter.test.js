@@ -73,6 +73,11 @@ test('codex hook wrapper fails clearly when 100xprism install cannot be resolved
 
   assert.equal(r.status, 2)
   assert.match(r.stderr, /could not find the 100xprism install/i)
+  assert.deepEqual(r.stderr.trim().split('\n'), [
+    '100xprism Codex hook could not find the 100xprism install.',
+    'Set DEV_100X_HOME=/path/to/100xprism or run `100xprism install`, then retry.',
+  ])
+  assert.doesNotMatch(r.stderr, /\\n/)
 })
 
 test('codex hook wrapper reports version skew when install exists without requested hook', () => {
@@ -94,6 +99,11 @@ test('codex hook wrapper reports version skew when install exists without reques
   assert.equal(r.status, 2)
   assert.match(r.stderr, /found a 100xprism install/i)
   assert.match(r.stderr, /does not provide hook pretooluse-gate\.py/i)
+  assert.deepEqual(r.stderr.trim().split('\n'), [
+    '100xprism Codex hook found a 100xprism install, but it does not provide hook pretooluse-gate.py.',
+    'Update the generated Codex hooks or reinstall 100xprism, then retry.',
+  ])
+  assert.doesNotMatch(r.stderr, /\\n/)
 })
 
 test('codex hook wrapper reuses its current Python interpreter for hook execution', () => {

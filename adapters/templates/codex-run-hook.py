@@ -80,14 +80,16 @@ def main() -> int:
     if hook is None:
         if found_install:
             print(
-                f"100xprism Codex hook found a 100xprism install, but it does not provide hook {script}.\\n"
+                f"100xprism Codex hook found a 100xprism install, but it does not provide hook {script}.",
                 "Update the generated Codex hooks or reinstall 100xprism, then retry.",
+                sep="\n",
                 file=sys.stderr,
             )
         else:
             print(
-                "100xprism Codex hook could not find the 100xprism install.\\n"
+                "100xprism Codex hook could not find the 100xprism install.",
                 "Set DEV_100X_HOME=/path/to/100xprism or run `100xprism install`, then retry.",
+                sep="\n",
                 file=sys.stderr,
             )
         return 2
