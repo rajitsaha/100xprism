@@ -40,7 +40,7 @@ def _candidate_homes() -> list[Path]:
     return unique
 
 
-def _manifest_scripts(root: Path) -> set[str] | None:
+def _manifest_scripts(root: Path):
     manifest = root / "hooks" / "hooks.manifest.json"
     try:
         data = json.loads(manifest.read_text())

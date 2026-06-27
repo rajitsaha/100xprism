@@ -106,6 +106,14 @@ test('codex hook wrapper reuses its current Python interpreter for hook executio
   assert.match(wrapper, /allowlist is intentionally baked into generated projects/)
 })
 
+test('codex hook wrapper avoids Python 3.10-only union type syntax', () => {
+  const tmp = makeTmpDir()
+  emitCodex(tmp)
+
+  const wrapper = fs.readFileSync(path.join(tmp, '.codex', '100xprism-hooks', 'run-hook.py'), 'utf8')
+  assert.doesNotMatch(wrapper, /\| None/)
+})
+
 test('codex adapter preserves non-100xprism repo skills', () => {
   const tmp = makeTmpDir()
   const custom = path.join(tmp, '.agents', 'skills', 'custom-skill')
