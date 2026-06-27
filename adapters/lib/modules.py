@@ -21,12 +21,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 MODULES_DIR = REPO / "modules"
+CODEX_HOOK_TEMPLATE = REPO / "adapters" / "templates" / "codex-run-hook.py"
 
 # Markers + manifest let `emit-claude-code` prune ONLY 100xprism's own artifacts
 # (never the user's hand-authored skills/commands) when a module is removed or
@@ -332,11 +334,17 @@ def cmd_emit_codex(project_dir: str):
     hooks_dir = project / ".codex"
     hooks_dir.mkdir(parents=True, exist_ok=True)
     manifest = json.loads((HOOKS_DIR / "hooks.manifest.json").read_text())
+    wrapper_dir = hooks_dir / "100xprism-hooks"
+    wrapper_dir.mkdir(parents=True, exist_ok=True)
+    wrapper = wrapper_dir / "run-hook.py"
+    wrapper.write_text(_codex_hook_wrapper(manifest))
+    wrapper.chmod(0o755)
+
     hooks: dict[str, list[dict]] = {}
     for hook in manifest.get("hooks", []):
         if not _hook_enabled(hook):
             continue
-        command = _hook_command(hook["script"])
+        command = _codex_hook_command(hook["script"])
         hooks.setdefault(hook["event"], []).append({
             "matcher": hook["matcher"],
             "hooks": [{
@@ -475,6 +483,22 @@ HOOKS_DIR = REPO / "hooks"
 
 def _hook_command(script: str) -> str:
     return f'python3 "{HOOKS_DIR / script}"'
+
+
+def _codex_hook_command(script: str) -> str:
+    return f"python3 .codex/100xprism-hooks/run-hook.py {shlex.quote(script)}"
+
+
+def _codex_hook_wrapper(manifest: dict) -> str:
+    allowed = sorted(
+        hook["script"]
+        for hook in manifest.get("hooks", [])
+        if isinstance(hook, dict) and hook.get("script")
+    )
+    return CODEX_HOOK_TEMPLATE.read_text().replace(
+        "__ALLOWED_HOOKS_JSON__",
+        json.dumps(allowed, separators=(",", ":")),
+    )
 
 
 def _hook_enabled(hook: dict) -> bool:
