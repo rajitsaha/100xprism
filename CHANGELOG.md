@@ -9,6 +9,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
 
+## [2.4.4] — 2026-06-27
+
+### Fixed
+- **Portable Codex hook artifacts.** The generated Codex hook is now a project-local wrapper (`adapters/templates/codex-run-hook.py`) so committed hooks no longer embed the generating machine's absolute paths, and it invokes the inner hook via `sys.executable` so it runs under whatever Python the consumer has. The Python and Windows adapters share a single wrapper template (parity enforced by tests), the Windows adapter now mirrors Codex-native `AGENTS`, repo skills, and hook output, and install-time version-skew failures are clearer. Adds regression coverage for Codex portability, Python/Windows wrapper parity, custom-skill preservation, and Claude Code hook separation.
+
+---
+
 ## [2.4.3] — 2026-06-22
 
 ### Changed
