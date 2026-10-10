@@ -5,6 +5,14 @@ const assert = require('node:assert/strict')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+
+// The emitters resolve ~/.100xprism (catalog, config, removed-artifacts) via
+// os.homedir(). Point it at a throwaway dir before loading them, or these tests
+// wipe the developer's real catalog and read their real skills mode.
+const ISOLATED_HOME = fs.mkdtempSync(path.join(os.tmpdir(), '100x-win-home-'))
+process.env.HOME = ISOLATED_HOME
+process.env.USERPROFILE = ISOLATED_HOME
+
 const {
   parseFrontmatter,
   emitClaudeModules,

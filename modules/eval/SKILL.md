@@ -14,7 +14,7 @@ does the skill trigger on its prompts, and does its output satisfy each assertio
 
 The deterministic engine is `scripts/eval-harness.py` (discovery, validation, work-list,
 scorecard rendering — no model calls). **Grading is your job**: fan the cases out to
-subagents and have Haiku 4.5 judge every assertion with structured output. Installed path
+subagents and have Haiku 5.5 judge every assertion with structured output. Installed path
 is `~/100xprism/scripts/eval-harness.py`; in a checkout it's `scripts/eval-harness.py`.
 
 ## Phase 0 — Pick the target
@@ -37,7 +37,7 @@ python3 ~/100xprism/scripts/eval-harness.py plan --module <slug> --json
 This emits `{ "modules": [ { "module", "cases": [ { id, prompt, expected_output,
 assertions[], files[] } ] } ] }`. Each `(case, assertion)` is one unit of work.
 
-## Phase 2 — Grade with parallel subagents (Haiku 4.5)
+## Phase 2 — Grade with parallel subagents (Haiku 5.5)
 
 For each case, dispatch **one subagent** (use the **subagents** skill / `Agent` tool, or a
 Workflow fan-out) that:
@@ -46,7 +46,7 @@ Workflow fan-out) that:
    context, then answer the case `prompt` exactly as the assistant would — this is the
    *candidate response*. Note whether the skill would have auto-triggered on that prompt
    (trigger accuracy) separately from output quality.
-2. **Grades each assertion.** Spawn a Haiku 4.5 grader (`model: claude-haiku-4-5`) that,
+2. **Grades each assertion.** Spawn a Haiku 5.5 grader (`model: claude-haiku-5-5`) that,
    given the prompt, the candidate response, the `expected_output`, and one assertion,
    returns **structured output**:
 

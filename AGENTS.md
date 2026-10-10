@@ -95,6 +95,11 @@ npm run check
 - **The consumer `CLAUDE.md` scaffold is duplicated.** It lives in both `adapters/claude-code.sh` (`install_project`) and `lib/adapters/windows.js` (`scaffoldClaudeMd`). Change one, change the other — `test/windows-adapters.test.js` only guards the JS copy.
 - **Keep `retention_of` / `profiles_of` / `detect_profiles` in sync** between `adapters/lib/modules.py` and `lib/adapters/windows.js`. A parity test in `test/retention-profiles.test.js` compares both across every real module, so drift fails CI rather than shipping.
 - **Machine-readable project config belongs in `.claude/100xprism.yml`, not `CLAUDE.md`** — the instruction file is re-sent every turn. Modules read the yml first and fall back to the instruction file, so old repos keep working. Its keys must stay flush-left: `/db` and friends match them with an anchored `grep`.
+- **Cleanup requires proof of ownership.** Anything install/update/uninstall deletes must carry a
+  generated marker, a manifest entry, a `/100xprism/hooks/` path, or match
+  `adapters/lib/legacy-v1-commands.json`. JS cleanup lives in `lib/cleanup.js` and mirrors the
+  Python markers; `test/cleanup-contract.test.js` guards both. If you add a new artifact, teach
+  `lib/cleanup.js` to remove it and extend that test.
 - **Don't bump the version manually.** Use `/release` or follow `docs/USAGE.md` — `package.json`, `VERSION`, and the git tag must move together.
 - **Don't commit `.DS_Store` or `.playwright-mcp/`** (already in `.gitignore`, but worth knowing).
 - **Marketing assets in `assets/`** are generated from the HTML files in the same dir via Playwright. If you change the HTML, regenerate the PNG.

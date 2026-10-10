@@ -29,12 +29,14 @@ function makeProject(files) {
   return dir
 }
 
-// Sources the helper and runs it, returning { count, stdout }.
+// Sources the helper and runs it, returning { count, stdout }. HOME is a throwaway
+// dir: the helper backs files up under $HOME/.100xprism/removed-artifacts.
 function prune(projectDir) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), '100x-prune-home-'))
   const stdout = execFileSync(
     'bash',
     ['-c', `source "${DEPRECATED_SH}"; prune_deprecated_artifacts "${projectDir}"; echo "COUNT=$PRUNED_COUNT"`],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', env: { ...process.env, HOME: home } },
   )
   return { count: Number(/COUNT=(\d+)/.exec(stdout)[1]), stdout }
 }

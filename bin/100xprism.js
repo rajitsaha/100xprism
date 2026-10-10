@@ -11,12 +11,12 @@ Commands:
   check      Check for a newer version without applying
   slim       Shrink the always-on context: keep must-have skills, route the rest
   optimize   Apply the lean context policy (slim compatibility successor)
-  audit      Inventory standing context, plugins, hooks, and indexed skills
+  audit      Inventory standing context and drift; --fix repairs dead hooks, v1 leftovers, missing catalog
   hermes     Install/refresh modules as Hermes/OpenClaw skills (auto-runs in install/update when Hermes is detected)
   tokens     Start/open the AI economics dashboard
   dashboard  Alias for tokens
   value      Print value report for a directory
-  uninstall  Stop dashboard and remove stale command/shell-startup links
+  uninstall  Remove skills, aliases, hooks, catalog, links (--projects, --purge for more)
 
 Examples:
   npm install -g 100xprism && 100xprism install

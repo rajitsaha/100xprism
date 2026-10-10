@@ -15,6 +15,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import _value  # noqa: E402
 
+# Never touch the developer's real ~/.100xprism/value.json: every test starts from
+# a throwaway store (tests that swap in their own still restore to this one).
+_STORE_TMP = tempfile.TemporaryDirectory()
+_value.STORE_DIR = _STORE_TMP.name
+_value.STORE_PATH = os.path.join(_STORE_TMP.name, "value.json")
+
 # token-dashboard.py has a hyphen → load it by path.
 _spec = importlib.util.spec_from_file_location(
     "token_dashboard", os.path.join(HERE, "token-dashboard.py"))

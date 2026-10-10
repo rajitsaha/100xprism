@@ -46,7 +46,7 @@ installable artifact — not just advice:
 - **Tier 1 (offline):** a deterministic allowlist auto-approves read-only commands
   (`ls`, `cat`, `git status`, `grep`, …); destructive/network/credential commands are
   never auto-approved.
-- **Tier 2 (optional):** set `HOOK_ROUTER_MODEL=claude-haiku-4-5` (needs the `claude`
+- **Tier 2 (optional):** set `HOOK_ROUTER_MODEL=claude-haiku-5-5` (needs the `claude`
   CLI) to route ambiguous commands to a cheap model; only a confident "safe" verdict
   grants permission, so escalation to a deeper model (e.g. Opus 5) or a human is the
   default for anything uncertain. The router **never blocks** — it only grants.
