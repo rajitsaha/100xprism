@@ -252,6 +252,8 @@ test('uninstall --projects strips our Codex hooks and keeps user hook groups', (
   const data = JSON.parse(fs.readFileSync(mixedHooks, 'utf8'))
   assert.match(JSON.stringify(data), /100xprism-hooks\/run-hook\.py/, 'precondition: our hooks emitted')
   data.hooks.Stop = [{ hooks: [{ type: 'command', command: 'echo user-stop' }] }]
+  const [event] = Object.keys(data.hooks).filter(e => e !== 'Stop')
+  data.hooks[event][0].hooks.push({ type: 'command', command: 'echo user-in-our-group' })
   fs.writeFileSync(mixedHooks, JSON.stringify(data, null, 2))
   write(path.join(home, '.100xprism', 'tracked-projects'), `${onlyOurs}\n${mixed}\n`)
 
@@ -261,6 +263,7 @@ test('uninstall --projects strips our Codex hooks and keeps user hook groups', (
   const kept = fs.readFileSync(mixedHooks, 'utf8')
   assert.doesNotMatch(kept, /100xprism-hooks/, 'no hook left pointing at the deleted runner')
   assert.match(kept, /echo user-stop/, 'user hook group kept')
+  assert.match(kept, /echo user-in-our-group/, 'user hook inside a mixed group kept')
 })
 
 test('uninstall --projects keeps an AGENTS.md that only mentions the marker', () => {
