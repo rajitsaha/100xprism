@@ -11,9 +11,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 - **Cleanup contract.** Everything install/update/uninstall deletes must be provably ours: a generated marker, a manifest entry, a `/100xprism/hooks/` path, or an exact v1 header from `adapters/lib/legacy-v1-commands.json` (generated from git history). Shared JS logic lives in `lib/cleanup.js`; `test/cleanup-contract.test.js` guards install → uninstall end to end.
   - `install`/`update` sweep v1 leftovers (`_lib.md`, `db-engines/`, old workflow commands) without touching same-named user files.
-  - `100xprism uninstall` now removes generated skills, aliases, managed hooks on **every** event, the Hermes skills, the catalog and caches. `--projects` cleans tracked repos (never a hand-written `AGENTS.md`); `--purge` removes `~/.100xprism`.
-  - npm `preuninstall` only drops settings.json hooks pointing into the package being removed, so an upgrade never wipes skills and a removal never leaves hooks that exit 2 on every tool call.
-  - `100xprism audit` reports drift (dead hook paths, v1 leftovers, missing catalog); `audit --fix` repairs it.
+  - `100xprism uninstall` now removes generated skills, aliases, managed hooks on **every** event, the Hermes skills, the catalog and caches. `--projects` cleans tracked repos, including our groups in `.codex/hooks.json` (user hook groups and any `AGENTS.md` without the generated header are kept); `--purge` removes `~/.100xprism`, including the `removed-artifacts` recovery copies a plain uninstall keeps.
+  - npm `preuninstall` stops the dashboard and drops settings.json hooks pointing into the package being removed — nothing else. An upgrade no longer disables managed packs, removes the SessionStart update check, edits shell startup, or unlinks live launchers (npm manages its own bin links).
+  - `100xprism audit` reports drift (dead hook paths, v1 leftovers, missing catalog); `audit --fix` repairs it and exits non-zero if the catalog rebuild fails.
 
 ### Fixed
 
