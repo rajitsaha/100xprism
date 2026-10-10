@@ -1,6 +1,6 @@
 ---
 name: gate
-description: **MANDATORY before every commit and push.** All gates must pass — Gates 1–3 always run; Gates 4 (Docker) and 5 (Cloud) run only when applicable. Do NOT proceed if any gate fails — fix the issue first.
+description: Run the pre-commit quality gate: test coverage, security scan, local build, plus Docker and cloud checks when applicable. Use before any commit or push; a failing gate blocks both.
 category: quality
 tier: core
 slash_command: /gate

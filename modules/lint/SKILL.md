@@ -1,6 +1,6 @@
 ---
 name: lint
-description: You are a code quality engineer. Auto-detect the linting stack, run it, fix all errors. Zero errors before done.
+description: Detect the project's linters and formatters, run them, and fix every error. Use when asked to lint or clean up style and type errors.
 category: quality
 tier: on-demand
 slash_command: /lint

@@ -1,6 +1,6 @@
 ---
 name: docs
-description: You are a documentation engineer. Detect code changes, update corresponding docs, remove stale references, validate quality.
+description: Sync documentation with what shipped: refresh READMEs, guides and API references, and prune stale mentions. Use once a feature lands or when asked to refresh docs.
 category: docs
 tier: on-demand
 slash_command: /docs

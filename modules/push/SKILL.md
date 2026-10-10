@@ -1,6 +1,6 @@
 ---
 name: push
-description: Quality gate re-runs before pushing. **Do NOT push if any gate fails.**
+description: Push the current branch after re-running the quality gate. Use when the user asks to push; never pushes on a failing gate.
 category: lifecycle
 tier: on-demand
 slash_command: /push

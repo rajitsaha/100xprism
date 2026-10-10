@@ -174,10 +174,21 @@ fi
 ## Step 5 — Delegate to engine file
 
 ```bash
-ENGINE_FILE="$HOME/.claude/commands/db-engines/${ENGINE}.md"
+# Engine files ship in db-engines/ next to this SKILL.md. Use the directory you
+# loaded this skill from; the list below covers every adapter's install location.
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+ENGINE_FILE=""
+for d in "${DB_SKILL_DIR:-}" \
+  "$HOME/.claude/skills/db" "$HOME/.100xprism/100xprism-catalog/db" \
+  "$ROOT/.agents/skills/db" "$ROOT/.agents/100xprism-catalog/db" \
+  "$ROOT/.cursor/100xprism-catalog/db" \
+  "$ROOT/.pi/skills/db" "$ROOT/.pi/100xprism-catalog/db" \
+  "$HOME/.hermes/skills/100xprism/db" "$HOME/.claude/commands"; do
+  [ -n "$d" ] && [ -f "$d/db-engines/${ENGINE}.md" ] && ENGINE_FILE="$d/db-engines/${ENGINE}.md" && break
+done
 
-if [ ! -f "$ENGINE_FILE" ]; then
-  echo "ERROR: No engine file found at $ENGINE_FILE"
+if [ -z "$ENGINE_FILE" ]; then
+  echo "ERROR: No engine file found for ${ENGINE} (looked for db-engines/${ENGINE}.md beside this skill)"
   echo "Supported engines: cloud-sql, postgres, snowflake, databricks, athena, presto, oracle"
   exit 1
 fi
