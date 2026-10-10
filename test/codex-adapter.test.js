@@ -157,3 +157,21 @@ test('codex adapter preserves non-100xprism repo skills', () => {
 
   assert.equal(fs.readFileSync(path.join(custom, 'SKILL.md'), 'utf8'), 'custom\n')
 })
+
+test('codex adapter never overwrites a hand-written AGENTS.md', () => {
+  const tmp = makeTmpDir()
+  const agentsPath = path.join(tmp, 'AGENTS.md')
+  fs.writeFileSync(agentsPath, '# My repo contract\n\nHand-written rules.\n')
+  emitCodex(tmp)
+  assert.equal(fs.readFileSync(agentsPath, 'utf8'), '# My repo contract\n\nHand-written rules.\n')
+  assert.ok(fs.existsSync(path.join(tmp, '.agents', 'skills', 'gate', 'SKILL.md')))
+})
+
+test('codex adapter refreshes an AGENTS.md it generated', () => {
+  const tmp = makeTmpDir()
+  emitCodex(tmp)
+  const agentsPath = path.join(tmp, 'AGENTS.md')
+  fs.appendFileSync(agentsPath, '\nstale line\n')
+  emitCodex(tmp)
+  assert.doesNotMatch(fs.readFileSync(agentsPath, 'utf8'), /stale line/)
+})

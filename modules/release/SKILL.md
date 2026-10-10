@@ -1,6 +1,6 @@
 ---
 name: release
-description: You are a release engineer. Execute each phase in order. Each must fully complete before advancing. Do NOT ask for permission. Do NOT skip phases.
+description: Cut a versioned release: smoke-test the package, bump the version, tag, publish to PyPI/npm/Docker, and verify the published artifact. Use when asked to release or ship a version.
 category: lifecycle
 tier: on-demand
 slash_command: /release

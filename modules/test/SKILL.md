@@ -1,6 +1,6 @@
 ---
 name: test
-description: You are a senior test engineer. Auto-detect all test layers (unit, integration, frontend, backend, E2E/system), run them all, write more if coverage is below threshold, and loop until everything passes.
+description: Detect and run every test layer (unit, integration, E2E), add tests where coverage is below threshold, and loop until green. Use when asked to test or raise coverage.
 category: quality
 tier: on-demand
 slash_command: /test

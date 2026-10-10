@@ -316,6 +316,8 @@ if [ -d "$COMMANDS_DIR" ] && [ "$(ls -A "$COMMANDS_DIR" 2>/dev/null)" ]; then
   BACKUP="$CLAUDE_DIR/commands.bak.$(date +%Y%m%d_%H%M%S)"
   cp -r "$COMMANDS_DIR" "$BACKUP"
   echo -e "  ${YELLOW}→ Backed up commands to $(basename "$BACKUP")${NC}"
+  # Keep the 3 newest backups; every run makes one, so they pile up otherwise.
+  ls -1dt "$CLAUDE_DIR"/commands.bak.* 2>/dev/null | tail -n +4 | while IFS= read -r old; do rm -rf "$old"; done
 fi
 
 # Sync modules (skills + slash command aliases) via the claude-code adapter

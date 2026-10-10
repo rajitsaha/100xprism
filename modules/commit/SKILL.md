@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Quality gate runs FIRST. **Do NOT commit if any gate fails.**
+description: Commit staged work with a conventional message after the quality gate passes. Use when the user asks to commit; never commits on a failing gate.
 category: lifecycle
 tier: on-demand
 slash_command: /commit

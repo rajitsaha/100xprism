@@ -466,3 +466,23 @@ test('pruneTrackedProjects reports failures instead of claiming success', () => 
   assert.equal(r.failed, 1, 'failure counted')
   assert.ok(fs.existsSync(path.join(project, 'GEMINI.md')), 'original left in place')
 })
+
+test('emitCodexProject never overwrites a hand-written AGENTS.md', () => {
+  const modulesDir = makeTmpDir()
+  const projectDir = makeTmpDir()
+  const hooksDir = makeTmpDir()
+  fakeModules(modulesDir, [
+    { slug: 'gate', fm: { name: 'gate', category: 'quality', tier: 'core', slash_command: '/gate', description: 'Quality gate.' }, body: 'GATE BODY' },
+  ])
+  fs.writeFileSync(path.join(hooksDir, 'hooks.manifest.json'), JSON.stringify({ hooks: [] }))
+  const agentsPath = path.join(projectDir, 'AGENTS.md')
+  fs.writeFileSync(agentsPath, '# My repo contract\n')
+  emitCodexProject(modulesDir, projectDir, hooksDir)
+  assert.equal(fs.readFileSync(agentsPath, 'utf8'), '# My repo contract\n')
+
+  fs.rmSync(agentsPath)
+  emitCodexProject(modulesDir, projectDir, hooksDir)
+  fs.appendFileSync(agentsPath, 'stale line\n')
+  emitCodexProject(modulesDir, projectDir, hooksDir)
+  assert.doesNotMatch(fs.readFileSync(agentsPath, 'utf8'), /stale line/)
+})

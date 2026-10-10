@@ -1,6 +1,6 @@
 ---
 name: security
-description: You are a security engineer. Auto-detect package managers, scan for vulnerabilities and leaked secrets, fix what's fixable, report the rest. Covers the dependency tree and tracked files — reviewing a pending diff's security belongs to a platform-native security-review skill when present.
+description: Scan dependencies and tracked files for known vulnerabilities and leaked secrets; fix what's fixable, report the rest. For reviewing a pending diff, prefer a platform security-review skill.
 category: quality
 tier: on-demand
 slash_command: /security
