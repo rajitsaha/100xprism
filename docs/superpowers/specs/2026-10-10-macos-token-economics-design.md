@@ -57,9 +57,10 @@ The feature has two short-lived processes and one local database:
 2. `100xprism tokens` starts the existing localhost dashboard server on demand. The
    server reads SQLite immediately, triggers a collection if one is not active, and
    exits after ten minutes without browser or API requests.
-3. `~/.100xprism/token-economics.sqlite3` is the source of truth for source-file
-   checkpoints, durable session summaries, scan coverage, optional search content,
-   and complete dashboard snapshots.
+3. `~/.100xprism/token-economics/current/token-economics.sqlite3` is the source of
+   truth for source-file checkpoints, durable session summaries, scan coverage,
+   optional search content, and complete dashboard snapshots. `current` is an atomic
+   symlink to one owned versioned generation.
 
 The collector and server are separate so collection consumes zero resident memory
 between scheduled runs. SQLite uses WAL mode, allowing the server to read the last
@@ -87,6 +88,19 @@ The database directory is created with mode `0700`; the database and sidecar fil
 user-only. Schema migrations run transactionally and are keyed by `PRAGMA
 user_version`.
 
+Store metadata includes a monotonic `snapshot_input_revision` and
+`snapshot_revision`. Every durable mutation represented in the snapshot increments
+`snapshot_input_revision`, including session summaries, source presence and coverage,
+errors, content-backfill coverage, and value-cache refreshes. A published snapshot
+records the revision it represents. Transient live scan state is queried separately and
+does not enter a completed snapshot. This makes interrupted snapshot publication
+recoverable without reopening transcript content.
+
+All snapshot-relevant Git/value inputs and their format version live in the generation
+database and update in the same SQLite transaction as `snapshot_input_revision`. The
+pre-existing `~/.100xprism/value.json` may be read once as a backward-compatible import
+hint, but the collector never writes it and snapshot correctness never depends on it.
+
 ### `source_locations`
 
 One row per tool-owned root, for example `~/.claude/projects` or
@@ -111,10 +125,13 @@ One row per discovered transcript or activity file.
   record.
 - `tail_anchor` hashes the final 64 KiB immediately before `parsed_offset`; it cheaply
   rejects a false append when bytes near the prior boundary changed.
-- `integrity_cursor` and a companion `source_file_blocks` table hold 1 MiB BLAKE2 block
-  hashes. Each scheduled run verifies a bounded rotating set of historical blocks, so
-  old in-place rewrites are detected incrementally without rereading every file on
-  every minute.
+- `source_file_blocks` holds BLAKE2 hashes for immutable, complete 1 MiB blocks. The
+  current partial block has a separate digest and length. Before an append, the
+  collector rehashes at most that existing partial block and compares it; after enough
+  bytes arrive to complete the block, it promotes the resulting digest to immutable
+  and starts a new partial block.
+- `integrity_cursor` identifies the next complete or partial historical block to verify
+  during a separately due integrity-maintenance pass.
 - `parser_version` invalidates only summaries owned by a parser whose semantics
   changed.
 - `parser_state_json` stores minimal continuation state, such as the current Codex
@@ -171,6 +188,15 @@ intact. This removes searchable text from the live SQLite database and sidecars;
 cannot erase copies retained by APFS snapshots, Time Machine, or other backups, which
 the confirmation message states explicitly.
 
+Enable/disable are exclusive maintenance operations, not dashboard HTTP handlers. The
+CLI boots out the LaunchAgent, stops the owned dashboard server, acquires the collector
+lock, waits for SQLite readers to drain, and then opens the database exclusively. On
+disable it writes the search preference off before deleting content, so a failed cleanup
+cannot expose the index through a restarted server. It reports success only after the
+FTS tables are absent, the WAL checkpoint/truncate and full vacuum succeed, the database
+is closed, and no non-empty sidecars remain. A `finally` path reloads the LaunchAgent;
+failure keeps search disabled and prints the exact recovery command.
+
 ## Incremental collection protocol
 
 ### Location inventory
@@ -200,14 +226,24 @@ only files owned by that parser.
 
 ### Rewrite and truncation handling
 
-A smaller size, changed file identity, failed 64 KiB tail anchor, failed historical
-block verification, or offset beyond EOF causes a single-file rebuild from byte zero.
-Its old summary and content rows remain visible until the replacement parse commits.
-Other sessions are unaffected. Initial scans create 1 MiB block hashes while parsing;
-later runs verify a bounded rotating subset, advancing `integrity_cursor`. This makes
-normal appends cheap while eventually detecting an arbitrary same-inode rewrite. The UI
-distinguishes `incrementally current` from `integrity verified` and shows the last time
-all historical blocks completed a verification cycle.
+A smaller size, changed file identity, failed 64 KiB tail anchor, failed current-partial
+digest, failed historical block verification, or offset beyond EOF causes a single-file
+rebuild from byte zero. Its old summary and content rows remain visible until the
+replacement parse commits. Other sessions are unaffected.
+
+Initial scans hash each complete 1 MiB block and the remaining partial block while they
+are already being parsed. A normal append verifies only the 64 KiB anchor plus the prior
+partial block (at most 1 MiB), then promotes every newly completed immutable block and
+stores the new partial digest. Appends below, across, and above a block boundary never
+compare a growing partial digest to an immutable complete-block digest.
+
+Historical integrity verification is not part of the one-minute unchanged fast path.
+Once per day, or via `100xprism tokens --verify-history`, a maintenance run reads at
+most 32 MiB of rotating complete blocks and stored partial blocks across all sources
+and advances `integrity_cursor`. Partial blocks participate even when their files never
+append again. This eventually detects an arbitrary older same-inode rewrite while
+keeping each pass bounded. The UI distinguishes `incrementally current` from `integrity
+verified` and shows the last complete verification cycle.
 
 ### Non-append-only sources
 
@@ -224,18 +260,28 @@ are treated as a new file and deduplicated by tool/session identity after parsin
 
 ### Concurrency and failure safety
 
-A process lock under `~/.100xprism/token-collector.lock` prevents scheduled, manual,
-and install-triggered collectors from overlapping. The lock is held only for the
-one-shot collection. SQLite transactions are short and scoped per file; snapshot
+A process lock under `~/.100xprism/token-economics/collector.lock` prevents scheduled,
+manual, and install-triggered collectors from overlapping. The lock is held only for
+the one-shot collection. SQLite transactions are short and scoped per file; snapshot
 publication is a separate atomic transaction. A terminated collector therefore leaves
 the last complete snapshot and every previously committed file checkpoint readable.
+
+At startup, the collector marks an unterminated prior `scan_run` abandoned, clears any
+expired database lease after confirming that the process lock is available, and
+restores each affected location to its last committed `current` or `degraded` state.
+After inventory, it compares `snapshot_input_revision` with `snapshot_revision`. If they
+differ—even when no transcript changed—the run rebuilds and publishes the snapshot
+from durable summaries only. It does not reopen transcript content. This repairs a
+crash between any snapshot-input commit and snapshot publication.
 
 ## macOS lifecycle
 
 The owned file is
 `~/Library/LaunchAgents/com.100xprism.token-economics.plist`. It contains an explicit
-generated marker and points to the stable `~/100xprism` clone, never the transient npm
-package directory.
+generated marker and invokes a small owned launcher at
+`~/.100xprism/token-economics/launcher.py`, never the transient npm package directory.
+The launcher contains no schema logic: it resolves the single atomic `current` symlink
+and executes that generation's collector with that generation's database.
 
 Installation resolves `python3` to an absolute executable, verifies it can import the
 required standard-library modules, and writes that exact path into `ProgramArguments`.
@@ -248,23 +294,48 @@ The LaunchAgent uses `RunAtLoad`, `StartInterval=60`, background process type,
 low-priority I/O, and a positive nice value. It does not use `KeepAlive`. `launchd`
 does not overlap invocations of the same job.
 
-- `100xprism install` bootstraps the stable clone, writes or refreshes the plist,
+- `100xprism install` creates the owned launcher and first versioned generation from the
+  stable clone, atomically points `current` at it, writes or refreshes the plist,
   bootstraps it into the current GUI domain, and triggers the first collection.
-- `100xprism update` pauses the job, updates code, runs migrations through the new
-  collector, rewrites the plist, and restarts it even when the repository was already
-  current.
-- npm `preuninstall` during an upgrade boots out the running job but preserves its
-  plist and database. npm `postinstall` restarts an existing owned plist; it does not
-  opt a new user into token economics or clone a repository.
+- `100xprism update` first refuses a live `~/100xprism` checkout with tracked or
+  untracked changes; it never removes ignored files. It stages and validates a new
+  immutable runtime generation on the same filesystem without changing `current`.
+  After stopping the dashboard and acquiring the collector lock, it uses SQLite's
+  backup API to copy the current database into the candidate generation, runs every
+  required sequential migration there, checkpoints and closes it, verifies no
+  candidate WAL/SHM files remain, and runs integrity and schema checks with the new
+  collector. Cutover is one atomic rename of a prepared symlink over `current`; the
+  plist and launcher never move or unload. A kill before that rename leaves the old
+  complete generation active; a kill after it leaves the new complete generation
+  active. Releasing the lock and kickstarting the still-loaded job completes update.
+  The preceding generation is retained until the new collector completes successfully,
+  so rollback is the same atomic symlink operation. The stable clone is then advanced
+  with a non-destructive fast-forward; failure leaves its files and the active runtime
+  intact and is reported separately.
+- npm `preuninstall` does not boot out the owned LaunchAgent because the job does
+  not execute code from the transient npm package. npm `postinstall` validates and
+  kickstarts an already installed owned plist after an upgrade; it does not opt a new
+  user into token economics or clone a repository. Plain npm removal and interrupted
+  upgrades therefore leave scheduled collection running.
 - `100xprism uninstall` boots out and removes the owned plist. It retains the database
   so reinstalling restores history.
 - Installation writes `~/.100xprism/token-economics-manifest.json` with a generated
-  marker and the exact database, sidecar, lock, log, and diagnostic paths it owns.
-  Cleanup validates the marker, requires every target to remain under
-  `~/.100xprism`, and permits WAL/SHM deletion only beside the validated database.
-- `100xprism uninstall --purge` removes the SQLite database, WAL/SHM files, process
-  lock, logs, and bounded diagnostics only through that validated manifest. The JS and
-  Python cleanup ownership rules and cleanup-contract tests remain in parity.
+  marker and dynamically registers every artifact before creation: launcher, current
+  symlink, each generation and its database/sidecars/runtime,
+  update journal, dashboard credential file, lock, logs, and diagnostics. Generation
+  roots also carry an ownership marker. Cleanup validates the manifest and marker,
+  requires every target to remain under the dedicated token-economics root, and permits
+  WAL/SHM deletion only beside a validated owned database.
+- Search disable scrubs content from every retained generation or recovery database,
+  not only `current`, before reporting success. Successful update removes obsolete
+  generations only after a successful collector run and only through the manifest;
+  it never removes a dirty user checkout. Dashboard exit removes its credential file.
+- `100xprism uninstall --purge` removes every registered generation database and
+  WAL/SHM file, launcher, symlink, runtime credential, update artifact, process lock,
+  log, and bounded diagnostic only through that validated manifest. The JS and Python
+  cleanup ownership rules and cleanup-contract tests remain in parity. Purge removes
+  the validated manifest itself last only after every registered target succeeds; a
+  partial cleanup retains it so the remaining owned artifacts can be recovered safely.
 - `100xprism tokens` ensures the owned job is loaded, triggers a non-overlapping
   collection, starts the on-demand server if necessary, and opens the browser unless
   `--no-open` was supplied.
@@ -278,8 +349,10 @@ current reporting contract while accurately scoping the coming-soon declaration.
 ## Resource budgets
 
 - Collector resident memory is zero between scheduled runs.
-- Unchanged runs perform metadata inventory only and do not rebuild dashboard
-  aggregates.
+- Ordinary unchanged one-minute runs perform metadata inventory only and do not open
+  transcript content. They rebuild a dashboard snapshot from SQLite only when a durable
+  revision shows that an earlier publication was interrupted. The separately due daily
+  integrity pass reads at most 32 MiB of historical block data without reparsing it.
 - A collector processes one changed file at a time and does not retain raw transcript
   content after committing it.
 - The dashboard server is the only resident Python process while the UI is open. It
@@ -325,12 +398,29 @@ restrictive Content Security Policy using a per-response script nonce and disall
 object, frame, and remote connection sources. Queries are parameterized and bounded by
 result count.
 
+The server rejects every request whose `Host` is not the exact launched loopback host
+and port. Each dashboard launch generates a random 256-bit bootstrap token and writes
+the port, PID, and token to an owned mode-`0600` runtime file. The CLI reads that file
+when reopening an existing server and places the token in the URL fragment, which
+browsers do not send in HTTP requests. Startup JavaScript exchanges it once for an
+`HttpOnly`, `SameSite=Strict` process-lifetime session cookie and clears the fragment.
+Search and every mutating API require that cookie. Mutating requests also require an
+exact loopback `Origin` and a per-page CSRF header. The runtime file is never served,
+logged, or stored in SQLite and is removed on clean exit or when its PID is stale. This
+threat model accepts that another process running as the same OS user can already read
+the user's transcripts and database. Tests cover reload, duplicate tabs, reopening an
+existing dashboard, hostile Host headers, missing/wrong credentials, cross-origin
+mutation attempts, stale runtime files, and DNS-rebinding-shaped requests.
+
 ## Privacy and security
 
 - Transcript collection, SQLite storage, search, and scheduled snapshot building are
   local-only and perform no network calls. The pre-existing opt-in GitHub insights
   integration is interactive-only and remains governed by `github.enabled`.
 - The HTTP server binds only to `127.0.0.1`.
+- The server validates Host and Origin and protects search/mutation APIs with an
+  unguessable per-launch credential; loopback binding alone is not treated as
+  authorization.
 - Content search is opt-in and its scope is stated before activation.
 - Disabling content search removes text from the live database and sidecars without
   deleting economic history, while honestly warning about filesystem backups.
@@ -348,19 +438,25 @@ result count.
 - Reject an unsupported future schema without modifying it.
 - Verify WAL mode, permissions, snapshot rollback, scan-history cap, and content removal
   from the main database plus WAL/SHM sidecars after FTS disable.
+- Verify value-cache data and `snapshot_input_revision` commit or roll back together;
+  the legacy JSON cache is import-only and is never rewritten.
 - Enable search after economics history already exists and verify a content-only
   backfill reaches old sessions without changing token totals.
 
 ### Incremental parser tests
 
 - A first scan parses a fixture fully.
-- A second unchanged scan reads no transcript content.
+- A second ordinary unchanged scan reads no transcript content.
 - Appending complete records parses only bytes after the committed offset.
 - An incomplete trailing JSONL record remains uncommitted until completed.
 - Truncation, replacement, tail-anchor mismatch, rotating block-hash mismatch, and
   parser-version change rebuild only the affected file.
 - Verify rewrites before, within, and after the current historical integrity block and
-  advance the bounded integrity cursor without reparsing unchanged records.
+  advance the bounded daily integrity cursor without reparsing unchanged records.
+- Verify a same-size, same-mtime rewrite in an unchanged sub-1-MiB partial block is
+  detected by bounded integrity maintenance.
+- Verify partial-block appends below, across, and above 1 MiB boundaries without false
+  rebuilds, and cap a due integrity pass at 32 MiB.
 - Claude attribution and Codex cumulative counters remain correct across scan
   boundaries.
 - Deleted transcripts retain historical totals and reappearing session identities do
@@ -373,17 +469,39 @@ result count.
   degraded.
 - The collector lock makes a concurrent invocation exit successfully without work.
 - A failed snapshot build leaves the previous snapshot readable.
-- Unchanged inventory does not invoke aggregation.
+- A forced termination after a file commit but before snapshot publication leaves the
+  prior snapshot readable; the next unchanged run republishes from durable summaries.
+- Repeat that termination test after absence/deletion state, degraded coverage,
+  content-backfill progress, and value-cache commits.
+- Unchanged inventory does not invoke aggregation when snapshot-input and snapshot
+  revisions match.
+- A killed collector's stale scan run, lease, and `scanning` location state are
+  reconciled by the next run.
 
 ### Lifecycle tests
 
 - Install writes an owned macOS plist and triggers collection.
-- Update stops, migrates, rewrites, and restarts the job.
-- npm upgrade pauses and resumes only a previously installed job.
+- Update stages and validates code before cutover, migrates from supported skipped
+  versions, atomically switches `current`, and kickstarts the job.
+- Termination before and after every preparation and symlink transition leaves either
+  the old or new complete generation runnable through the stable launcher, including
+  after reboot.
+- Candidate failures during migration commit and checkpoint, including a non-empty WAL,
+  never expose candidate frames to the active database; rollback verifies the prior
+  generation's integrity and schema before switching.
+- A candidate value-cache format change remains inside its generation; atomic rollback
+  restores the preceding database and value format together.
+- Dirty tracked and untracked clone updates abort without changes, and ignored files
+  remain present.
+- npm upgrade kickstarts only a previously installed job; plain npm removal and a
+  failed or interrupted npm upgrade do not stop collection.
 - Ordinary uninstall removes the agent but retains history.
 - Purge removes the agent, database, sidecars, locks, and logs.
 - Hand-written or foreign LaunchAgent files are never deleted.
 - Purge refuses an absent, malformed, escaped, or marker-less ownership manifest.
+- Successful update, failed rollback, interrupted update, search disable, and purge
+  clean every dynamically registered runtime, database, sidecar, journal, and credential
+  artifact according to their retention contract.
 - Windows and Linux preserve foreground reporting, show the background-service
   coming-soon banner, and do not install lifecycle artifacts.
 
@@ -394,7 +512,12 @@ result count.
 - Cache metrics and counterfactual savings use the correct model rates.
 - FTS is unavailable while disabled and returns filtered, bounded excerpts while
   enabled.
+- Search disable drains readers, pauses collection, verifies vacuum/checkpoint cleanup,
+  invalidates the old server token, and resumes collection in a `finally` path.
 - Malicious prompt HTML remains inert in structured highlighted excerpts under CSP.
+- DNS-rebinding-shaped Host headers and unauthenticated search requests are rejected.
+- Reload, duplicate-tab, and CLI reopen flows obtain a valid process-lifetime session
+  without exposing the bootstrap credential in HTTP requests or logs.
 - Ten minutes without API activity shuts down the on-demand server; active polling
   keeps it alive.
 
