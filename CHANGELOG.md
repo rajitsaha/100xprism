@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-10-10
+
 ### Added
 
 - **Cleanup contract.** Everything install/update/uninstall deletes must be provably ours: a generated marker, a manifest entry, a `/100xprism/hooks/` path, or an exact v1 header from `adapters/lib/legacy-v1-commands.json` (generated from git history). Shared JS logic lives in `lib/cleanup.js`; `test/cleanup-contract.test.js` guards install → uninstall end to end.
