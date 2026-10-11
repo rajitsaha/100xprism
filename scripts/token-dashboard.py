@@ -152,17 +152,91 @@ COMP_LABELS = claude_code.COMP_LABELS
 project_label = _value.project_label
 
 
-def build(verbose=True):
+def _partial_preview(summaries):
+    """Small, cheap facts that can be shown before the full dataset is built."""
+    totals = _empty()
+    by_model = defaultdict(_empty)
+    sources = defaultdict(int)
+    metered_sessions = 0
+    activity_sessions = 0
+    messages = 0
+    for summary in summaries:
+        sources[summary.get("tool", "unknown")] += 1
+        values = summary.get("totals") or {}
+        _add(totals, values.get("input", 0), values.get("output", 0),
+             values.get("cache_read", 0), values.get("cache_write", 0))
+        for model, model_values in (summary.get("by_model") or {}).items():
+            _add(by_model[model], model_values.get("input", 0),
+                 model_values.get("output", 0), model_values.get("cache_read", 0),
+                 model_values.get("cache_write", 0))
+        if summary.get("activity_only"):
+            activity_sessions += 1
+        elif summary.get("turns"):
+            metered_sessions += 1
+        messages += summary.get("msgs", 0) or 0
+    return {
+        "records": len(summaries),
+        "metered_sessions": metered_sessions,
+        "activity_sessions": activity_sessions,
+        "messages": messages,
+        "tokens": sum(totals.values()),
+        "estimated_cost": round(pricing.cost_by_model(by_model)[0], 2),
+        "sources": dict(sorted(sources.items())),
+    }
+
+
+def build(verbose=True, progress=None, summaries=None, value_context=None,
+          offline=False, value_store=None):
     """Scan every adapter (incremental via each adapter's own cache) and return
     the full dataset."""
-    discovered, dir_index = _value.cached_scan()
-    all_summaries = []
-    for collector in usage_collectors():
+    if progress:
+        progress({"stage": "discovering", "tool": None, "current": 0, "total": 0,
+                  "reparsed": 0, "cached": 0, "message": "Discovering local repositories"})
+    discovered, dir_index = value_context if value_context is not None else _value.cached_scan()
+    all_summaries = list(summaries) if summaries is not None else []
+    completed_sources = []
+    for collector in (usage_collectors() if summaries is None else []):
         kwargs = {"dir_index": dir_index} if collector.tool in ("claude-code", "cursor") else {}
+        console_bucket = [-1]
+
+        def report_scan(current, total, reparsed, cached, tool=collector.tool):
+            if progress:
+                progress({
+                    "stage": "scanning", "tool": tool, "current": current,
+                    "total": total, "reparsed": reparsed, "cached": cached,
+                    "completed_sources": list(completed_sources),
+                    "preview": _partial_preview(all_summaries),
+                    "message": f"Scanning {tool} transcripts",
+                })
+            bucket = current // 100 if current else 0
+            if verbose and (current == 0 or current == total or bucket > console_bucket[0]):
+                console_bucket[0] = bucket
+                print(f"  {tool}: {current}/{total} files "
+                      f"({reparsed} parsed, {cached} cached)", file=sys.stderr)
+
         try:
-            all_summaries.extend(collector.scan(verbose=verbose, **kwargs))
+            rows = collector.scan(verbose=verbose, progress=report_scan, **kwargs)
+            all_summaries.extend(rows)
+            completed_sources.append(collector.tool)
+            if progress:
+                progress({
+                    "stage": "scanning", "tool": collector.tool,
+                    "current": len(rows), "total": len(rows), "reparsed": 0,
+                    "cached": 0, "completed_sources": list(completed_sources),
+                    "preview": _partial_preview(all_summaries),
+                    "message": f"Finished {collector.tool}; continuing with remaining sources",
+                })
         except Exception as exc:
             print(f"warning: {collector.tool} collector failed: {exc}", file=sys.stderr)
+
+    if progress:
+        progress({
+            "stage": "aggregating", "tool": None, "current": 0, "total": 1,
+            "reparsed": 0, "cached": 0,
+            "completed_sources": list(completed_sources),
+            "preview": _partial_preview(all_summaries),
+            "message": f"Building cross-tool views from {len(all_summaries)} source records",
+        })
 
     totals = _empty()
     by_project = defaultdict(_empty)
@@ -229,6 +303,10 @@ def build(verbose=True):
                 "session_id": s["session_id"], "project": proj, "tool": s.get("tool"),
                 "cost": round(file_cost, 4), "msgs": s.get("msgs", 0), "mtime": s.get("mtime", 0),
                 "models": sorted(s.get("by_model", {}).keys()),
+                "tokens": t, "cache": cache_metrics(s.get("by_model", {})),
+                "context_growth": s.get("context_growth"),
+                "first_activity": s.get("first_activity"), "last_activity": s.get("last_activity"),
+                "historical": s.get("historical", False),
                 "model_costs": {model: round(pricing.cost_of(tok, model), 4)
                                 for model, tok in s.get("by_model", {}).items()},
                 "day_cost": {
@@ -360,7 +438,7 @@ def build(verbose=True):
         mangled_by_label, tokens_by_label, by_project_day_cost,
         window_by_label, tool_by_label,
         discovered=discovered, realdir_by_label=realdir_by_label,
-        dir_index=dir_index)
+        dir_index=dir_index, value_store=value_store)
     delivery_by_day = _delivery_by_day(directories)
 
     comp_tokens = {k: comp_chars.get(k, 0) // 4 for k in COMP_CATS}
@@ -462,9 +540,10 @@ def build(verbose=True):
         "cost_per_release": delivery_economics["delivery_unit_cost"]["per_release"],
         **outcome_totals,
     }
-    github = _github_insights(directories)
+    github = (_empty_github_summary([], False, "GitHub insights are interactive-only", False)
+              if offline else _github_insights(directories))
 
-    handoff_runs = _build_handoff_runs(all_summaries)
+    handoff_runs = [] if offline else _build_handoff_runs(all_summaries)
 
     dataset = {
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -472,6 +551,8 @@ def build(verbose=True):
         "sessions": sessions,
         "messages": total_msgs,
         "totals": totals,
+        "cache": cache_metrics(by_model),
+        "cache_by_model": {model: cache_metrics({model: tokens}) for model, tokens in by_model.items()},
         "total_cost": round(total_cost, 2),
         "cost_by_purpose": cost_by_purpose,
         "fallback_pct": fallback_pct,
@@ -552,6 +633,24 @@ def build(verbose=True):
         for s in _suggest.suggestions(dataset)
     ]
     return dataset
+
+
+def cache_metrics(by_model):
+    """Model-priced no-cache counterfactual; local counters, not a provider bill."""
+    totals = _empty()
+    savings = 0.0
+    for model, tokens in by_model.items():
+        rates, _ = pricing.rates_for_model(model)
+        for key in totals:
+            totals[key] += tokens.get(key, 0)
+        savings += tokens.get("cache_read", 0) * (rates["input"] - rates["cache_read"]) / 1_000_000
+    read_context = totals["input"] + totals["cache_read"]
+    all_context = read_context + totals["cache_write"]
+    return {**totals,
+            "cache_hit_ratio": totals["cache_read"] / read_context if read_context else 0,
+            "cached_context_share": totals["cache_read"] / all_context if all_context else 0,
+            "estimated_savings": round(savings, 8),
+            "label": "Estimated cache savings at catalog input rates"}
 
 
 def _build_handoff_runs(all_summaries):
@@ -977,7 +1076,8 @@ def print_summary(data):
 
 def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
                          window_by_label, tool_by_label,
-                         discovered=None, realdir_by_label=None, dir_index=None):
+                         discovered=None, realdir_by_label=None, dir_index=None,
+                         value_store=None):
     """Build the unified per-directory rows (cost + tool-agnostic value)."""
     if discovered is None:
         discovered = {}
@@ -991,7 +1091,10 @@ def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
     all_labels = set(mangled_by_label.values()) | set(discovered.values())
 
     rows = []
-    value_store = _value.load_store()
+    owns_value_store = value_store is None
+    value_store = _value.load_store() if owns_value_store else value_store
+    value_store.setdefault("dirs", {})
+    value_store.setdefault("version", _value.STORE_VERSION)
     value_store_dirty = [False]
     for label in all_labels:
         mangled = label_to_mangled.get(label)
@@ -1016,7 +1119,7 @@ def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
             "tokens": tokens_by_label.get(label, _empty()),
             "window": {"start": start, "end": end}, "value": value,
         })
-    if value_store_dirty[0]:
+    if value_store_dirty[0] and owns_value_store:
         _value.save_store(value_store)
     rows.sort(key=lambda r: -(r["cost"] or 0))
     return rows
@@ -1036,9 +1139,9 @@ PAGE = """<!doctype html><html><head><meta charset=utf-8>
 --cost:#B7791F;--value:#047857;--warn:#C2410C;--in:#2563EB;--out:#BE185D;--cr:#16A34A;--cw:#CA8A04;
 --glow:rgba(37,99,235,.18);--shadow:rgba(15,23,42,.12)}
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(circle at 20% -10%,#18263a 0,transparent 34%),var(--ink);color:var(--text);
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% -10%,#18263a 0,transparent 34%) no-repeat,var(--ink);color:var(--text);
 font:14px/1.55 'IBM Plex Sans',-apple-system,Segoe UI,Roboto,sans-serif;transition:background .35s ease,color .25s ease}
-body[data-theme=light]{background:radial-gradient(circle at 20% -10%,#DCEBFF 0,transparent 34%),var(--ink)}
+body[data-theme=light]{background:radial-gradient(circle at 20% -10%,#DCEBFF 0,transparent 34%) no-repeat,var(--ink)}
 .num,td.n,.money{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 header{padding:18px 28px;border-bottom:1px solid var(--line);display:flex;background:rgba(14,17,22,.88);
 align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
@@ -1095,6 +1198,8 @@ td:first-child,th:first-child{text-align:left}
 .meter{background:#21262d;border-radius:6px;height:22px;position:relative;overflow:hidden;max-width:520px}
 .meter b{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
 .meter em{position:absolute;left:10px;top:0;line-height:22px;font-style:normal;font-size:12px}
+.scan-status{margin-bottom:18px;border-color:color-mix(in srgb,var(--value),var(--line) 55%)}
+.scan-status .cards{margin:14px 0 0}.scan-detail{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
 .legend{font-size:12px;color:var(--muted);margin:10px 0}.legend span{margin-right:16px}
 button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;
 padding:6px 12px;cursor:pointer;font-size:13px}button:hover{border-color:var(--in)}
@@ -1147,9 +1252,17 @@ color:var(--text);max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
 <div id=tip role=tooltip></div>
 <header><h1>100xPrism · AI Economics</h1>
 <span class=sub id=meta></span>
-<span style=margin-left:auto><button id=themeToggle onclick=toggleTheme()>☾ Dark</button> <button onclick=refresh()>↻ Rescan</button></span></header>
+<span style=margin-left:auto><button id=themeToggle data-action=theme>☾ Dark</button> <button data-action=refresh>↻ Rescan</button></span></header>
 <div class=wrap id=app><p class=muted>Loading…</p></div>
 <script>
+const PRISM_SECURE = false;
+let PRISM_CSRF='';
+const SESSION_READY=PRISM_SECURE?(async()=>{
+ const token=new URLSearchParams(location.hash.slice(1)).get('token');
+ const response=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(token?{token}:{})});
+ history.replaceState(null,'',location.pathname+location.search);
+ if(response.ok)PRISM_CSRF=(await response.json()).csrf;
+})():Promise.resolve();
 const C={input:'var(--in)',output:'var(--out)',cache_read:'var(--cr)',cache_write:'var(--cw)'};
 function applyTheme(theme){document.body.dataset.theme=theme;const b=document.getElementById('themeToggle');if(b)b.textContent=theme==='light'?'☀ Light':'☾ Dark';}
 function toggleTheme(){const next=document.body.dataset.theme==='light'?'dark':'light';localStorage.setItem('100xprism-theme',next);applyTheme(next);}
@@ -1195,7 +1308,7 @@ function windowButtons(current,d){
    WINDOWS.map(([id,label,n])=>{
     const limited=n!=null&&span>0&&span<n;
     const tip=limited?`Only ${span} calendar days of metered token history are available, so this window currently matches all available data.`:`Show ${label} of available metered token history.`;
-    return `<button class="windowbtn ${id===current?'active':''} ${limited?'limited':''}" data-tip="${esc(tip)}" onclick="setWindow('${id}')">${esc(label)}</button>`;
+    return `<button class="windowbtn ${id===current?'active':''} ${limited?'limited':''}" data-tip="${esc(tip)}" data-action="window" data-window="${esc(id)}">${esc(label)}</button>`;
    }).join('')+
    `<span class=window-note>${note}</span></div>`;
 }
@@ -1209,7 +1322,10 @@ function datedKeysFrom(raw){
 }
 function dayInWindow(day,current,allDays){
  const def=windowDef(current); if(def[2]==null)return true;
- const end=(allDays&&allDays.length?allDays[allDays.length-1]:new Date().toISOString().slice(0,10));
+ // Undated records (day "unknown") sort after ISO dates; they count only in "all".
+ const isDay=v=>/^\\d{4}-\\d{2}-\\d{2}$/.test(v); if(!isDay(day))return false;
+ const dated=(allDays||[]).filter(isDay);
+ const end=(dated.length?dated[dated.length-1]:new Date().toISOString().slice(0,10));
  const cutoff=new Date(end+'T00:00:00'); cutoff.setDate(cutoff.getDate()-def[2]+1);
  return day>=cutoff.toISOString().slice(0,10)&&day<=end;
 }
@@ -1288,7 +1404,7 @@ function selectedRowValue(row,current,anchorDays){
 }
 function sideTabs(current){
  return `<aside class=side-panel aria-label="Dashboard sections"><div class=side-title>Dashboard</div>`+
-   TABS.map(([id,label,note])=>`<button class="tabbtn ${id===current?'active':''}" data-tab="${esc(id)}" onclick="showTab('${esc(id)}')"><span>${esc(label)}<small>${esc(note)}</small></span></button>`).join('')+
+   TABS.map(([id,label,note])=>`<button class="tabbtn ${id===current?'active':''}" data-tab="${esc(id)}" data-action="tab"><span>${esc(label)}<small>${esc(note)}</small></span></button>`).join('')+
    `</aside>`;
 }
 function showTab(id){
@@ -1472,19 +1588,33 @@ function budgetBar(block,label){
  return `<div style="margin:6px 0"><div class=muted style="font-size:11px;margin-bottom:2px">${esc(label)}: $${block.spend.toFixed(0)} / $${block.limit.toFixed(0)}</div>
    <div class=meter style="height:10px"><b style="width:${pct}%;background:${col}"></b></div></div>`;
 }
-function sessionsTable(rows,current,d){
+function scopedSessions(rows,current,d){
  const days=meteredDays(d), scoped=(rows||[]).map(row=>{
   const dayCost=row.day_cost||{}, dated=Object.keys(dayCost).sort();
   const windowCost=dated.length?Object.entries(dayCost).reduce((sum,[day,cost])=>sum+(dayInWindow(day,current,days)?+cost||0:0),0):row.cost;
   return {...row,window_cost:windowCost,window_days:dated};
- }).filter(row=>row.window_days.length?row.window_cost>0:!row.mtime||dayInWindow(new Date(row.mtime*1000).toISOString().slice(0,10),current,days)).sort((a,b)=>b.window_cost-a.window_cost);
+ }).filter(row=>row.window_days.length?row.window_cost>0:!row.mtime||dayInWindow(new Date(row.mtime*1000).toISOString().slice(0,10),current,days));
+ return scoped;
+}
+function sessionsTable(rows,current,d){
+ const scoped=scopedSessions(rows,current,d).sort((a,b)=>b.window_cost-a.window_cost);
  if(!scoped.length) return emptyState(`No sessions in the selected window (${windowDef(current)[1]}).`);
- let h='<table><tr><th>session</th><th>project</th><th>tool</th><th>msgs</th><th>cost</th></tr>';
+ let h='<table><tr><th>session</th><th>project</th><th>tool</th><th>msgs</th><th>cost</th><th>lifetime tokens</th><th>context growth</th><th>lifetime cache savings</th></tr>';
  for(const r of scoped.slice(0,20)){
   h+=`<tr><td class=muted>${esc(r.session_id.slice(0,8))}</td><td>${esc(r.project)}</td>`+
-     `<td>${toolBadge(r.tool)}</td><td class=n>${r.msgs}</td><td class=money>$${r.window_cost.toFixed(2)}</td></tr>`;
+     `<td>${toolBadge(r.tool)}</td><td class=n>${r.msgs}</td><td class=money>$${r.window_cost.toFixed(2)}</td><td>${fmt(Object.values(r.tokens||{}).reduce((sum,n)=>sum+n,0))}${r.historical?' · historical':''}</td><td>${r.context_growth?`${fmt(r.context_growth.first_context_tokens)} → ${fmt(r.context_growth.last_context_tokens)}${r.context_growth.growth_ratio?' · '+(+r.context_growth.growth_ratio).toFixed(1)+'×':''}`:'unavailable'}</td><td>${money2((r.cache||{}).estimated_savings)}<div class=muted>${(((r.cache||{}).cache_hit_ratio||0)*100).toFixed(1)}% hits</div></td></tr>`;
  }
  return h+'</table>';
+}
+function contextGrowthTable(rows,current,d){
+ const scoped=scopedSessions(rows,current,d).filter(r=>r.context_growth&&r.context_growth.delta_tokens>0).sort((a,b)=>b.context_growth.delta_tokens-a.context_growth.delta_tokens).slice(0,10);
+ if(!scoped.length)return emptyState('No observed context growth in the selected sessions.');
+ return '<p class=muted>Lifetime growth in per-turn context, ranked by added tokens. Cumulative session usage is excluded.</p><table><tr><th>session</th><th>project</th><th>tool</th><th>first → last context</th><th>added tokens</th><th>largest observed context</th></tr>'+scoped.map(r=>`<tr><td>${esc(r.session_id.slice(0,8))}</td><td>${esc(r.project)}</td><td>${toolBadge(r.tool)}</td><td>${fmt(r.context_growth.first_context_tokens)} → ${fmt(r.context_growth.last_context_tokens)}</td><td>${fmt(r.context_growth.delta_tokens)}</td><td>${fmt(r.context_growth.max_context_tokens)}</td></tr>`).join('')+'</table>';
+}
+function cacheModelTable(d){
+ const rows=Object.entries(d.cache_by_model||{}).sort((a,b)=>b[1].estimated_savings-a[1].estimated_savings);
+ if(!rows.length)return '';
+ return '<details><summary>Lifetime cache economics by model</summary><table><tr><th>model</th><th>cache-read tokens</th><th>hit ratio</th><th>cached-context share</th><th>estimated savings</th></tr>'+rows.map(([model,c])=>`<tr><td>${esc(model)}</td><td>${fmt(c.cache_read)}</td><td>${(c.cache_hit_ratio*100).toFixed(1)}%</td><td>${(c.cached_context_share*100).toFixed(1)}%</td><td>${money2(c.estimated_savings)}</td></tr>`).join('')+'</table></details>';
 }
 function selectedSkills(d,current){
  const raw=d.skill_by_day||{}, days=Object.keys(raw).sort(), base=Object.fromEntries((d.by_skill||[]).map(row=>[row.skill,row]));
@@ -1512,7 +1642,7 @@ function skillsTable(rows,current,d){
   const agents=(r.tools||[]).map(toolBadge).join(' · '), modelEntries=(r.models||[]).map(model=>({label:modelDisplay(model.model).label,tip:modelDisplay(model.model).tip})), models=modelEntries.map(model=>model.label);
   h+=`<tr><td>${esc(r.skill)}</td><td title="${esc((r.tools||[]).join(', '))}">${agents||'—'}</td>`+
      `<td title="${esc((r.projects||[]).join(', '))}">${esc(listLabel(r.projects))}</td>`+
-     `<td title="${esc(modelEntries.map(model=>model.tip).join('\n'))}">${esc(listLabel(models))}</td>`+
+     `<td title="${esc(modelEntries.map(model=>model.tip).join('\\n'))}">${esc(listLabel(models))}</td>`+
      `<td class=n>${r.invocations}</td><td class=money>$${r.cost.toFixed(2)}</td>`+
      `<td class=money>$${perInv.toFixed(3)}</td><td>${r.exact?'<span class=badge title="exact — native Claude Code attribution">exact</span>':'<span class=badge title="attributed — heuristic segmentation">attr.</span>'}</td></tr>`;
  }
@@ -1700,7 +1830,7 @@ function snippetsHtml(s,i){
  const snippets=suggestionSnippets(s);
  if(!snippets.length)return '';
  return `<details class=howto open><summary>Copy/paste examples</summary>`+
-  snippets.map(([label,lang,text],j)=>{const id=`snippet-${i}-${j}`;return `<div class=snippet><div class=snippet-head><span>${esc(label)} · ${esc(lang)}</span><button onclick="copyText('${id}')">Copy</button></div><pre><code id="${id}">${esc(text)}</code></pre></div>`;}).join('')+
+  snippets.map(([label,lang,text],j)=>{const id=`snippet-${i}-${j}`;return `<div class=snippet><div class=snippet-head><span>${esc(label)} · ${esc(lang)}</span><button data-action="copy" data-copy="${esc(id)}">Copy</button></div><pre><code id="${id}">${esc(text)}</code></pre></div>`;}).join('')+
   `</details>`;
 }
 function suggestionCard(s,i,scale,scopeLabel){
@@ -1895,8 +2025,47 @@ function dirsTable(d,current){
  }
  return h+(rows.length?'':'<tr><td colspan=7 class=muted>No directory spend found in the selected window.</td></tr>')+'</table></div>';
 }
-async function load(){render(await (await fetch('/api/data')).json());}
-async function refresh(){document.getElementById('app').innerHTML='<p class=muted>Rescanning…</p>';render(await (await fetch('/api/refresh')).json());}
+let pollTimer;
+function schedule(d){clearTimeout(pollTimer);pollTimer=setTimeout(load,(d.loading||d.refreshing)?750:30000);}
+async function load(){
+ try{await SESSION_READY;const d=await (await fetch('/api/data')).json();render(d);schedule(d);}
+ catch(err){document.getElementById('meta').textContent='dashboard unavailable · retrying';pollTimer=setTimeout(load,2000);}
+}
+async function refresh(){
+ clearTimeout(pollTimer);
+ await SESSION_READY;
+ const response=await fetch('/api/refresh',PRISM_SECURE?{method:'POST',headers:{'Content-Type':'application/json','X-Prism-CSRF':PRISM_CSRF},body:'{}'}:{});
+ if(!response.ok){document.getElementById('meta').textContent='Reopen with 100xprism tokens to authorize collection.';return;}
+ const d=await response.json();render(d);schedule(d);
+}
+async function fetchGithub(){
+ await SESSION_READY;
+ const response=await fetch('/api/github',{method:'POST',headers:{'Content-Type':'application/json','X-Prism-CSRF':PRISM_CSRF},body:'{}'});
+ if(response.ok){const d=await response.json();render(d);schedule(d);}
+ else document.getElementById('meta').textContent='GitHub request unavailable. Check local authorization and github.enabled.';
+}
+function coveragePanel(d){
+ const live=d.live_status;if(!live)return '';
+ const locations=live.locations||live.source_locations||[];
+ const rows=locations.map(row=>`<tr><td>${esc(row.tool||'')}</td><td>${esc(row.root_path||'')}</td><td>${esc(row.status||'never_scanned')}</td><td>${row.present_file_count||0}/${row.file_count||0}</td><td>${esc(row.last_full_scan_at?new Date(row.last_full_scan_at*1000).toLocaleString():'never')}</td><td>${esc(row.last_error||'')}</td></tr>`).join('');
+ const run=live.run||live.latest_run||live.scan_run||{};
+ const state=locations.some(row=>row.status==='scanning')?'scanning':locations.some(row=>row.status==='degraded')?'degraded':locations.some(row=>row.status==='never_scanned')?'not yet scanned':'incrementally current';
+ const integrity=live.integrity_verified_at?new Date(live.integrity_verified_at*1000).toLocaleString():'verification pending';
+ return `<details class=howto><summary>Local collection coverage · ${esc(state)}</summary><p>Complete snapshot totals remain visible during collection. Historical integrity is checked separately: ${esc(integrity)}.</p><p>${fmt(run.files_parsed||0)} changed files · ${fmt(run.bytes_parsed||0)} bytes parsed in latest run</p><div class=table-wrap><table><tr><th>tool</th><th>source</th><th>state</th><th>present / recorded</th><th>last full scan</th><th>error</th></tr>${rows}</table></div></details>`;
+}
+function localSearchPanel(d){
+ if(!PRISM_SECURE)return '';
+ const live=d.live_status||{},enabled=live.content_search_enabled||live.search_enabled||(live.content_search||{}).enabled;
+ if(!enabled)return '<p class=muted>Local prompt and assistant-prose search is off. Enable with <code>100xprism tokens --enable-content-search</code>.</p>';
+ const coverage=live.content_backfill||{};
+ return `<section><h2>Search local prompts and prose</h2><p class=muted>Tool results and file contents are excluded. Backfill: ${fmt(coverage.complete||0)} / ${fmt(coverage.total||0)} files complete.</p><form id=localSearchForm><input name=q aria-label="Search query" placeholder="Keyword, phrase, prefix or Boolean query" required maxlength=512><input name=project aria-label="Repository" placeholder="Repository"><select name=tool aria-label="Tool"><option value="">All tools</option><option>claude-code</option><option>codex</option><option>cursor</option><option>pi</option></select><select name=role aria-label="Role"><option value="">All roles</option><option>user</option><option>assistant</option></select><input type=date name=date_from aria-label="From date"><input type=date name=date_to aria-label="To date"><button>Search</button></form><div id=localSearchResults></div></section>`;
+}
+async function searchLocal(form){
+ await SESSION_READY;const query=new URLSearchParams();for(const[key,value]of new FormData(form))if(value)query.set(key,value);
+ const response=await fetch('/api/search?'+query.toString()),target=document.getElementById('localSearchResults');
+ if(!response.ok){target.textContent='Search unavailable. Reopen using 100xprism tokens, or wait for backfill.';return;}
+ const data=await response.json();target.innerHTML=(data.results||[]).map(row=>`<article><h3>${esc(row.project||row.session_key||row.session_id||'session')} · ${esc(row.tool||'')} · ${esc(row.role||'')}</h3><p>${(row.segments||row.excerpt||[]).map(part=>part.matched?'<mark>'+esc(part.text)+'</mark>':esc(part.text)).join('')}</p></article>`).join('')||'<p>No matching prose.</p>';
+}
 function money(c){return c==null?'<span class=muted>—</span>':'$'+(+c).toLocaleString(undefined,{maximumFractionDigits:0});}
 function money2(c){return c==null?'<span class=muted>—</span>':'$'+(+c).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
 function qualityStrip(d,current){const q=d.data_quality||{},v=q.value_sources||{},w=q.window||{},days=meteredDays(d),u={},a={};
@@ -1904,10 +2073,26 @@ function qualityStrip(d,current){const q=d.data_quality||{},v=q.value_sources||{
  for(const[day,tools]of Object.entries(q.activity_by_day||{}))if(dayInWindow(day,current,days))for(const[tool,n]of Object.entries(tools))a[tool]=(a[tool]||0)+n;
  const usage=Object.entries(u).map(([k,n])=>`${esc(k)} ${n}`).join(' · '), activity=Object.entries(a).map(([k,n])=>`${esc(k)} ${n}`).join(' · '), delivery=selectedDelivery(d,current);
  return `<div class=quality aria-label="Data provenance"><span><b>${usage||'No metered sources'}</b> selected-window records with provider token counters</span><span><b>${activity||'No activity-only sources'}</b> selected-window activity sessions without counters</span><span><b>${q.pricing_coverage_pct||0}%</b> tokens matched to a named price</span><span><b>${delivery.spend.coverage_pct||0}%</b> selected-window spend joined to git outcomes</span><span><b>${v.git||0} git · ${v.fs||0} filesystem</b> available outcome sources</span><span>${w.start?`${esc(w.start)} → ${esc(w.end)}`:'No dated usage'}</span></div>`;}
+function scanStatus(d,compact=false){
+ const s=d.scan||{},p=d.preview||{},total=+s.total||0,current=+s.current||0;
+ const pct=s.stage==='complete'?100:s.stage==='aggregating'?96:total?Math.min(95,Math.round(100*current/total)):4;
+ const source=(s.tool||s.stage||'starting').replace('-',' '), done=(s.completed_sources||[]).join(' · ');
+ const cards=p.records==null?'':`<div class=cards>
+   <div class=card><div class=lbl>Records available</div><div class=val>${fmt(p.records||0)}</div><div class=note>${esc(done||'first source still scanning')}</div></div>
+   <div class=card><div class=lbl>Tokens surfaced</div><div class=val>${fmt(p.tokens||0)}</div><div class=note>partial provider counters</div></div>
+   <div class=card><div class=lbl>Estimated spend</div><div class=val>${money2(p.estimated_cost||0)}</div><div class=note>partial list-price estimate</div></div>
+ </div>`;
+ return `<section class=scan-status><h2>${compact?'Refreshing data':'Building dashboard'}</h2>
+   <p class=muted>${esc(d.scan_message||d.message||'Scanning local transcripts and repositories…')}</p>
+   <div class=meter><b style="width:${pct}%;background:var(--value)"></b><em>${esc(source)} · ${total?`${fmt(current)} / ${fmt(total)}`:'preparing'}</em></div>
+   <div class=scan-detail><span>${fmt(s.reparsed||0)} parsed</span><span>${fmt(s.cached||0)} cached</span><span>${(s.completed_sources||[]).length} sources complete</span></div>
+   ${compact?'':cards}${d.error?`<p class=muted>Last error: ${esc(d.error)}</p>`:''}</section>`;
+}
 function render(d){
+ const oldForm=document.getElementById('localSearchForm'),oldSearch=oldForm?Object.fromEntries(new FormData(oldForm)):null,oldResults=document.getElementById('localSearchResults')?.innerHTML;
  if(d.loading){
   document.getElementById('meta').textContent=`building local dataset · ${d.generated||''}`;
-  document.getElementById('app').innerHTML=`<section><h2>Building dashboard</h2><p class=muted>${esc(d.message||'Scanning local transcripts and repositories…')}</p>${d.error?`<p class=muted>Last error: ${esc(d.error)}</p>`:''}<div class=meter><b style="width:42%;background:var(--value)"></b><em>scanning in background</em></div></section>`;
+  document.getElementById('app').innerHTML=scanStatus(d);
   return;
  }
  LAST_DATA=d;
@@ -1949,8 +2134,8 @@ function render(d){
    <section><h2>Dollar spend by token purpose <span class=muted style="text-transform:none;font-weight:400">— ${esc(winLabel)}</span></h2>${donut(winPurposeCost)}${legend()}</section>
    <section><h2>Token volume by purpose <span class=muted style="text-transform:none;font-weight:400">— ${esc(winLabel)}</span></h2>${purposeSplit(t)}${legend()}</section>
  </div>${dirsTable(d,win)}`;
- const sessions=handoffTable(d.handoff_runs||[],win,d)+activityTable(d.activity,win,d)+
-  `<h2>Sessions <span class=muted style="text-transform:none;font-weight:400">— ${esc(winLabel)} · top 20 by cost</span></h2>${sessionsTable(d.by_session||[],win,d)}`;
+ const sessions=localSearchPanel(d)+handoffTable(d.handoff_runs||[],win,d)+activityTable(d.activity,win,d)+
+  `<h2>Sessions <span class=muted style="text-transform:none;font-weight:400">— ${esc(winLabel)} · top 20 by cost</span></h2>${sessionsTable(d.by_session||[],win,d)}<h2>Largest context growth</h2>${contextGrowthTable(d.by_session||[],win,d)}${cacheModelTable(d)}`;
  const scopedMainSubagent=selectedMainSubagent(d,win);
  const skills=`<h2>By skill <span class=muted style="text-transform:none;font-weight:400">— ${esc(winLabel)} · exact from Claude Code's native attribution, attr. from command-marker segmentation</span></h2>${skillsTable(d.by_skill||[],win,d)}
    <h2>Main vs subagent <span class=muted style="text-transform:none;font-weight:400">— ${esc(winLabel)}</span></h2><p>main ${money2(scopedMainSubagent.main)} · subagent ${money2(scopedMainSubagent.subagent)}</p>`;
@@ -1986,15 +2171,18 @@ function render(d){
    ${pane('recommendations',recommendationPanel(d),current)}
    ${pane('overview',overview+budget,current)}
    ${pane('delivery',delivery,current)}
-   ${pane('github',githubPanel(d.github,win,d),current)}
+   ${pane('github',(PRISM_SECURE?'<p class=muted>Fetching insights uses gh and accesses GitHub when github.enabled is true.</p><button data-action=github>Fetch GitHub insights</button>':'')+githubPanel(d.github,win,d),current)}
    ${pane('sessions',sessions,current)}
    ${pane('skills',skills,current)}
    ${pane('diagnostics',diagnostics,current)}
  </main></div>`;
- document.getElementById('app').innerHTML=h;
+ const cache=d.cache||{},cacheView=d.cache?`<div class=cards><div class=card><div class=lbl>Lifetime cached context</div><div class=val>${fmt(cache.cache_read||0)}</div><div class=note>${((cache.cache_hit_ratio||0)*100).toFixed(1)}% cache hit ratio · ${((cache.cached_context_share||0)*100).toFixed(1)}% cached-context share</div></div><div class=card><div class=lbl>Estimated lifetime cache savings</div><div class=val>${money2(cache.estimated_savings)}</div><div class=note>Cache-read priced at ordinary model input rates; catalog estimate</div></div></div>`:'';
+ document.getElementById('app').innerHTML=coveragePanel(d)+(d.refreshing?scanStatus(d,true):'')+cacheView+h;
+ const newForm=document.getElementById('localSearchForm');if(oldSearch&&newForm){for(const[key,value]of Object.entries(oldSearch))if(newForm.elements.namedItem(key))newForm.elements.namedItem(key).value=value;document.getElementById('localSearchResults').innerHTML=oldResults||'';}
 }
+document.addEventListener('click',event=>{const b=event.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'theme':toggleTheme();break;case'refresh':refresh();break;case'github':fetchGithub();break;case'window':setWindow(b.dataset.window);break;case'tab':showTab(b.dataset.tab);break;case'copy':copyText(b.dataset.copy);break;}});
+document.addEventListener('submit',event=>{if(event.target.id==='localSearchForm'){event.preventDefault();searchLocal(event.target);}});
 load();
-setInterval(load, 30000);  // auto-refresh every 30s — matches the server's 30s rescan cadence
 document.addEventListener('mousemove',e=>{const el=e.target.closest('[data-tip]');const tip=document.getElementById('tip');
   if(el){tip.textContent=el.getAttribute('data-tip');tip.style.display='block';
     let x=e.clientX+12,y=e.clientY+12;tip.style.left=Math.min(x,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=y+'px';}
@@ -2007,28 +2195,66 @@ document.addEventListener('focusout',()=>{document.getElementById('tip').style.d
 
 
 _build_lock = threading.Lock()
-_build_state = {"building": False, "error": None}
+_build_state_lock = threading.Lock()
+_build_state = {
+    "building": False, "error": None, "stage": "idle", "tool": None,
+    "current": 0, "total": 0, "reparsed": 0, "cached": 0,
+    "completed_sources": [], "preview": None, "message": None,
+}
+
+
+def _scan_state():
+    with _build_state_lock:
+        return {
+            key: (list(value) if isinstance(value, list) else value)
+            for key, value in _build_state.items()
+            if key not in ("building", "error", "preview", "message")
+        }
+
+
+def _publish_progress(update):
+    with _build_state_lock:
+        _build_state.update(update)
 
 
 def _rebuild(verbose=False):
-    _build_state["building"] = True
-    _build_state["error"] = None
+    with _build_state_lock:
+        if not _build_state["building"]:
+            _build_state.update({
+                "building": True, "error": None, "stage": "discovering", "tool": None,
+                "current": 0, "total": 0, "reparsed": 0, "cached": 0,
+                "completed_sources": [], "preview": None,
+                "message": "Discovering local repositories",
+            })
     with _build_lock:
         try:
-            Handler.data = build(verbose=verbose)
+            Handler.data = build(verbose=verbose, progress=_publish_progress)
             threading.Thread(target=lambda: _summaries.backfill(), daemon=True).start()
             return Handler.data
         except Exception as exc:
-            _build_state["error"] = str(exc)
+            with _build_state_lock:
+                _build_state["error"] = str(exc)
             raise
         finally:
-            _build_state["building"] = False
+            with _build_state_lock:
+                _build_state["building"] = False
+                if _build_state["error"] is None:
+                    _build_state["stage"] = "complete"
+                    _build_state["message"] = "Dashboard ready"
 
 
 def _start_rebuild(verbose=False):
-    if _build_state["building"]:
-        return
+    with _build_state_lock:
+        if _build_state["building"]:
+            return False
+        _build_state.update({
+            "building": True, "error": None, "stage": "discovering", "tool": None,
+            "current": 0, "total": 0, "reparsed": 0, "cached": 0,
+            "completed_sources": [], "preview": None,
+            "message": "Discovering local repositories",
+        })
     threading.Thread(target=lambda: _safe_rebuild(verbose=verbose), daemon=True).start()
+    return True
 
 
 def _safe_rebuild(verbose=False):
@@ -2040,15 +2266,35 @@ def _safe_rebuild(verbose=False):
 
 def _client_data(data):
     """Token data for the browser."""
-    return data
+    payload = dict(data)
+    with _build_state_lock:
+        building = _build_state["building"]
+        preview = _build_state.get("preview")
+        message = _build_state.get("message")
+        error = _build_state.get("error")
+    if building:
+        payload.update({
+            "refreshing": True,
+            "scan": _scan_state(),
+            "preview": preview,
+            "scan_message": message,
+            "scan_error": error,
+        })
+    return payload
 
 
 def _loading_data():
+    with _build_state_lock:
+        message = _build_state.get("message")
+        preview = _build_state.get("preview")
+        error = _build_state.get("error")
     return {
         "loading": True,
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "message": "Dashboard is scanning local transcripts and repositories. Refresh will update automatically when the first build finishes.",
-        "error": _build_state.get("error"),
+        "message": message or "Dashboard is scanning local transcripts and repositories.",
+        "scan": _scan_state(),
+        "preview": preview,
+        "error": error,
     }
 
 
@@ -2069,11 +2315,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             if self.path.startswith("/api/refresh"):
-                if _build_state["building"]:
-                    self._send(json.dumps(_loading_data()))
-                else:
-                    data = _rebuild()
-                    self._send(json.dumps(_client_data(data)))
+                _start_rebuild(verbose=False)
+                response = (_loading_data() if Handler.data is None
+                            else _client_data(Handler.data))
+                self._send(json.dumps(response))
             elif self.path.startswith("/api/data"):
                 if Handler.data is None:
                     _start_rebuild(verbose=False)
@@ -2270,6 +2515,124 @@ def ensure_daemon(port: int) -> str | None:
         return None
 
 
+def _sqlite_dashboard(args):
+    """Start/reopen the on-demand server independently of scheduled collection."""
+    from _token_store import TokenStore, register_artifact
+    from _token_http import DashboardServer
+
+    root = os.path.abspath(args.root or os.path.expanduser("~/.100xprism/token-economics"))
+    runtime_path = os.path.join(root, "dashboard-runtime.json")
+    script = os.path.abspath(__file__)
+    collector = os.path.join(os.path.dirname(script), "token-collector.py")
+
+    def collect():
+        subprocess.Popen([sys.executable, "-B", collector, "--db", args.db, "--root", root],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+
+    if args.text or args.oneline:
+        store = TokenStore(args.db)
+        try:
+            data = store.latest_snapshot()
+        finally:
+            store.close()
+        if data is None:
+            result = subprocess.run([sys.executable, "-B", collector, "--db", args.db, "--root", root])
+            if result.returncode:
+                return result.returncode
+            store = TokenStore(args.db)
+            try:
+                data = store.latest_snapshot()
+            finally:
+                store.close()
+        if data:
+            if args.oneline:
+                print(f"{fmt(sum(data.get('totals', {}).values()))} tokens · ${data.get('total_cost', 0):.2f} estimated")
+            else:
+                print_summary(data)
+        else:
+            print("No completed local snapshot yet.", file=sys.stderr)
+        return 0
+
+    runtime = None
+    try:
+        if os.path.islink(runtime_path):
+            raise ValueError("refusing symlink credential")
+        with open(runtime_path) as stream:
+            runtime = json.load(stream)
+        pid = runtime.get("pid")
+        owned = (isinstance(pid, int) and pid > 0 and
+                 runtime.get("script") == script and
+                 script in _command_for_pid(pid) and
+                 isinstance(runtime.get("port"), int) and
+                 re.fullmatch(r"[0-9a-f]{64}", runtime.get("token", "")))
+        if owned and _port_in_use(runtime["port"]):
+            url = f"http://127.0.0.1:{runtime['port']}"
+            print(f"Token dashboard → {url}")
+            collect()
+            if not args.no_open:
+                webbrowser.open(url + "#token=" + runtime["token"])
+            return 0
+        # Only a registered credential for a dead PID can be removed here.
+        from _token_store import load_manifest
+        manifest = load_manifest(root)
+        registered = any(row["path"] == runtime_path for row in manifest["artifacts"])
+        if registered and isinstance(pid, int) and not _command_for_pid(pid):
+            os.unlink(runtime_path)
+        else:
+            raise ValueError("dashboard credential belongs to another process; stop it before starting")
+    except FileNotFoundError:
+        pass
+
+    if args.ensure_daemon:
+        command = [sys.executable, "-B", script, "--db", args.db, "--root", root,
+                   "--no-open", "--port", str(args.port)]
+        child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and child.poll() is None:
+            try:
+                with open(runtime_path) as stream:
+                    record = json.load(stream)
+                if record.get("pid") == child.pid:
+                    print(f"Token dashboard → http://127.0.0.1:{record['port']}")
+                    if not args.no_open:
+                        webbrowser.open(f"http://127.0.0.1:{record['port']}#token={record['token']}")
+                    return 0
+            except (OSError, ValueError):
+                pass
+            time.sleep(.05)
+        print("Dashboard did not start; run 100xprism tokens --no-open to inspect startup.", file=sys.stderr)
+        return 1
+
+    page = PAGE.replace("const PRISM_SECURE = false", "const PRISM_SECURE = true")
+    def interactive_github():
+        store = TokenStore(args.db)
+        try:
+            data = store.latest_snapshot() or {}
+        finally:
+            store.close()
+        return _github_insights(data.get("directories", []))
+    srv = DashboardServer(("127.0.0.1", args.port), page, lambda: TokenStore(args.db), collect,
+                          runtime_path, register=lambda target: register_artifact(root, target),
+                          github=interactive_github)
+    # Signal handlers cannot call shutdown on the serving thread itself.
+    def stop(signum, frame):
+        threading.Thread(target=srv.shutdown, daemon=True).start()
+    signal.signal(signal.SIGTERM, stop)
+    print(f"Token dashboard → {srv.origin}", flush=True)
+    collect()
+    if not args.no_open:
+        webbrowser.open(srv.url)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8787)
@@ -2279,7 +2642,12 @@ def main():
     ap.add_argument("--ensure-daemon", action="store_true",
                     help="ensure dashboard is running as a background daemon; print URL + status")
     ap.add_argument("--no-open", action="store_true")
+    ap.add_argument("--db", help="read committed economics snapshots from SQLite")
+    ap.add_argument("--root", help="owned token-economics state root")
     args = ap.parse_args()
+
+    if args.db:
+        sys.exit(_sqlite_dashboard(args))
 
     if args.oneline:
         _oneline()
@@ -2332,12 +2700,16 @@ def main():
         return
     _write_pid(args.port)
     print(f"\nToken dashboard → {url}  (Ctrl-C to stop) — all sessions & repos on this machine", flush=True)
-    print("Scanning transcripts in the background; the page will update when ready.", file=sys.stderr)
-    threading.Timer(5.0, lambda: _start_rebuild(verbose=True)).start()
+    print("Scanning starts now; the page shows live progress and partial totals as sources finish.",
+          file=sys.stderr)
+    _start_rebuild(verbose=True)
 
     def _auto_refresh():
         while True:
             time.sleep(REFRESH_SECONDS)
+            with _build_state_lock:
+                if _build_state["building"]:
+                    continue
             try:
                 data = _rebuild()
                 today_str = datetime.now().strftime("%Y-%m-%d")

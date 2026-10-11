@@ -237,3 +237,16 @@ echo -e "  ${CYAN}In your terminal:${NC}"
 echo -e "    source \"$REPO_DIR/shell/aliases.sh\"  # optional aliases for this terminal only"
 echo -e "    cd your-project && ${YELLOW}100xprism init${NC}  # set up a project"
 echo ""
+
+# Direct shell installs receive the same durable macOS collector as the Node CLI.
+if [ "${PRISM_TOKEN_LIFECYCLE_DONE:-0}" != 1 ]; then
+  if [ "$(uname -s)" = Darwin ]; then
+    if command -v node >/dev/null 2>&1; then
+      node -e 'const root=process.argv[1]; require(root+"/lib/token-economics").createLifecycle({stopDashboard:require(root+"/lib/dashboard").stopDashboard}).install(root)' "$REPO_DIR"
+    else
+      echo "Background token collection needs Node 18+. Setup deferred; install Node and rerun install.sh."
+    fi
+  else
+    echo "Background token economics is coming soon for this platform."
+  fi
+fi

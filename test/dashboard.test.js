@@ -27,6 +27,7 @@ test('dashboard default instructions say it is opt-in and provide start command'
 test('tokens JSON and tool-filter requests use the fast report path', () => {
   assert.equal(reportScript(['--json']), 'token_report.py')
   assert.equal(reportScript(['--tool', 'codex']), 'token_report.py')
+  assert.equal(reportScript(['--oneline']), 'token_report.py')
   assert.equal(reportScript(['--print']), 'token-dashboard.py')
   assert.equal(reportScript([]), 'token-dashboard.py')
 })

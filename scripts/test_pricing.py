@@ -62,6 +62,30 @@ class TestPricing(unittest.TestCase):
         self.assertEqual(out["output"], 30.0)
         self.assertEqual(out["cache_read"], 0.5)
 
+    def test_current_models_match_published_rates(self):
+        expected = {
+            "claude-opus-5-5": (4.0, 20.0, 0.2),
+            "claude-opus-5": (5.0, 25.0, 0.5),
+            "claude-opus-4-7": (5.0, 25.0, 0.5),
+            "claude-opus-4-1": (15.0, 75.0, 1.5),
+            "claude-fable-5-1": (10.0, 50.0, 0.25),
+            "claude-fable-5": (10.0, 50.0, 1.0),
+            "claude-sonnet-5-5": (2.0, 10.0, 0.2),
+            "claude-haiku-5-5": (0.1, 0.5, 0.01),
+            "claude-haiku-4-5-20251001": (1.0, 5.0, 0.1),
+            "gpt-6-astra": (10.0, 50.0, 1.0),
+            "gpt-6.1-sol": (2.0, 10.0, 0.1),
+            "gpt-6-luna": (0.1, 0.5, 0.01),
+            "gpt-5.6-sol": (4.0, 20.0, 0.4),
+            "gpt-5.6-luna": (0.2, 1.2, 0.02),
+            "gpt-5.6-terra": (2.0, 12.0, 0.2),
+        }
+        for model, (inp, out, read) in expected.items():
+            rates, is_fallback = pricing.rates_for_model(model)
+            self.assertFalse(is_fallback, model)
+            self.assertEqual((rates["input"], rates["output"], rates["cache_read"]),
+                             (inp, out, read), model)
+
 
 if __name__ == "__main__":
     unittest.main()

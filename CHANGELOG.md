@@ -7,6 +7,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-11
+
+### Added
+
+- **Background token economics on macOS.** `install` sets up a once-a-minute LaunchAgent that incrementally collects Claude Code, Codex, Cursor, Antigravity and Pi transcripts into a private SQLite store under `~/.100xprism/token-economics/` (no Docker, no network). Only complete appended records are parsed; unchanged files are checked by metadata alone. History survives deleted transcripts, updates switch atomically between staged generations, and ownership is proved by a manifest (`uninstall` keeps history; `uninstall --purge` removes it). Windows and Linux keep foreground reports.
+- **Dashboard serves saved snapshots** instantly, with live source coverage, per-session context growth, lifetime cache savings by session and model, and opt-in local FTS5 prompt/prose search (`100xprism tokens --enable-content-search`). The server requires a per-launch credential, CSRF tokens on mutations, and exits after ten idle minutes.
+
+### Fixed
+
+- **Subagent usage was missing from token totals.** The foreground scan read only `~/.claude/projects/*/*.jsonl`, skipping `<session>/subagents/*.jsonl`. On a real install that omitted ~40% of cache-read tokens. The collector counts every transcript.
+- **Pricing catalog refreshed (as of 2026-10-11).** Added Opus 5.5 ($4/$20), Opus 5, Opus 4.5–4.7 at $5/$25 (previously priced at the $15/$75 Opus 4.1 tier), Fable 5.1 cache reads ($0.25), Haiku 5.5, GPT-6 Astra/Sol/Luna and gpt-5.3-codex; corrected GPT-5.6 Sol/Terra/Luna to OpenAI's published rates. Fallback-priced share on a real install fell from 56.7% to 0.2%.
+- **Dashboard no longer fails to load** when a skill record has no timestamp (an `"unknown"` day key broke every time window), and the page background no longer tiles on short pages.
+- **Snapshots reprice after an update** even when no transcript changed; an actively written transcript is retried next minute instead of being marked as a collection error; zero-usage records no longer report a session's context as ending at 0.
+
 ## [3.4.0] - 2026-10-10
 
 ### Added

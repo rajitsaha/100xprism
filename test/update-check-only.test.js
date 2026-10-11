@@ -53,6 +53,11 @@ function makeCurrentClone() {
 
   fs.mkdirSync(path.join(work, 'adapters', 'lib'), { recursive: true })
   fs.mkdirSync(path.join(work, 'plugins'), { recursive: true })
+  // Lifecycle behavior has separate integration coverage; this fixture isolates
+  // the project-migration branch without starting a real user LaunchAgent.
+  fs.mkdirSync(path.join(work, 'lib'), { recursive: true })
+  fs.writeFileSync(path.join(work, 'lib', 'token-economics.js'), 'exports.createLifecycle=()=>({update(){}})\n')
+  fs.writeFileSync(path.join(work, 'lib', 'dashboard.js'), 'exports.stopDashboard=()=>({stopped:false})\n')
   fs.copyFileSync(path.join(REPO, 'update.sh'), path.join(work, 'update.sh'))
   for (const f of ['deprecated.sh', 'shared.sh', 'modules.py', 'sync_plugins.py']) {
     fs.copyFileSync(path.join(REPO, 'adapters', 'lib', f), path.join(work, 'adapters', 'lib', f))

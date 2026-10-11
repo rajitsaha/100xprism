@@ -97,10 +97,12 @@ def parse_file(path, dir_index=None):
     }
 
 
-def scan(verbose=False, dir_index=None):
+def scan(verbose=False, dir_index=None, progress=None):
     if not os.path.isdir(SOURCE_DIR):
         return []
     paths = _transcript_paths()
+    if progress:
+        progress(0, len(paths), 0, 0)
     rows = []
     live = set()
     for path in paths:
@@ -124,6 +126,8 @@ def scan(verbose=False, dir_index=None):
     if verbose:
         print(f"cursor: scanned {len(rows)} activity transcripts (token counters unavailable)",
               file=sys.stderr)
+    if progress:
+        progress(len(paths), len(paths), len(rows), 0)
     return rows
 
 

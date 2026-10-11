@@ -30,12 +30,13 @@ from collections import defaultdict
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import _value  # noqa: E402
 
-from . import Usage  # noqa: E402
+from . import Usage, _incremental  # noqa: E402
 
 TOOL = "codex"
 HOME = os.path.expanduser("~")
 SOURCE_DIR = os.path.join(HOME, ".codex", "sessions")
 CACHE_FILE = os.path.join(HOME, ".claude", ".token-dashboard-codex-cache.json")
+PARSER_VERSION = 1
 CACHE_VERSION = 1
 
 
@@ -55,7 +56,7 @@ def _lines(path):
         yield from fh
 
 
-def parse_file(path):
+def _parse_records(records, state=None, summary=None):
     """Aggregate one Codex rollout into the same summary shape claude_code.parse_file
     produces (minus fields Codex has no data for: composition, first_fixed,
     subagent/skill attribution)."""
@@ -70,13 +71,22 @@ def parse_file(path):
     prev_cum = None
     msgs = 0
 
-    for line in _lines(path):
-        try:
-            o = json.loads(line)
-        except Exception:
-            continue
-        if not isinstance(o, dict):
-            continue
+    summary = summary or {}
+    state = state or {}
+    totals = _incremental.restore(totals, summary.get("totals", {}))
+    by_day = _incremental.restore(by_day, summary.get("by_day", {}))
+    by_model = _incremental.restore(by_model, summary.get("by_model", {}))
+    by_day_model = _incremental.restore(by_day_model, summary.get("by_day_model", {}))
+    main_subagent_by_day = _incremental.restore(main_subagent_by_day, summary.get("main_subagent_by_day", {}))
+    session_id = summary.get("session_id", None)
+    cwd = summary.get("cwd", None)
+    msgs = summary.get("msgs", 0)
+    current_model = state.get("current_model", "unknown")
+    prev_cum = state.get("prev_cum", None)
+    observed = _incremental.observations(summary)
+
+    for o in records:
+        _incremental.observe_activity(observed, o)
         t = o.get("type")
         if t == "session_meta":
             payload = o.get("payload") or {}
@@ -93,6 +103,9 @@ def parse_file(path):
         payload = o.get("payload") or {}
         if payload.get("type") != "token_count":
             continue
+        last = (payload.get("info") or {}).get("last_token_usage")
+        if isinstance(last, dict):
+            _incremental.observe_context(observed, last.get("input_tokens"))
         cum = (payload.get("info") or {}).get("total_token_usage")
         if not isinstance(cum, dict):
             continue
@@ -129,7 +142,7 @@ def parse_file(path):
         _add(by_day_model[day][current_model], d_in, d_out, d_cr, 0)
         _add(main_subagent_by_day[day]["main"], d_in, d_out, d_cr, 0)
 
-    return {
+    aggregate = {
         "totals": totals,
         "by_day": dict(by_day),
         "by_model": dict(by_model),
@@ -147,6 +160,18 @@ def parse_file(path):
         "skill_exact": [],
         "cwd": cwd,
     }
+    aggregate.update(observed)
+    return aggregate, {"current_model": current_model, "prev_cum": prev_cum}
+
+
+def parse_file(path):
+    """Parse a complete transcript with the legacy tolerant foreground behavior."""
+    return _parse_records(_incremental.legacy_records(path), state=None)[0]
+
+
+def parse_incremental(path, offset=0, state=None, summary=None, observer=None):
+    """Parse only complete records after a durable binary checkpoint."""
+    return _incremental.parse(path, _parse_records, offset, state, summary, observer=observer)
 
 
 def load_cache():
@@ -172,7 +197,7 @@ def _project_label(cwd):
     return _value.project_label_for_path(cwd) if cwd else "unknown"
 
 
-def scan(verbose=False):
+def scan(verbose=False, progress=None):
     """Glob + incrementally parse every Codex rollout. Returns [] if Codex has
     never been used locally (no ~/.codex/sessions dir)."""
     if not os.path.isdir(SOURCE_DIR):
@@ -181,6 +206,9 @@ def scan(verbose=False):
     paths = glob.glob(os.path.join(SOURCE_DIR, "**", "*.jsonl"), recursive=True)
     new_cache = {}
     reparsed = 0
+    processed = 0
+    if progress:
+        progress(0, len(paths), 0, 0)
     for p in paths:
         try:
             st = os.stat(p)
@@ -189,6 +217,9 @@ def scan(verbose=False):
         prev = cache.get(p)
         if prev and prev.get("mtime") == st.st_mtime and prev.get("size") == st.st_size:
             new_cache[p] = prev
+            processed += 1
+            if progress and (processed == len(paths) or processed % 25 == 0):
+                progress(processed, len(paths), reparsed, processed - reparsed)
             continue
         summary = parse_file(p)
         summary["mtime"] = st.st_mtime
@@ -200,10 +231,15 @@ def scan(verbose=False):
         summary["tool"] = TOOL
         new_cache[p] = summary
         reparsed += 1
+        processed += 1
+        if progress and (processed == len(paths) or processed % 25 == 0):
+            progress(processed, len(paths), reparsed, processed - reparsed)
     save_cache(new_cache)
     if verbose:
         print(f"codex: scanned {len(paths)} rollouts ({reparsed} re-parsed, "
               f"{len(paths) - reparsed} cached)", file=sys.stderr)
+    if progress and processed != len(paths):
+        progress(len(paths), len(paths), reparsed, max(0, len(paths) - reparsed))
     return list(new_cache.values())
 
 

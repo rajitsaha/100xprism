@@ -31,6 +31,9 @@ Examples:
   100xprism install --dashboard  # optionally start dashboard after install
   100xprism tokens               # start and open dashboard
   100xprism tokens --no-open      # serve without opening browser
+  100xprism tokens --verify-history  # bounded local integrity maintenance (macOS)
+  100xprism tokens --enable-content-search  # opt in to local prompt/prose search
+  100xprism tokens --disable-content-search # scrub indexed text from retained history
   100xprism value                 # report shipped outcomes for cwd
   100xprism uninstall
 `.trimStart()

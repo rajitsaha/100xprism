@@ -533,9 +533,13 @@ Claude Code records every session's token usage in `~/.claude/projects/**/*.json
 100xprism tokens --print   # text summary, no server
 ```
 
-It does not start during shell startup or ordinary `install` / `init` / `update`.
-Install output prints the command to start it; it does not imply the URL is live.
-Start it explicitly when you want it:
+On macOS, `install` sets up a lightweight LaunchAgent that collects once per minute
+and at login, then exits. `update` refreshes its owned runtime.
+This background lifecycle requires Node 18+. Direct shell installs without Node
+defer collector setup; updates preserve any existing collector. Install Node and
+rerun `install.sh` or `update.sh` to enable or refresh collection.
+The dashboard starts on demand and exits after ten minutes without browser/API traffic; it does not
+start from shell startup or `init`. Open it when you want it:
 
 ```bash
 100xprism tokens
@@ -555,9 +559,43 @@ collected for project, session, message/artifact, and date coverage. Cursor cove
 limited to flat or nested JSONL beneath `~/.cursor/projects/*/agent-transcripts`;
 legacy `.txt`, `~/.cursor/chats`, and Cursor `state.vscdb` data are not parsed. Their local
 formats do not expose provider token counters, so the dashboard labels them
-activity-only and leaves cost unavailable rather than estimating it. The first run scans all
-transcripts; later runs use an incremental cache. The page auto-refreshes every
-30s.
+activity-only and leaves cost unavailable rather than estimating it. Pi usage is
+included when its local records contain token counters. On macOS, the first
+collection scans transcripts into a private SQLite database; later runs process
+complete appended records. Ordinary unchanged scans inspect metadata only.
+Historical totals survive deleted transcripts. The page reads the latest complete
+snapshot immediately and polls every 30 seconds, with live source coverage shown
+separately. Daily integrity maintenance verifies at most 32 MiB of historical
+blocks per run; “incrementally current” does not imply full integrity verification.
+The Sessions view ranks context growth and shows lifetime cache savings by session
+and model. Savings price cache-read tokens at each model's ordinary input rate;
+they are catalog estimates, separate from provider invoices.
+
+```bash
+100xprism tokens --no-open                 # start without opening a browser
+100xprism tokens --verify-history          # bounded historical integrity pass
+100xprism tokens --enable-content-search   # opt in to local prompt/prose search
+100xprism tokens --disable-content-search  # scrub searchable text, retain economics
+```
+
+Content search is off by default. When enabled, SQLite FTS5 indexes user prompts
+and assistant prose; tool results, structured tool payloads and files read are
+excluded. The Sessions view shows backfill progress and filters by tool,
+repository, role and date. Records over 1 MiB are omitted from search and drained
+incrementally. Search never requires embeddings or a network service. Disabling
+search removes indexed text from all retained runtime databases and sidecars;
+filesystem snapshots and backups may still contain earlier copies.
+
+The private store is under `~/.100xprism/token-economics/current/`. Updates stage a
+complete runtime and database before an atomic switch, and refuse dirty stable
+clones. Ordinary `100xprism uninstall` stops collection but retains history;
+`100xprism uninstall --purge` removes artifacts only through the owned manifest.
+An npm upgrade refreshes an existing job without enrolling a new user, and npm
+removal alone leaves the stable collector running. No Docker is required.
+
+Windows and Linux retain foreground token reports and display:
+“Background token economics is coming soon for this platform.” Background
+lifecycle and content-search flags make no changes there.
 
 The default Economics view keeps three layers separate:
 
@@ -620,6 +658,9 @@ explicit users/repos:
 The GitHub view includes PR-level links, status, author, title, comments,
 last-updated date, and bounded file/churn detail. Rows explicitly identify when
 file details were not sampled.
+
+On macOS, click **Fetch GitHub insights** to perform that explicit network action.
+Scheduled collection never invokes `gh` or accesses GitHub.
 
 It reports PR counts, merged/open/closed split, comment-heavy PRs, docs-touching
 PRs, deleted-file PRs, and additions/deletions. Results are cached for 30 minutes.

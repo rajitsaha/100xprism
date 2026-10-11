@@ -14,26 +14,42 @@ Values below are standard API LIST PRICES in USD per 1M tokens. They are estimat
 for local usage economics, not a reconstruction of subscription-plan billing.
 """
 
-PRICING_AS_OF = "2026-07-19"
+PRICING_AS_OF = "2026-10-11"
 PRICING_SOURCES = {
     "anthropic": "https://www.anthropic.com/pricing",
-    "openai": "https://developers.openai.com/api/docs/models/compare",
+    "openai": "https://developers.openai.com/api/docs/pricing",
 }
+
+_OPUS_4_5_PLUS = {"input": 5.0, "output": 25.0, "cache_read": 0.5, "cache_write": 6.25}
 
 # Most-specific patterns must come first. In particular, a broad `gpt-5` entry
 # before `gpt-5.6` would silently price every newer model at the legacy rate.
+# OpenAI rates are the short-context (<=272K input) tier.
 RATES = [
+    ("fable-5-1", {"input": 10.0, "output": 50.0, "cache_read": 0.25, "cache_write": 12.5}),
     ("fable-5", {"input": 10.0, "output": 50.0, "cache_read": 1.0, "cache_write": 12.5}),
-    ("opus-4-8", {"input": 5.0, "output": 25.0, "cache_read": 0.5, "cache_write": 6.25}),
+    ("opus-5-5", {"input": 4.0, "output": 20.0, "cache_read": 0.2, "cache_write": 5.0}),
+    ("opus-5", _OPUS_4_5_PLUS),
+    ("opus-4-8", _OPUS_4_5_PLUS),
+    ("opus-4-7", _OPUS_4_5_PLUS),
+    ("opus-4-6", _OPUS_4_5_PLUS),
+    ("opus-4-5", _OPUS_4_5_PLUS),
     ("sonnet-5", {"input": 2.0, "output": 10.0, "cache_read": 0.2, "cache_write": 2.5}),
     ("opus-4", {"input": 15.0, "output": 75.0, "cache_read": 1.5, "cache_write": 18.75}),
     ("sonnet", {"input": 3.0, "output": 15.0, "cache_read": 0.3, "cache_write": 3.75}),
+    ("haiku-5-5", {"input": 0.1, "output": 0.5, "cache_read": 0.01, "cache_write": 0.125}),
     ("haiku-3-5", {"input": 0.8, "output": 4.0, "cache_read": 0.08, "cache_write": 1.0}),
     ("haiku-3", {"input": 0.25, "output": 1.25, "cache_read": 0.03, "cache_write": 0.3}),
     ("haiku", {"input": 1.0, "output": 5.0, "cache_read": 0.1, "cache_write": 1.25}),
-    ("gpt-5.6-luna", {"input": 1.0, "output": 6.0, "cache_read": 0.1, "cache_write": 1.25}),
-    ("gpt-5.6-terra", {"input": 2.5, "output": 15.0, "cache_read": 0.25, "cache_write": 3.125}),
+    ("gpt-6-astra", {"input": 10.0, "output": 50.0, "cache_read": 1.0, "cache_write": 12.5}),
+    ("gpt-6.1-sol", {"input": 2.0, "output": 10.0, "cache_read": 0.1, "cache_write": 2.5}),
+    ("gpt-6-sol", {"input": 2.0, "output": 10.0, "cache_read": 0.2, "cache_write": 2.5}),
+    ("gpt-6-luna", {"input": 0.1, "output": 0.5, "cache_read": 0.01, "cache_write": 0.125}),
+    ("gpt-5.6-luna", {"input": 0.2, "output": 1.2, "cache_read": 0.02, "cache_write": 0.25}),
+    ("gpt-5.6-terra", {"input": 2.0, "output": 12.0, "cache_read": 0.2, "cache_write": 2.5}),
+    ("gpt-5.6-sol", {"input": 4.0, "output": 20.0, "cache_read": 0.4, "cache_write": 5.0}),
     ("gpt-5.6", {"input": 5.0, "output": 30.0, "cache_read": 0.5, "cache_write": 6.25}),
+    ("gpt-5.3-codex", {"input": 1.75, "output": 14.0, "cache_read": 0.175, "cache_write": 1.75}),
     ("gpt-5.5", {"input": 5.0, "output": 30.0, "cache_read": 0.5, "cache_write": 6.25}),
     ("gpt-5.4-mini", {"input": 0.75, "output": 4.5, "cache_read": 0.075, "cache_write": 0.75}),
     ("gpt-5.4", {"input": 2.5, "output": 15.0, "cache_read": 0.25, "cache_write": 2.5}),
