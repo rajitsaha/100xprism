@@ -56,9 +56,9 @@ REMOVED_MODULES = {"systems-architect", "conversion-copy"}
 # a Claude model name. `id`/`label` are the single source of truth for the deferred
 # slash-command / documentation work; the emitters in this pass use `tier_hint`.
 MODEL_ALIASES = {
-    "haiku":  {"id": "claude-haiku-4-5",  "label": "Claude Haiku 4.5",  "tier_hint": "fast / low-cost (mechanical task)"},
-    "sonnet": {"id": "claude-sonnet-5",   "label": "Claude Sonnet 5",   "tier_hint": "balanced (moderate reasoning)"},
-    "opus":   {"id": "claude-opus-5",     "label": "Claude Opus 5",     "tier_hint": "most capable (deep reasoning)"},
+    "haiku":  {"id": "claude-haiku-5-5",  "label": "Claude Haiku 5.5",  "tier_hint": "fast / low-cost (mechanical task)"},
+    "sonnet": {"id": "claude-sonnet-5-5", "label": "Claude Sonnet 5.5", "tier_hint": "balanced (moderate reasoning)"},
+    "opus":   {"id": "claude-opus-5-5",   "label": "Claude Opus 5.5",   "tier_hint": "most capable (deep reasoning)"},
 }
 
 
@@ -938,6 +938,41 @@ def _migrate_legacy_markers(skills_dir: Path, commands_dir: Path) -> None:
             f.write_text(text.replace(_LEGACY_ALIAS_MARKER, ALIAS_MARKER))
 
 
+# v1 copied workflows/*.md straight into ~/.claude/commands/ with no marker. A file
+# there is ours only when its path AND first non-empty line match a header v1
+# shipped (adapters/lib/legacy-v1-commands.json, generated from git history).
+LEGACY_V1_COMMANDS = Path(__file__).resolve().parent / "legacy-v1-commands.json"
+
+
+def _first_line(path: Path) -> str:
+    try:
+        with path.open(encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    return line.strip()
+    except (OSError, UnicodeDecodeError):
+        pass
+    return ""
+
+
+def sweep_legacy_v1_commands(commands_dir: Path) -> int:
+    """Delete signature-matched v1 command files; returns how many were removed."""
+    try:
+        signatures = json.loads(LEGACY_V1_COMMANDS.read_text())["files"]
+    except (OSError, ValueError, KeyError):
+        return 0
+    removed = 0
+    for rel, headers in signatures.items():
+        f = commands_dir / rel
+        if f.is_file() and _first_line(f) in headers:
+            f.unlink()
+            removed += 1
+    engines = commands_dir / "db-engines"
+    if engines.is_dir() and not any(engines.iterdir()):
+        engines.rmdir()
+    return removed
+
+
 def cmd_emit_claude_code():
     home = Path(os.environ.get("HOME", str(Path.home())))
     skills_dir = home / ".claude" / "skills"
@@ -946,6 +981,7 @@ def cmd_emit_claude_code():
     commands_dir.mkdir(parents=True, exist_ok=True)
 
     _migrate_legacy_markers(skills_dir, commands_dir)
+    legacy_removed = sweep_legacy_v1_commands(commands_dir)
     prev = _read_manifest(skills_dir)
     prev_skills = set(prev.get("skills", []))
     prev_cmds = set(prev.get("commands", []))
@@ -1041,6 +1077,8 @@ def cmd_emit_claude_code():
     suffix = ""
     if pruned_skills or pruned_cmds:
         suffix = f" (pruned {pruned_skills} stale skill(s), {pruned_cmds} stale alias(es))"
+    if legacy_removed:
+        suffix += f" (removed {legacy_removed} v1 leftover command file(s))"
     catalog_note = f" + {len(catalog)} catalog module(s) behind {RESOLVER_SLUG}" if catalog else ""
     print(f"wrote {skill_count} skills + {cmd_count} slash command aliases{catalog_note}{suffix}")
 

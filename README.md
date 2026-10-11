@@ -47,9 +47,19 @@ cd your-project && 100xprism init
 100xprism update --no-slim          # skip the one-time always-on index slim
 100xprism slim --dry-run            # preview what slimming would change
 100xprism hermes                    # install/refresh Hermes/OpenClaw skills on demand
-100xprism uninstall                 # stop dashboard + remove legacy shell-startup entries/symlinks
+100xprism audit --fix               # repair drift: dead hook paths, v1 leftovers, missing catalog
+100xprism uninstall                 # remove skills, aliases, hooks, catalog, links (keeps your data)
+100xprism uninstall --projects      # …and generated files in every tracked repo
+100xprism uninstall --purge         # …and all of ~/.100xprism
 npm install -g 100xprism@latest     # (optional) upgrade the launcher itself
 ```
+
+**Cleanup contract.** 100xprism removes only what it can prove it wrote — a generated
+marker, a manifest entry, a `/100xprism/hooks/` path, or an exact v1 file header — so
+your own skills, commands, hooks, and a hand-written `AGENTS.md` are never touched.
+`install`/`update` sweep v1 leftovers and prune stale skills; `uninstall` reverses the rest.
+Run `100xprism uninstall` *before* `npm rm -g 100xprism`: npm's own hook only drops
+settings.json hooks that would point at deleted scripts.
 
 `install` and `update` auto-run the Hermes adapter whenever `~/.hermes` or the `hermes`
 CLI is detected — `100xprism hermes` is only needed if you installed Hermes after

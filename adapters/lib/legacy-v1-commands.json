@@ -1,0 +1,121 @@
+{
+  "_comment": "First non-empty line of every file 100xprism v1 (pre-549d273) copied into ~/.claude/commands/. Install/update/uninstall delete a commands/ file only when its path AND first line match an entry here, so user-authored commands with the same name are never touched. Generated from git history; do not hand-edit.",
+  "files": {
+    "_lib.md": [
+      "# _lib — Shared Workflow Conventions"
+    ],
+    "architect.md": [
+      "# /architect — Cloud, Data & SaaS Distributed Architecture Advisor",
+      "# Architect — Cloud, Data & SaaS Distributed Architecture Advisor"
+    ],
+    "branch.md": [
+      "# Branch — Create Feature Branch"
+    ],
+    "cloud-security.md": [
+      "# /cloud-security — Cloud Security & Data Privacy Scan",
+      "# Cloud Security — Cloud Security & Data Privacy Scan"
+    ],
+    "commit.md": [
+      "# /commit — Gate → Stage → Commit",
+      "# Commit — Gate → Stage → Commit"
+    ],
+    "connect.md": [
+      "# Connect — SaaS CLI Connection Manager"
+    ],
+    "context.md": [
+      "# Context — Session Orientation Dump"
+    ],
+    "db-engines/_router.md": [
+      "# db-engines/_router — Shared DB Engine Skeleton"
+    ],
+    "db-engines/athena.md": [
+      "# db-engine: athena"
+    ],
+    "db-engines/cloud-sql.md": [
+      "# db-engine: cloud-sql"
+    ],
+    "db-engines/databricks.md": [
+      "# db-engine: databricks"
+    ],
+    "db-engines/oracle.md": [
+      "# db-engine: oracle"
+    ],
+    "db-engines/postgres.md": [
+      "# db-engine: postgres"
+    ],
+    "db-engines/presto.md": [
+      "# db-engine: presto"
+    ],
+    "db-engines/snowflake.md": [
+      "# db-engine: snowflake"
+    ],
+    "db.md": [
+      "# /db — Universal Database Access",
+      "# DB — Universal Database Access"
+    ],
+    "docs.md": [
+      "# /docs — Documentation Sync",
+      "# Docs — Documentation Sync"
+    ],
+    "enterprise-design.md": [
+      "# /enterprise-design — Enterprise Design & Systems Architect",
+      "# Enterprise Design — Enterprise Design & Systems Architect",
+      "# Enterprise Design — Technical Blueprint Generator"
+    ],
+    "fix.md": [
+      "# Fix — Autonomous Bug Fixer"
+    ],
+    "gate.md": [
+      "# /gate — Pre-Commit Quality Gate",
+      "# Gate — Pre-Commit Quality Gate"
+    ],
+    "grill.md": [
+      "# Grill — Adversarial Code Review"
+    ],
+    "issue.md": [
+      "# /issue — Investigate & Create Detailed GitHub Issue",
+      "# Issue — Investigate & Create Detailed GitHub Issue"
+    ],
+    "launch.md": [
+      "# /launch — Pre-flight Pipeline: Docker → Test → Lint → Security → Build → Commit → Push → Cleanup",
+      "# Launch — Pre-flight Pipeline: Docker → Test → Lint → Security → Build → Commit → Push → Cleanup"
+    ],
+    "lint.md": [
+      "# /lint — Lint, Format & Type Check",
+      "# Lint — Lint, Format & Type Check"
+    ],
+    "orchestrate.md": [
+      "# Orchestrate — Complex Task Orchestration"
+    ],
+    "pr.md": [
+      "# PR — Create Pull Request with AI Review"
+    ],
+    "push.md": [
+      "# /push — Gate → Push → Monitor CI/CD",
+      "# Push — Gate → Push → Monitor CI/CD"
+    ],
+    "query.md": [
+      "# Query — Plain-English Database Analytics"
+    ],
+    "release.md": [
+      "# Release — Local Gate → Install Test → Version Bump → Tag → Publish → Verify"
+    ],
+    "security.md": [
+      "# /security — Vulnerability Scanner & Secret Audit",
+      "# Security — Vulnerability Scanner & Secret Audit"
+    ],
+    "spec.md": [
+      "# Spec — Implementation-Ready Specification"
+    ],
+    "techdebt.md": [
+      "# Techdebt — Technical Debt Scanner"
+    ],
+    "test.md": [
+      "# /test — Run All Tests: Unit → Integration → E2E",
+      "# Test — Run All Tests: Unit → Integration → E2E"
+    ],
+    "update-claude.md": [
+      "# Update-Claude — CLAUDE.md Rule Writer"
+    ]
+  }
+}
