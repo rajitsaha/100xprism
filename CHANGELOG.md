@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-11
+
 ### Added
 
 - **Background token economics on macOS.** `install` sets up a once-a-minute LaunchAgent that incrementally collects Claude Code, Codex, Cursor, Antigravity and Pi transcripts into a private SQLite store under `~/.100xprism/token-economics/` (no Docker, no network). Only complete appended records are parsed; unchanged files are checked by metadata alone. History survives deleted transcripts, updates switch atomically between staged generations, and ownership is proved by a manifest (`uninstall` keeps history; `uninstall --purge` removes it). Windows and Linux keep foreground reports.
