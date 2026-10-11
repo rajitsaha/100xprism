@@ -109,7 +109,12 @@ One row per discovered transcript or activity file.
   determine whether a file is unchanged, appended, replaced, or truncated.
 - `parsed_offset` is the byte position immediately after the last committed complete
   record.
-- `prefix_digest` detects a rewrite that retains or increases file size.
+- `tail_anchor` hashes the final 64 KiB immediately before `parsed_offset`; it cheaply
+  rejects a false append when bytes near the prior boundary changed.
+- `integrity_cursor` and a companion `source_file_blocks` table hold 1 MiB BLAKE2 block
+  hashes. Each scheduled run verifies a bounded rotating set of historical blocks, so
+  old in-place rewrites are detected incrementally without rereading every file on
+  every minute.
 - `parser_version` invalidates only summaries owned by a parser whose semantics
   changed.
 - `parser_state_json` stores minimal continuation state, such as the current Codex
@@ -151,10 +156,20 @@ Content search is disabled by default. When enabled, `session_content` stores on
 human prompt text and assistant prose with session, role, timestamp, and sequence.
 Tool results, terminal output, files read, and structured tool payloads are excluded.
 An FTS5 virtual table indexes that content for keyword, phrase, prefix, and Boolean
-search with BM25 ranking and highlighted excerpts.
+search with BM25 ranking. Searchable text has an independent `content_offset` and
+`content_parser_version`; it never reuses the economics offset.
 
-`100xprism tokens --disable-content-search` drops both content tables and runs an
-incremental vacuum when appropriate. Economic summaries remain intact.
+`100xprism tokens --enable-content-search` records explicit consent, creates the FTS
+tables, and schedules a byte-zero content-only backfill. That backfill is bounded per
+collector run and never mutates or double-counts economic summaries. The UI reports
+backfill coverage separately until every present file reaches its content EOF.
+
+`100xprism tokens --disable-content-search` deletes content rows and FTS tables with
+`PRAGMA secure_delete=ON`, checkpoints and truncates the WAL, runs a full `VACUUM`,
+closes the database, and removes empty WAL/SHM sidecars. Economic summaries remain
+intact. This removes searchable text from the live SQLite database and sidecars; it
+cannot erase copies retained by APFS snapshots, Time Machine, or other backups, which
+the confirmation message states explicitly.
 
 ## Incremental collection protocol
 
@@ -185,9 +200,14 @@ only files owned by that parser.
 
 ### Rewrite and truncation handling
 
-A smaller size, changed file identity, failed prefix digest, or offset beyond EOF
-causes a single-file rebuild from byte zero. Its old summary and content rows remain
-visible until the replacement parse commits. Other sessions are unaffected.
+A smaller size, changed file identity, failed 64 KiB tail anchor, failed historical
+block verification, or offset beyond EOF causes a single-file rebuild from byte zero.
+Its old summary and content rows remain visible until the replacement parse commits.
+Other sessions are unaffected. Initial scans create 1 MiB block hashes while parsing;
+later runs verify a bounded rotating subset, advancing `integrity_cursor`. This makes
+normal appends cheap while eventually detecting an arbitrary same-inode rewrite. The UI
+distinguishes `incrementally current` from `integrity verified` and shows the last time
+all historical blocks completed a verification cycle.
 
 ### Non-append-only sources
 
@@ -217,6 +237,13 @@ The owned file is
 generated marker and points to the stable `~/100xprism` clone, never the transient npm
 package directory.
 
+Installation resolves `python3` to an absolute executable, verifies it can import the
+required standard-library modules, and writes that exact path into `ProgramArguments`.
+The plist never relies on an interactive-shell `PATH`. A missing interpreter leaves the
+previous owned plist unloaded and prints a recovery command rather than installing a
+job that will fail after login. Tests cover Homebrew paths, paths containing spaces, and
+a missing interpreter.
+
 The LaunchAgent uses `RunAtLoad`, `StartInterval=60`, background process type,
 low-priority I/O, and a positive nice value. It does not use `KeepAlive`. `launchd`
 does not overlap invocations of the same job.
@@ -231,14 +258,22 @@ does not overlap invocations of the same job.
   opt a new user into token economics or clone a repository.
 - `100xprism uninstall` boots out and removes the owned plist. It retains the database
   so reinstalling restores history.
-- `100xprism uninstall --purge` also removes the SQLite database, WAL/SHM files,
-  process lock, and bounded diagnostics.
+- Installation writes `~/.100xprism/token-economics-manifest.json` with a generated
+  marker and the exact database, sidecar, lock, log, and diagnostic paths it owns.
+  Cleanup validates the marker, requires every target to remain under
+  `~/.100xprism`, and permits WAL/SHM deletion only beside the validated database.
+- `100xprism uninstall --purge` removes the SQLite database, WAL/SHM files, process
+  lock, logs, and bounded diagnostics only through that validated manifest. The JS and
+  Python cleanup ownership rules and cleanup-contract tests remain in parity.
 - `100xprism tokens` ensures the owned job is loaded, triggers a non-overlapping
   collection, starts the on-demand server if necessary, and opens the browser unless
   `--no-open` was supplied.
 
-On Windows and Linux, token-economics commands print: `Token economics is coming soon
-for this platform.` Existing non-dashboard commands continue to work.
+On Windows and Linux, existing foreground `tokens`, `tokens --print`, `tokens --json`,
+and `tokens --tool` behavior remains available. The CLI adds a concise banner:
+`Background token economics is coming soon for this platform.` LaunchAgent and SQLite
+background-lifecycle flags make no changes on those platforms. This preserves the
+current reporting contract while accurately scoping the coming-soon declaration.
 
 ## Resource budgets
 
@@ -250,7 +285,10 @@ for this platform.` Existing non-dashboard commands continue to work.
 - The dashboard server is the only resident Python process while the UI is open. It
   exits after ten minutes without browser/API traffic.
 - Git/value recomputation is limited to affected project paths plus a bounded periodic
-  refresh; unchanged repositories use the existing value cache.
+  refresh; unchanged repositories use the existing value cache. Scheduled collectors
+  exclude GitHub insights and never invoke `gh` or another network client. The existing
+  optional `github.enabled` dashboard integration remains an explicit, interactive-only
+  exception and is labeled before it accesses GitHub.
 - Collector logs rotate at 1 MiB with two backups. Scan diagnostics in SQLite are
   capped independently.
 
@@ -279,18 +317,27 @@ The no-cache counterfactual prices cache-read tokens at the corresponding model'
 ordinary input rate and labels the result an estimate. It does not claim provider-bill
 reconciliation.
 
-Search endpoints return session metadata and short highlighted excerpts, never entire
-transcripts by default. Queries are parameterized and bounded by result count.
+Search endpoints return session metadata and structured excerpt segments of the form
+`{text, matched}` rather than FTS-generated HTML. The client escapes every `text` value
+with the existing HTML escaper and wraps only server-generated `matched` segments in a
+fixed highlight element. It never inserts transcript text as HTML. Responses include a
+restrictive Content Security Policy using a per-response script nonce and disallow
+object, frame, and remote connection sources. Queries are parameterized and bounded by
+result count.
 
 ## Privacy and security
 
-- All data remains local; the feature performs no network calls.
+- Transcript collection, SQLite storage, search, and scheduled snapshot building are
+  local-only and perform no network calls. The pre-existing opt-in GitHub insights
+  integration is interactive-only and remains governed by `github.enabled`.
 - The HTTP server binds only to `127.0.0.1`.
 - Content search is opt-in and its scope is stated before activation.
-- Disabling content search deletes persisted searchable text without deleting economic
-  history.
-- Generated plist deletion requires the exact label and ownership marker.
+- Disabling content search removes text from the live database and sidecars without
+  deleting economic history, while honestly warning about filesystem backups.
+- Generated plist deletion requires the exact label and ownership marker. Purge of all
+  other token-economics artifacts requires the validated owned manifest.
 - Database SQL uses parameters, and FTS queries are validated and bounded.
+- Search excerpts are structured data, escaped before rendering, and covered by CSP.
 - Logs contain paths and counts only, not transcript content.
 
 ## Testing strategy
@@ -299,7 +346,10 @@ transcripts by default. Queries are parameterized and bounded by result count.
 
 - Create, reopen, and migrate a database transactionally.
 - Reject an unsupported future schema without modifying it.
-- Verify WAL mode, permissions, snapshot rollback, scan-history cap, and FTS removal.
+- Verify WAL mode, permissions, snapshot rollback, scan-history cap, and content removal
+  from the main database plus WAL/SHM sidecars after FTS disable.
+- Enable search after economics history already exists and verify a content-only
+  backfill reaches old sessions without changing token totals.
 
 ### Incremental parser tests
 
@@ -307,8 +357,10 @@ transcripts by default. Queries are parameterized and bounded by result count.
 - A second unchanged scan reads no transcript content.
 - Appending complete records parses only bytes after the committed offset.
 - An incomplete trailing JSONL record remains uncommitted until completed.
-- Truncation, replacement, prefix mismatch, and parser-version change rebuild only the
-  affected file.
+- Truncation, replacement, tail-anchor mismatch, rotating block-hash mismatch, and
+  parser-version change rebuild only the affected file.
+- Verify rewrites before, within, and after the current historical integrity block and
+  advance the bounded integrity cursor without reparsing unchanged records.
 - Claude attribution and Codex cumulative counters remain correct across scan
   boundaries.
 - Deleted transcripts retain historical totals and reappearing session identities do
@@ -331,7 +383,9 @@ transcripts by default. Queries are parameterized and bounded by result count.
 - Ordinary uninstall removes the agent but retains history.
 - Purge removes the agent, database, sidecars, locks, and logs.
 - Hand-written or foreign LaunchAgent files are never deleted.
-- Windows and Linux return the coming-soon message without mutating state.
+- Purge refuses an absent, malformed, escaped, or marker-less ownership manifest.
+- Windows and Linux preserve foreground reporting, show the background-service
+  coming-soon banner, and do not install lifecycle artifacts.
 
 ### Dashboard tests
 
@@ -340,6 +394,7 @@ transcripts by default. Queries are parameterized and bounded by result count.
 - Cache metrics and counterfactual savings use the correct model rates.
 - FTS is unavailable while disabled and returns filtered, bounded excerpts while
   enabled.
+- Malicious prompt HTML remains inert in structured highlighted excerpts under CSP.
 - Ten minutes without API activity shuts down the on-demand server; active polling
   keeps it alive.
 
@@ -363,4 +418,3 @@ so a format fix does not force a global rebuild.
 - Content search works locally when enabled and leaves no indexed text after disable.
 - No collector process remains resident between launchd intervals.
 - Install/update restart collection; uninstall stops it; purge removes its data.
-
