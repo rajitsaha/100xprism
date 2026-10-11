@@ -305,3 +305,37 @@ print(json.dumps([m.GENERATED_MARKER, m.ALIAS_MARKER, m.MANIFEST_NAME, m.CURSOR_
   assert.deepEqual([c.GENERATED_MARKER, c.ALIAS_MARKER, c.MANIFEST_NAME, c.CURSOR_MARKER,
     c.CODEX_AGENTS_MARKER, c.RESOLVER_SLUG, c.CATALOG_DIRNAME], py)
 })
+
+test('token economics manifest marker and containment validation match Python', () => {
+  const {createLifecycle,MARKER}=require('../lib/token-economics')
+  const home=tmpHome(), lifecycle=createLifecycle({home,platform:'darwin'})
+  lifecycle.initialize()
+  const payload=JSON.parse(execFileSync('python3',['-B','-c',`
+import json, sys
+sys.path.insert(0, ${JSON.stringify(path.join(REPO,'scripts'))})
+from _token_store import MARKER, load_manifest
+m=load_manifest(sys.argv[1]); print(json.dumps([MARKER,m['root'],m['schema']]))
+`,lifecycle.root],{encoding:'utf8'}))
+  assert.deepEqual(payload,[MARKER,lifecycle.root,1])
+  const manifest=JSON.parse(fs.readFileSync(lifecycle.manifest,'utf8'))
+  manifest.artifacts.push({path:path.join(lifecycle.home,'foreign'),kind:'file'})
+  fs.writeFileSync(lifecycle.manifest,JSON.stringify(manifest))
+  assert.throws(()=>lifecycle.readManifest(),/outside|contained/)
+  const result=require('node:child_process').spawnSync('python3',['-B','-c',`
+import sys
+sys.path.insert(0, ${JSON.stringify(path.join(REPO,'scripts'))})
+from _token_store import load_manifest
+load_manifest(sys.argv[1])
+`,lifecycle.root],{encoding:'utf8'})
+  assert.notEqual(result.status,0)
+  assert.match(result.stderr,/escapes/)
+})
+
+test('uninstall purge cannot bypass an absent token economics ownership manifest', () => {
+  const home=tmpHome()
+  write(path.join(home,'.100xprism','token-economics','unknown.sqlite3'),'foreign')
+  const result=require('node:child_process').spawnSync('node',[UNINSTALL,'--purge'],
+    {cwd:REPO,encoding:'utf8',env:{...process.env,HOME:home,USERPROFILE:home}})
+  assert.notEqual(result.status,0)
+  assert.equal(fs.readFileSync(path.join(home,'.100xprism','token-economics','unknown.sqlite3'),'utf8'),'foreign')
+})

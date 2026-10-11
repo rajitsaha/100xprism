@@ -25,12 +25,13 @@ from collections import defaultdict
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import _value  # noqa: E402 — project_label / mangle_path
 
-from . import Usage  # noqa: E402
+from . import Usage, _incremental  # noqa: E402
 
 TOOL = "claude-code"
 HOME = os.path.expanduser("~")
 SOURCE_DIR = os.path.join(HOME, ".claude", "projects")
 CACHE_FILE = os.path.join(HOME, ".claude", ".token-dashboard-cache.json")
+PARSER_VERSION = 1
 CACHE_VERSION = 5  # bump -> re-parse all transcripts (windowed attribution added)
 FULL_SCAN_SECONDS = 1800
 HOT_FILE_SECONDS = 86400
@@ -92,7 +93,7 @@ def _classify(role, content, comp, tool_names):
             sz = len(json.dumps(b.get("input", {}), ensure_ascii=False))
             comp["code_authored" if name in _EDIT_TOOLS else "tool_calls"] += sz
         elif bt == "tool_result":
-            name = tool_names.get(b.get("tool_use_id", ""), "")
+            name = tool_names.pop(b.get("tool_use_id", ""), "")
             c = b.get("content", "")
             if isinstance(c, list):
                 sz = sum(len(x.get("text") or "") for x in c if isinstance(x, dict))
@@ -116,7 +117,7 @@ def _extract_text(content):
     return ""
 
 
-def parse_file(path):
+def _parse_records(records, state=None, summary=None):
     """Aggregate one Claude Code transcript into totals, breakdowns, and
     session/subagent/skill attribution. Returns a per-file summary dict."""
     totals = _empty()
@@ -148,13 +149,40 @@ def parse_file(path):
     current_marker_segment = None
     prev_attr_skill = None
 
-    for line in _lines(path):
-        try:
-            o = json.loads(line)
-        except Exception:
-            continue
-        if not isinstance(o, dict):
-            continue
+    summary = summary or {}
+    state = state or {}
+    totals = _incremental.restore(totals, summary.get("totals", {}))
+    by_day = _incremental.restore(by_day, summary.get("by_day", {}))
+    by_model = _incremental.restore(by_model, summary.get("by_model", {}))
+    by_day_model = _incremental.restore(by_day_model, summary.get("by_day_model", {}))
+    by_skill_model = _incremental.restore(by_skill_model, summary.get("by_skill_model", {}))
+    by_skill_day_model = _incremental.restore(by_skill_day_model, summary.get("by_skill_day_model", {}))
+    skill_invocations_by_day = _incremental.restore(skill_invocations_by_day, summary.get("skill_invocations_by_day", {}))
+    comp_by_day = _incremental.restore(comp_by_day, summary.get("comp_by_day", {}))
+    main_subagent_by_day = _incremental.restore(main_subagent_by_day, summary.get("main_subagent_by_day", {}))
+    comp = _incremental.restore(comp, summary.get("comp", {}))
+    main_tokens = _incremental.restore(main_tokens, summary.get("main_tokens", {}))
+    subagent_tokens = _incremental.restore(subagent_tokens, summary.get("subagent_tokens", {}))
+    by_skill = _incremental.restore(by_skill, summary.get("by_skill", {}))
+    skill_invocations = _incremental.restore(skill_invocations, summary.get("skill_invocations", {}))
+    msgs = summary.get("msgs", 0)
+    first_fixed = summary.get("first_fixed") or None
+    turns = summary.get("turns", 0)
+    session_id = summary.get("session_id", None)
+    cwd = summary.get("cwd")
+    first_fixed_day = summary.get("first_fixed_day", None)
+    tool_names = state.get("tool_names", {})
+    current_marker_segment = state.get("current_marker_segment", None)
+    prev_attr_skill = state.get("prev_attr_skill", None)
+    skill_exact = set(summary.get("skill_exact", []))
+    agent_id = summary.get("agent_id") or state.get("agent_id")
+    observed = _incremental.observations(summary)
+
+    for o in records:
+        _incremental.observe_activity(observed, o)
+        if isinstance(o.get("cwd"), str):
+            cwd = o["cwd"]
+        agent_id = agent_id or o.get("agentId") or o.get("agent_id")
         if session_id is None:
             session_id = o.get("sessionId") or o.get("session_id")
         day = (o.get("timestamp") or "")[:10] or "unknown"
@@ -195,6 +223,9 @@ def parse_file(path):
         ot = u.get("output_tokens", 0) or 0
         cr = u.get("cache_read_input_tokens", 0) or 0
         cw = u.get("cache_creation_input_tokens", 0) or 0
+        if any(key in u for key in ("input_tokens", "cache_read_input_tokens",
+                                     "cache_creation_input_tokens")):
+            _incremental.observe_context(observed, i + cr + cw)
         if not (i or ot or cr or cw):
             continue
         msgs += 1
@@ -218,7 +249,7 @@ def parse_file(path):
             _add(by_skill_model[attr_skill][model], i, ot, cr, cw)
             _add(by_skill_day_model[day][attr_skill][model], i, ot, cr, cw)
 
-    return {
+    aggregate = {
         "totals": totals,
         "by_day": dict(by_day),
         "by_model": dict(by_model),
@@ -235,6 +266,7 @@ def parse_file(path):
         "turns": turns,
         "first_fixed": first_fixed or 0,
         "session_id": session_id,
+        "cwd": cwd,
         "main_tokens": main_tokens,
         "subagent_tokens": subagent_tokens,
         "first_fixed_day": first_fixed_day,
@@ -242,7 +274,22 @@ def parse_file(path):
         "by_skill": dict(by_skill),
         "skill_invocations": dict(skill_invocations),
         "skill_exact": sorted(skill_exact),
+        "agent_id": agent_id,
     }
+    aggregate.update(observed)
+    return aggregate, {"tool_names": tool_names,
+                       "current_marker_segment": current_marker_segment,
+                       "prev_attr_skill": prev_attr_skill, "agent_id": agent_id}
+
+
+def parse_file(path):
+    """Parse a complete transcript with the legacy tolerant foreground behavior."""
+    return _parse_records(_incremental.legacy_records(path), state=None)[0]
+
+
+def parse_incremental(path, offset=0, state=None, summary=None, observer=None):
+    """Parse only complete records after a durable binary checkpoint."""
+    return _incremental.parse(path, _parse_records, offset, state, summary, observer=observer)
 
 
 def _load_cache_payload():
@@ -292,7 +339,7 @@ def save_cache(files, project_mtimes=None, full_scan_at=0):
         print(f"warning: could not write claude_code cache: {e}", file=sys.stderr)
 
 
-def scan(verbose=False, dir_index=None):
+def scan(verbose=False, dir_index=None, progress=None):
     """Glob + incrementally parse every Claude Code transcript. Returns a list of
     per-file summary dicts with mtime/size/project/projdir/tool added."""
     payload = _load_cache_payload()
@@ -324,9 +371,12 @@ def scan(verbose=False, dir_index=None):
             paths.update(current)
     new_cache = {}
     reparsed = 0
+    processed = 0
     labels_by_dir = {}
     cache_changed = set(cache) != paths
     hot_cutoff = now - HOT_FILE_SECONDS
+    if progress:
+        progress(0, len(paths), 0, 0)
     for p in sorted(paths):
         prev = cache.get(p)
         needs_stat = (full_scan or prev is None or os.path.dirname(p) in changed_projects
@@ -357,6 +407,9 @@ def scan(verbose=False, dir_index=None):
         summary["projdir"] = projdir
         summary["tool"] = TOOL
         new_cache[p] = summary
+        processed += 1
+        if progress and (processed == len(paths) or processed % 25 == 0):
+            progress(processed, len(paths), reparsed, processed - reparsed)
     full_scan_at = now if full_scan else last_full_scan
     metadata_changed = project_mtimes != old_project_mtimes or full_scan
     if cache_changed or reparsed or metadata_changed:
@@ -365,6 +418,8 @@ def scan(verbose=False, dir_index=None):
         mode = "full" if full_scan else "incremental"
         print(f"claude_code: scanned {len(paths)} transcripts ({reparsed} re-parsed, "
               f"{len(paths) - reparsed} cached; {mode})", file=sys.stderr)
+    if progress and processed != len(paths):
+        progress(len(paths), len(paths), reparsed, max(0, len(paths) - reparsed))
     return list(new_cache.values())
 
 

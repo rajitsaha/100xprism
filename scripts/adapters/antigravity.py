@@ -92,7 +92,7 @@ def _artifact_info(session_id):
     return len(paths), max(dates) if dates else None
 
 
-def scan(verbose=False):
+def scan(verbose=False, progress=None):
     if not os.path.isdir(SOURCE_DIR):
         return []
     conversation_paths = glob.glob(os.path.join(SOURCE_DIR, "conversations", "*.pb"))
@@ -103,6 +103,8 @@ def scan(verbose=False):
     conversation_by_id = {os.path.basename(p).rsplit(".", 1)[0]: p
                           for p in conversation_paths}
     rows = []
+    if progress:
+        progress(0, len(ids), 0, 0)
     for session_id in sorted(ids):
         artifacts, artifact_day = _artifact_info(session_id)
         conv = conversation_by_id.get(session_id)
@@ -128,6 +130,8 @@ def scan(verbose=False):
     if verbose:
         print(f"antigravity: scanned {len(rows)} activity sessions "
               f"(token counters unavailable)", file=sys.stderr)
+    if progress:
+        progress(len(ids), len(ids), len(rows), 0)
     return rows
 
 

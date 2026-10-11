@@ -1,7 +1,7 @@
 # macOS Incremental Token Economics — Design
 
 **Date:** 2026-10-10
-**Status:** Approved in brainstorming, pending written-spec review
+**Status:** Implemented on `codex/macos-token-economics`; verification recorded in the implementation plan
 **Platform:** macOS first; Windows and Linux display a coming-soon message
 
 ## Problem

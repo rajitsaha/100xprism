@@ -129,6 +129,11 @@ echo "Checking for updates..."
 
 cd "$REPO_DIR"
 
+if [ "$CHECK_ONLY" = false ] && [ -n "$(git status --porcelain --untracked-files=all)" ]; then
+  echo "Refusing update: stable clone has tracked or untracked changes. Commit or move them, then retry." >&2
+  exit 1
+fi
+
 git fetch origin main --quiet 2>/dev/null
 
 LOCAL=$(git rev-parse HEAD)
@@ -236,8 +241,19 @@ suggest_packs() {
   fi
 }
 
+sync_token_economics() {
+  if command -v node >/dev/null 2>&1; then
+    node -e 'const root=process.argv[1]; require(root+"/lib/token-economics").createLifecycle({stopDashboard:require(root+"/lib/dashboard").stopDashboard}).update(root,process.argv[2]||undefined)' "$REPO_DIR" "${1:-}"
+  else
+    echo "Background token collector update needs Node 18+. Existing collector retained; install Node and rerun update.sh."
+  fi
+}
+
 if [ "$LOCAL" = "$REMOTE" ]; then
   echo -e "${GREEN}✓ Repo already up to date.${NC}"
+  if [ "$CHECK_ONLY" = false ] && [ "$(uname -s)" = Darwin ]; then
+    sync_token_economics
+  fi
   echo ""
   echo "Syncing plugins and settings..."
   python3 "$REPO_DIR/adapters/lib/sync_plugins.py" \
@@ -298,7 +314,15 @@ fi
 
 echo ""
 
-git pull origin main --quiet
+# Stage and validate the next macOS runtime before advancing the stable checkout.
+# The job continues to resolve its owned current generation throughout the update.
+if [ "$(uname -s)" = Darwin ]; then
+  sync_token_economics origin/main
+fi
+if ! git merge --ff-only origin/main --quiet; then
+  echo "Stable clone could not fast-forward. Its files and the active token runtime were retained." >&2
+  exit 1
+fi
 echo -e "  ${GREEN}→ Pulled latest ✓${NC}"
 
 # Optional: verify GPG signature on HEAD when HUNDRED_X_VERIFY_SIGNATURES=1.

@@ -14,6 +14,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import _value  # noqa: E402
+import pricing  # noqa: E402
 
 # Never touch the developer's real ~/.100xprism/value.json: every test starts from
 # a throwaway store (tests that swap in their own still restore to this one).
@@ -280,6 +281,26 @@ class DeliveryEconomicsTest(unittest.TestCase):
         self.assertIn("directory</th><th>model", td.PAGE)
         self.assertNotIn("unit economics</th>", td.PAGE)
 
+    def test_dashboard_inline_javascript_is_valid(self):
+        script = td.PAGE.split("<script>", 1)[1].split("</script>", 1)[0]
+        result = subprocess.run(
+            ["node", "--check"], input=script, capture_output=True, text=True,
+            check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_undated_day_keys_do_not_break_time_windows(self):
+        script = td.PAGE.split("<script>", 1)[1].split("</script>", 1)[0]
+        pick = lambda prefix: next(l for l in script.splitlines() if l.startswith(prefix))
+        start = script.index("function dayInWindow(")
+        helper = script[start:script.index("\n}\n", start) + 3]
+        probe = "\n".join([pick("const WINDOWS="), pick("function windowDef("), helper,
+            "const days=['2026-10-01','2026-10-10','unknown'];",
+            "console.log(JSON.stringify([dayInWindow('2026-10-10','30d',days),"
+            "dayInWindow('unknown','30d',days),dayInWindow('unknown','all',days)]));"])
+        result = subprocess.run(["node", "-e", probe], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [True, False, True])
+
 
 class ScanHomeTest(unittest.TestCase):
     def test_mangle_path_non_alnum_to_dash(self):
@@ -525,25 +546,93 @@ class EnsureDaemonTest(unittest.TestCase):
         self.assertFalse(result)
         self.assertIn("dashboard pid file unavailable", stderr.getvalue())
 
-    def test_refresh_request_returns_json_error(self):
+    def test_background_refresh_failure_is_logged(self):
         import contextlib
         import io
         original_rebuild = td._rebuild
+        stderr = io.StringIO()
+        try:
+            td._rebuild = lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+            with contextlib.redirect_stderr(stderr):
+                td._safe_rebuild()
+        finally:
+            td._rebuild = original_rebuild
+        self.assertIn("dashboard rebuild failed: boom", stderr.getvalue())
+
+    def test_loading_payload_surfaces_live_scan_progress_and_partial_metrics(self):
+        original_state = dict(td._build_state)
+        try:
+            td._build_state.update({
+                "building": True,
+                "stage": "scanning",
+                "tool": "codex",
+                "current": 300,
+                "total": 646,
+                "reparsed": 300,
+                "cached": 0,
+                "completed_sources": ["claude-code"],
+                "preview": {
+                    "records": 525,
+                    "metered_sessions": 500,
+                    "activity_sessions": 0,
+                    "tokens": 123456,
+                    "estimated_cost": 12.34,
+                },
+            })
+            payload = td._loading_data()
+        finally:
+            td._build_state.clear()
+            td._build_state.update(original_state)
+
+        self.assertTrue(payload["loading"])
+        self.assertEqual(payload["scan"], {
+            "stage": "scanning",
+            "tool": "codex",
+            "current": 300,
+            "total": 646,
+            "reparsed": 300,
+            "cached": 0,
+            "completed_sources": ["claude-code"],
+        })
+        self.assertEqual(payload["preview"]["records"], 525)
+        self.assertEqual(payload["preview"]["estimated_cost"], 12.34)
+
+    def test_refresh_request_keeps_current_data_visible_while_rebuild_starts(self):
+        original_rebuild = td._rebuild
+        original_start = td._start_rebuild
+        original_data = td.Handler.data
+        original_state = dict(td._build_state)
         handler = object.__new__(td.Handler)
         handler.path = "/api/refresh"
         sent = []
         handler._send = lambda body, ctype="application/json", status=200: sent.append(
             (json.loads(body), ctype, status))
-        stderr = io.StringIO()
+        starts = []
+
+        def start(verbose=False):
+            starts.append(verbose)
+            td._build_state["building"] = True
+            td._build_state["stage"] = "discovering"
+            return True
+
         try:
-            td._rebuild = lambda: (_ for _ in ()).throw(RuntimeError("boom"))
-            with contextlib.redirect_stderr(stderr):
-                handler.do_GET()
+            td.Handler.data = {"transcripts": 7, "generated": "earlier"}
+            td._start_rebuild = start
+            td._rebuild = lambda *a, **kw: (_ for _ in ()).throw(
+                AssertionError("refresh request must not block on rebuild"))
+            handler.do_GET()
         finally:
             td._rebuild = original_rebuild
-        self.assertEqual(sent, [({"error": "dashboard refresh failed"},
-                                 "application/json", 500)])
-        self.assertIn("dashboard request failed: boom", stderr.getvalue())
+            td._start_rebuild = original_start
+            td.Handler.data = original_data
+            td._build_state.clear()
+            td._build_state.update(original_state)
+
+        self.assertEqual(starts, [False])
+        self.assertEqual(sent[0][2], 200)
+        self.assertEqual(sent[0][0]["transcripts"], 7)
+        self.assertTrue(sent[0][0]["refreshing"])
+        self.assertEqual(sent[0][0]["scan"]["stage"], "discovering")
 
     def test_stop_previous_dashboard_terminates_owned_process(self):
         original_pids = td._owned_dashboard_pids
@@ -727,7 +816,7 @@ class TestBuildIntegration(unittest.TestCase):
         self.assertAlmostEqual(sum(data["cost_by_purpose"].values()), data["total_cost"], places=2)
         self.assertIn("2026-07-09", data["by_day_model_cost"])
         self.assertEqual(data["data_quality"]["pricing_coverage_pct"], 100.0)
-        self.assertEqual(data["pricing"]["as_of"], "2026-07-19")
+        self.assertEqual(data["pricing"]["as_of"], pricing.PRICING_AS_OF)
         self.assertIn("models", data["by_session"][0])
         skill = next(row for row in data["by_skill"] if row["skill"] == "loop")
         self.assertEqual(skill["tools"], ["claude-code"])
