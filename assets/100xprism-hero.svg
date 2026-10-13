@@ -26,17 +26,17 @@
   <!-- wordmark + copy -->
   <text x="470" y="150" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="76" font-weight="800" fill="#e7edf3" letter-spacing="-1.5">100x<tspan fill="#3ddc84">Prism</tspan></text>
   <text x="472" y="200" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="27" font-weight="600" fill="#93a1ad">One config. Every AI coding tool.</text>
-  <text x="472" y="262" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" fill="#6f7d89">Claude Code &#183; Cursor &#183; Codex &#183; Windsurf &#183; Copilot &#183; Gemini &#183; Antigravity</text>
+  <text x="472" y="262" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" fill="#6f7d89">Claude Code &#183; Cursor &#183; Codex &#183; Pi &#183; Hermes/OpenClaw</text>
 
   <!-- stat chips -->
   <g font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="18" font-weight="600">
     <g transform="translate(472,300)">
       <rect width="150" height="40" rx="20" fill="#14181d" stroke="#232a31"/>
-      <text x="75" y="26" text-anchor="middle" fill="#cfe8d8">66 modules</text>
+      <text x="75" y="26" text-anchor="middle" fill="#cfe8d8">68 modules</text>
     </g>
     <g transform="translate(636,300)">
       <rect width="180" height="40" rx="20" fill="#14181d" stroke="#232a31"/>
-      <text x="90" y="26" text-anchor="middle" fill="#cfe8d8">26 slash commands</text>
+      <text x="90" y="26" text-anchor="middle" fill="#cfe8d8">28 slash commands</text>
     </g>
     <g transform="translate(830,300)">
       <rect width="150" height="40" rx="20" fill="#14181d" stroke="#232a31"/>
