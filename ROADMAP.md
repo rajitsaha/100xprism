@@ -28,7 +28,7 @@ the generator (#21), enforcing hooks + `emit-hooks` (#22), subagent fan-out for
 `orchestrate`/`gate`/`test`/`launch` (#25), shared stack detection (#26), e2e patterns
 and configurable thresholds (#27), native Windows adapter (#54).
 
-Original review: [2026-05-31-100x-powerup-review-design.md](https://github.com/rajitsaha/100xprism/blob/37e3a1c/docs/superpowers/specs/2026-05-31-100x-powerup-review-design.md) (archived; planning docs are no longer tracked).
+Original review: [2026-05-31-100x-powerup-review-design.md](https://github.com/rajitsaha/100xprism/blob/131564c/docs/superpowers/specs/2026-05-31-100x-powerup-review-design.md) (archived; planning docs are no longer tracked).
 
 ## Guardrails for every change
 
