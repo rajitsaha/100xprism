@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to 100x-dev are recorded here.
+All notable changes to 100xPrism (formerly 100x-dev) are recorded here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ---
@@ -57,7 +57,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- **`100xprism pack`** — external skill packs, ownership-tracked install/remove/sync for Claude Code, with a pack registry, schema validation, and a detection engine (Databricks is the first pack). Prefers the upstream vendor CLI where one exists and falls back to per-platform installers otherwise. Pack sync and detection are wired into `install`, `update`, and `uninstall`. (#103)
+- **`/pack`** (slash command, backed by `adapters/lib/packs.py`) — external skill packs, ownership-tracked install/remove/sync for Claude Code, with a pack registry, schema validation, and a detection engine (Databricks is the first pack). Prefers the upstream vendor CLI where one exists and falls back to per-platform installers otherwise. Pack sync and detection are wired into `install`, `update`, and `uninstall`. (#103)
 - **Lean cross-tool token observability.** Lean must-have defaults with on-demand resolver routing across Claude Code, Cursor, Codex, and Pi; honest cross-tool token reporting with `exact` / `best-effort` / `activity-only` measurement labels instead of a single unqualified number. (#104)
 - **`audit` and `optimize`** subcommands, context-footprint budgets, and managed-only cleanup for plugins and hooks. (#104)
 - **Pi package support**, cache accounting, independent reviewer enforcement, and fail-closed security hooks. (#104)

@@ -12,7 +12,7 @@ When reporting, please include:
 
 - A clear description of the issue and its impact
 - Steps to reproduce (commands, config, environment)
-- Affected version(s) — `100xprism --version` or commit SHA
+- Affected version(s) — `cat ~/100xprism/VERSION`, `npm ls -g 100xprism`, or the commit SHA
 - Any proof-of-concept code or screenshots (optional but helpful)
 
 ## What to Expect

@@ -1,9 +1,9 @@
 # 100xprism — First-party enforcing hooks
 
 These hooks turn the repo's headline guarantees from prose into enforcement. They are
-**opt-in**: `install.sh` offers a *Hooks* component with a per-hook toggle, and you can
-re-run the installer (or `100xprism update`) any time to change the selection. Nothing
-here runs unless you enable it.
+**opt-in**: `100xprism install` offers a *Hooks* component with a per-hook toggle; re-run
+it any time to change the selection. `100xprism update` refreshes hooks you already
+enabled but never enables new ones. Nothing here runs unless you enable it.
 
 All hooks are plain `python3` scripts (no third-party deps) that read the Claude Code
 hook event from stdin. They live at `~/100xprism/hooks/` after install and are wired into
@@ -19,7 +19,7 @@ emit-hooks` — the same idempotent-merge pattern used for plugins.
 
 ## The gate ↔ commit contract
 
-`pretooluse-gate.py` and `/gate` share a cache under `~/.100xprism/gate-cache/`. The cache
+`pretooluse-gate.py` and `/gate` share a single-file cache, `~/.100xprism/gate-cache`. The cache
 key is a sha256 over **HEAD + tracked diff + untracked status**, so a recorded pass is
 invalidated the instant the tree changes or HEAD moves. Flow:
 
@@ -35,7 +35,7 @@ tracked or untracked file after the gate re-arms the block.
 
 - `HOOK_SECRET_SCAN=off` — disable the secret scan for the current session.
 - `HOOK_LINT_ON_SAVE=off` — silence lint-on-save.
-- `HOOK_ROUTER_MODEL=claude-haiku-4-5` — enable the router's optional model tier (needs
+- `HOOK_ROUTER_MODEL=claude-haiku-5-5` — enable the router's optional model tier (needs
   the `claude` CLI); leave unset to use the deterministic allowlist only.
 
 ## Adding / changing hooks
