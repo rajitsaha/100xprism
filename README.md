@@ -293,7 +293,17 @@ Budgets, GitHub insights, content search and every flag:
 
 ---
 
-## What it changed: two open-source products
+## Built with 100xPrism
+
+| Product | Source |
+|:--|:--|
+| [100xprism](https://github.com/rajitsaha/100xprism) — this toolkit, built with itself | Open source |
+| [agentbreeder](https://github.com/agentbreeder/agentbreeder) | Open source |
+| [hippokit.ai](https://hippokit.ai) | Closed source |
+| [norulestrends.com](https://norulestrends.com) | Closed source |
+| [reinvestiq.com](https://reinvestiq.com) | Closed source |
+
+### What it changed
 
 Snapshot taken **2026-08-02** from each repo's git history.
 
@@ -308,10 +318,8 @@ Snapshot taken **2026-08-02** from each repo's git history.
 | Peak commits in one day | 39 | 61 |
 | Active engineering days | 29 | 53 |
 
-The same toolkit drove two closed-source products (a content-generation SaaS and a
-real-estate deal-analysis SaaS): **2,219 commits · 970 merged PRs · 1.13M lines** over
-**171 active days**. Across all five projects (these four plus one smaller one):
-**3,282 commits · 1,225 merged PRs · 1.78M lines added**, by one person.
+Across all five products, open and closed source: **3,282 commits · 1,225 merged PRs ·
+1.78M lines added**, by one person.
 
 **As an estimate, not a measurement.** Nothing was built twice, so there is no
 counterfactual. *Assume* a conventional team merges ~2 feature-sized PRs per
