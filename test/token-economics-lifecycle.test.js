@@ -80,6 +80,13 @@ test('dirty clone refusal considers untracked changes and never cleans ignored f
   const api=economics.createLifecycle({home,platform:'darwin',run:()=>({status:0,stdout:'?? notes\n'})})
   assert.throws(()=>api.assertClean(clone),/tracked or untracked/)
 })
+test('dirty clone refusal lists the changes and how to keep them, without a stack trace', () => {
+  const {home}=fixture(); const clone=path.join(home,'clone'); fs.mkdirSync(clone)
+  const stdout=[' M install.sh',...Array.from({length:12},(_,i)=>`?? notes-${i}`)].join('\n')+'\n'
+  const api=economics.createLifecycle({home,platform:'darwin',run:()=>({status:0,stdout})})
+  assert.throws(()=>api.assertClean(clone),e=>e.userFacing===true && /M install\.sh/.test(e.message)
+    && /and 3 more/.test(e.message) && /stash -u/.test(e.message))
+})
 
 function realFixture() {
   const {spawnSync}=require('node:child_process')
@@ -130,6 +137,8 @@ test('real cutover preserves history and preceding runnable generation, no candi
   assert.ok(!fs.existsSync(path.join(second.generation,'token-economics.sqlite3-wal')))
   assert.equal(calls.filter(c=>c.command==='launchctl'&&c.args[0]==='bootout').length,0)
   assert.ok(calls.some(c=>c.command==='launchctl'&&c.args[0]==='kickstart'))
+  // Upgrades end an in-flight background pass instead of silently waiting on its lock.
+  assert.ok(calls.some(c=>c.command==='launchctl'&&c.args[0]==='kill'&&c.args[1]==='SIGTERM'))
   api.uninstall()
   assert.ok(fs.existsSync(path.join(second.generation,'token-economics.sqlite3')))
   api.purge()

@@ -28,7 +28,7 @@ Examples:
   100xprism slim --skills=must    # most aggressive; --skills=all reverts
   100xprism audit --json           # machine-readable standing-context estimate
   100xprism optimize --all-projects
-  100xprism install --dashboard  # optionally start dashboard after install
+  100xprism install --no-open    # macOS: skip opening the dashboard after install
   100xprism tokens               # start and open dashboard
   100xprism tokens --no-open      # serve without opening browser
   100xprism tokens --verify-history  # bounded local integrity maintenance (macOS)
@@ -39,6 +39,13 @@ Examples:
 `.trimStart()
 
 const [,, cmd, ...args] = process.argv
+
+process.on('uncaughtException', error => {
+  // Expected refusals carry their own remediation; skip the stack trace.
+  if (!error || !error.userFacing) throw error
+  console.error(error.message)
+  process.exit(1)
+})
 
 switch (cmd) {
   case 'install': require('../lib/install').run(args); break

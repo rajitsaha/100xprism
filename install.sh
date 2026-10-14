@@ -172,7 +172,7 @@ install_shell() {
   echo "    100xprism update"
   echo ""
   echo -e "  ${CYAN}AI economics dashboard:${NC}"
-  echo "    Not started by default. Start and open it with:"
+  echo "    Open it anytime with:"
   echo "    100xprism tokens"
 }
 
