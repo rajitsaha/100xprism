@@ -5,8 +5,8 @@ pair-loop.py — CLI orchestration for the /pair-loop handoff skill.
 The interactive agent running the skill IS the coder; this CLI never simulates
 coding. It owns: run bookkeeping (manifest + HANDOFF.md), the per-round budget
 check, invoking the reviewer subprocess, and PR-body assembly. See
-docs/superpowers/specs/2026-07-09-pair-loop-handoff-skill-design.md for the
-full state machine.
+https://github.com/rajitsaha/100xprism/blob/131564c/docs/superpowers/specs/2026-07-09-pair-loop-handoff-skill-design.md
+(archived) for the full state machine.
 
 Subcommands: start, budget-check, coder-done, review, finish.
 """

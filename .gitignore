@@ -13,3 +13,7 @@ pi/skills/
 pi/prompts/
 pi/100xprism-catalog/
 pi/.100xprism-pi-manifest.json
+
+# Local planning docs (superpowers plugin) — not tracked
+docs/superpowers/
+.superpowers/

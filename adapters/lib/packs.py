@@ -6,8 +6,9 @@ Packs are opt-in. Nothing here installs anything unless the user explicitly runs
 relevant to the current project and stops there.
 
 Ownership is tracked per config entry, not per platform — see the state file shape
-in docs/superpowers/plans/2026-08-03-skill-packs.md. If the user already had a
-plugin listed, we did not add it and will never remove it.
+in https://github.com/rajitsaha/100xprism/blob/131564c/docs/superpowers/plans/2026-08-03-skill-packs.md
+(archived). If the user already had a plugin listed, we did not add it and will
+never remove it.
 
 Subcommands:
   detect  — which declared packs match the current project (read-only)
