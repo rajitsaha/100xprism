@@ -1,6 +1,6 @@
 {
   "name": "100xprism",
-  "version": "3.5.1",
+  "version": "3.5.2",
   "description": "68 cross-tool modules (workflows + skills). Quality gates on every commit. Works with Claude Code, Cursor, Codex, Pi, and Hermes/OpenClaw.",
   "scripts": {
     "postinstall": "node ./lib/token-economics.js",

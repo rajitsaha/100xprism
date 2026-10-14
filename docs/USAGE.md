@@ -457,9 +457,9 @@ The three CI traps these templates guard against (`# TRAP:` comments) are explai
 100xprism value                           # git delivery report for the current directory
 ```
 
-The dashboard serves at `http://127.0.0.1:8787`. Nothing starts it automatically — not
-your shell, not `init`, not `update`. `100xprism install --dashboard` starts it once after
-installing.
+The dashboard serves at `http://127.0.0.1:8787`. On macOS, an interactive
+`100xprism install` opens it once the first token scan finishes (`--no-open` skips that).
+Nothing else starts it automatically — not your shell, not `init`, not `update`.
 
 ### Sources
 

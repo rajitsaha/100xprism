@@ -7,6 +7,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [3.5.2] - 2026-10-13
+
+### Fixed
+
+- **Install no longer prints a stack trace when `~/100xprism` has local changes (#113).** It still refuses and touches nothing, but now lists the changed files with `stash -u` / discard commands, so there is no reason to `rm -rf` the clone.
+- **Install no longer looks hung after "Restart Claude Code".** It ends an in-flight background collector pass instead of silently waiting on its lock (the store is transactional and resumes interrupted scans), and database prep plus the first transcript scan show an animated spinner with elapsed time.
+
+### Changed
+
+- **Interactive macOS installs open the token economics dashboard** when the first scan finishes; `100xprism install --no-open` skips it.
+
 ## [3.5.1] - 2026-10-13
 
 ### Changed
