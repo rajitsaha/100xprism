@@ -298,10 +298,10 @@ Budgets, GitHub insights, content search and every flag:
 | Product | Source |
 |:--|:--|
 | [100xprism](https://github.com/rajitsaha/100xprism) — this toolkit, built with itself | Open source |
-| [agentbreeder](https://github.com/agentbreeder/agentbreeder) | Open source |
-| [hippokit.ai](https://hippokit.ai) | Closed source |
-| [norulestrends.com](https://norulestrends.com) | Closed source |
-| [reinvestiq.com](https://reinvestiq.com) | Closed source |
+| <img src="assets/built-with/agentbreeder.svg" height="28" alt="" align="absmiddle"> [agentbreeder](https://github.com/agentbreeder/agentbreeder) | Open source |
+| <img src="assets/built-with/hippokit.svg" height="28" alt="" align="absmiddle"> [hippokit.ai](https://hippokit.ai) | Closed source |
+| <img src="assets/built-with/norulestrends.svg" height="28" alt="" align="absmiddle"> [norulestrends.com](https://norulestrends.com) | Closed source |
+| <img src="assets/built-with/reinvestiq.png" height="28" alt="" align="absmiddle"> [reinvestiq.com](https://reinvestiq.com) | Closed source |
 
 ### What it changed
 

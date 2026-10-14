@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 450" role="img" aria-label="HippoKit mascot">
+  <defs>
+    <radialGradient id="hk-bodyG" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#A898D8"/>
+      <stop offset="55%" stop-color="#8878C4"/>
+      <stop offset="100%" stop-color="#6858A8"/>
+    </radialGradient>
+    <radialGradient id="hk-headG" cx="42%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#9A8CCC"/>
+      <stop offset="55%" stop-color="#8070BC"/>
+      <stop offset="100%" stop-color="#6858A8"/>
+    </radialGradient>
+    <linearGradient id="hk-platG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#86DEDA"/>
+      <stop offset="100%" stop-color="#52B2AE"/>
+    </linearGradient>
+    <linearGradient id="hk-platSideG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5ABEBA"/>
+      <stop offset="100%" stop-color="#3A9E9A"/>
+    </linearGradient>
+    <linearGradient id="hk-cubeTopG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C8EEEE" stop-opacity="0.72"/>
+      <stop offset="100%" stop-color="#8AD8D8" stop-opacity="0.42"/>
+    </linearGradient>
+    <linearGradient id="hk-cubeFrontG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#B2E4E4" stop-opacity="0.52"/>
+      <stop offset="100%" stop-color="#72CACA" stop-opacity="0.22"/>
+    </linearGradient>
+    <linearGradient id="hk-cubeRightG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#96D8D8" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#62BEBE" stop-opacity="0.16"/>
+    </linearGradient>
+    <radialGradient id="hk-glowG" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD53D" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#F5A800" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="hk-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- PLATFORM LEGS -->
+  <rect x="112" y="420" width="24" height="22" rx="4" fill="#3A9E9A"/>
+  <rect x="264" y="420" width="24" height="22" rx="4" fill="#3A9E9A"/>
+  <!-- Platform front face (depth) -->
+  <rect x="78" y="407" width="244" height="17" rx="6" fill="url(#hk-platSideG)"/>
+  <!-- Platform top surface -->
+  <rect x="78" y="392" width="244" height="22" rx="8" fill="url(#hk-platG)"/>
+  <!-- Platform highlight strip -->
+  <rect x="90" y="394" width="220" height="7" rx="3.5" fill="#A8EEE8" opacity="0.38"/>
+
+  <!-- TAIL -->
+  <path d="M316 290 Q360 255 352 220 Q348 206 338 216" fill="none" stroke="#8878C4" stroke-width="15" stroke-linecap="round"/>
+  <path d="M316 290 Q360 255 352 220" fill="none" stroke="#A898D8" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- BODY -->
+  <ellipse cx="200" cy="298" rx="130" ry="104"/>
+  <ellipse cx="200" cy="298" rx="130" ry="104" fill="url(#hk-bodyG)"/>
+  <!-- body shadow -->
+  <ellipse cx="208" cy="316" rx="116" ry="88" fill="#6858A8" opacity="0.11"/>
+  <!-- belly -->
+  <ellipse cx="197" cy="312" rx="82" ry="80" fill="#C4B0E0" opacity="0.44"/>
+
+  <!-- FEET -->
+  <ellipse cx="147" cy="388" rx="42" ry="20" fill="#8070BC"/>
+  <ellipse cx="147" cy="384" rx="42" ry="16" fill="#9888CC"/>
+  <ellipse cx="131" cy="386" rx="7" ry="5" fill="#7060AC" opacity="0.55"/>
+  <ellipse cx="147" cy="390" rx="7" ry="5" fill="#7060AC" opacity="0.55"/>
+  <ellipse cx="163" cy="386" rx="7" ry="5" fill="#7060AC" opacity="0.55"/>
+
+  <ellipse cx="253" cy="388" rx="42" ry="20" fill="#8070BC"/>
+  <ellipse cx="253" cy="384" rx="42" ry="16" fill="#9888CC"/>
+  <ellipse cx="237" cy="386" rx="7" ry="5" fill="#7060AC" opacity="0.55"/>
+  <ellipse cx="253" cy="390" rx="7" ry="5" fill="#7060AC" opacity="0.55"/>
+  <ellipse cx="269" cy="386" rx="7" ry="5" fill="#7060AC" opacity="0.55"/>
+
+  <!-- CRYSTAL CUBE — drawn before paws/head so they render on top -->
+  <!-- Amber interior glow -->
+  <ellipse cx="200" cy="358" rx="68" ry="46" fill="url(#hk-glowG)"/>
+
+  <!-- Top face -->
+  <polygon points="156,320 242,320 270,298 184,298" fill="url(#hk-cubeTopG)" stroke="#7EC8C8" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- Front face -->
+  <polygon points="156,320 242,320 242,392 156,392" fill="url(#hk-cubeFrontG)" stroke="#7EC8C8" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- Right face -->
+  <polygon points="242,320 270,298 270,370 242,392" fill="url(#hk-cubeRightG)" stroke="#7EC8C8" stroke-width="1.6" stroke-linejoin="round"/>
+
+  <!-- Book inside cube (amber, glowing) -->
+  <g transform="translate(199,358)" filter="url(#hk-glow)">
+    <path d="M-23,-22 C-23,-26 -4,-26 -2,-22 L-2,18 C-4,14 -23,14 -23,10Z" fill="#F5C518"/>
+    <path d="M2,-22 C2,-26 21,-26 21,-22 L21,10 C21,14 2,14 2,18Z" fill="#FFD53D"/>
+    <rect x="-2" y="-23" width="4" height="43" rx="2" fill="#E8A200"/>
+    <line x1="-19" y1="-12" x2="-5" y2="-12" stroke="#D08800" stroke-width="1.5" opacity="0.8"/>
+    <line x1="-19" y1="-5" x2="-5" y2="-5" stroke="#D08800" stroke-width="1.5" opacity="0.8"/>
+    <line x1="-19" y1="2" x2="-5" y2="2" stroke="#D08800" stroke-width="1.5" opacity="0.8"/>
+    <line x1="-19" y1="9" x2="-9" y2="9" stroke="#D08800" stroke-width="1.2" opacity="0.5"/>
+    <line x1="5" y1="-12" x2="19" y2="-12" stroke="#C07800" stroke-width="1.5" opacity="0.8"/>
+    <line x1="5" y1="-5" x2="19" y2="-5" stroke="#C07800" stroke-width="1.5" opacity="0.8"/>
+    <line x1="5" y1="2" x2="19" y2="2" stroke="#C07800" stroke-width="1.5" opacity="0.8"/>
+    <line x1="5" y1="9" x2="15" y2="9" stroke="#C07800" stroke-width="1.2" opacity="0.5"/>
+  </g>
+
+  <!-- Question marks -->
+  <text x="162" y="386" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="19" fill="#F5C518" opacity="0.9" filter="url(#hk-glow)">?</text>
+  <text x="193" y="316" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="13" fill="#F5C518" opacity="0.78" transform="rotate(-12 193 316)" filter="url(#hk-glow)">?</text>
+
+  <!-- Atom (right face) -->
+  <g transform="translate(258,334)" filter="url(#hk-glow)" opacity="0.86">
+    <circle cx="0" cy="0" r="4" fill="#FFD53D"/>
+    <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="none" stroke="#FFD53D" stroke-width="1.5"/>
+    <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="none" stroke="#FFD53D" stroke-width="1.5" transform="rotate(60)"/>
+    <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="none" stroke="#FFD53D" stroke-width="1.5" transform="rotate(120)"/>
+  </g>
+  <!-- Decorative dots on cube -->
+  <circle cx="246" cy="386" r="2.8" fill="#F5C518" opacity="0.58"/>
+  <circle cx="255" cy="377" r="2" fill="#F5C518" opacity="0.45"/>
+
+  <!-- FRONT PAWS (resting on cube top, drawn over cube) -->
+  <!-- Left paw -->
+  <ellipse cx="161" cy="325" rx="34" ry="15" fill="#9888CC" transform="rotate(-10 161 325)"/>
+  <ellipse cx="145" cy="325" rx="8" ry="6" fill="#8878BC" transform="rotate(-10 145 325)"/>
+  <ellipse cx="161" cy="328" rx="8" ry="6" fill="#8878BC" transform="rotate(-10 161 328)"/>
+  <ellipse cx="177" cy="324" rx="8" ry="6" fill="#8878BC" transform="rotate(-10 177 324)"/>
+  <!-- Right paw -->
+  <ellipse cx="239" cy="325" rx="34" ry="15" fill="#9888CC" transform="rotate(10 239 325)"/>
+  <ellipse cx="223" cy="324" rx="8" ry="6" fill="#8878BC" transform="rotate(10 223 324)"/>
+  <ellipse cx="239" cy="328" rx="8" ry="6" fill="#8878BC" transform="rotate(10 239 328)"/>
+  <ellipse cx="255" cy="325" rx="8" ry="6" fill="#8878BC" transform="rotate(10 255 325)"/>
+
+  <!-- EARS (drawn before head so head renders on top at edges) -->
+  <circle cx="120" cy="110" r="32" fill="#8070BC"/>
+  <ellipse cx="120" cy="112" rx="20" ry="22" fill="#F4A8B8"/>
+  <circle cx="280" cy="110" r="32" fill="#8070BC"/>
+  <ellipse cx="280" cy="112" rx="20" ry="22" fill="#F4A8B8"/>
+
+  <!-- HEAD -->
+  <circle cx="200" cy="176" r="93" fill="url(#hk-headG)"/>
+  <!-- subtle sheen top-left -->
+  <ellipse cx="172" cy="148" rx="50" ry="36" fill="white" opacity="0.065" transform="rotate(-25 172 148)"/>
+
+  <!-- EYEBROWS -->
+  <path d="M144 148 Q163 136 181 144" fill="none" stroke="#4A3878" stroke-width="7" stroke-linecap="round"/>
+  <path d="M219 144 Q237 136 256 148" fill="none" stroke="#4A3878" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- LEFT EYE -->
+  <ellipse cx="167" cy="167" rx="25" ry="27" fill="white" transform="rotate(-4 167 167)"/>
+  <circle cx="170" cy="169" r="18" fill="#18103C"/>
+  <circle cx="170" cy="169" r="11" fill="#28184C"/>
+  <circle cx="161" cy="159" r="7.5" fill="white"/>
+  <circle cx="176" cy="165" r="4" fill="white" opacity="0.62"/>
+
+  <!-- RIGHT EYE -->
+  <ellipse cx="233" cy="167" rx="25" ry="27" fill="white" transform="rotate(4 233 167)"/>
+  <circle cx="230" cy="169" r="18" fill="#18103C"/>
+  <circle cx="230" cy="169" r="11" fill="#28184C"/>
+  <circle cx="239" cy="159" r="7.5" fill="white"/>
+  <circle cx="224" cy="165" r="4" fill="white" opacity="0.62"/>
+
+  <!-- MUZZLE -->
+  <ellipse cx="200" cy="218" rx="57" ry="42" fill="#C8B4E0"/>
+  <ellipse cx="193" cy="208" rx="42" ry="24" fill="white" opacity="0.18"/>
+  <ellipse cx="207" cy="230" rx="50" ry="30" fill="#A898CC" opacity="0.16"/>
+
+  <!-- NOSTRILS -->
+  <ellipse cx="182" cy="223" rx="11" ry="8" fill="#5A4898" opacity="0.72"/>
+  <ellipse cx="218" cy="223" rx="11" ry="8" fill="#5A4898" opacity="0.72"/>
+
+  <!-- SMILE -->
+  <path d="M180 244 Q200 262 220 244" fill="none" stroke="#6858A8" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- CHEEK FRECKLES -->
+  <circle cx="150" cy="202" r="5" fill="#7868B8" opacity="0.32"/>
+  <circle cx="160" cy="216" r="4" fill="#7868B8" opacity="0.26"/>
+  <circle cx="250" cy="202" r="5" fill="#7868B8" opacity="0.32"/>
+  <circle cx="240" cy="216" r="4" fill="#7868B8" opacity="0.26"/>
+</svg>

@@ -7,6 +7,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [3.5.1] - 2026-10-13
+
+### Changed
+
+- **Docs accuracy pass (#110).** README, `docs/USAGE.md`, `docs/token-optimization.md`, `ROADMAP.md`, `docs/MIGRATION.md`, `SECURITY.md` and `hooks/README.md` were checked against the code and corrected; the package description now lists Hermes/OpenClaw. The README gained a "Built with 100xPrism" section with product logos.
+- **Internal planning docs are no longer tracked (#111).** `docs/superpowers/` and `.superpowers/` are gitignored; the remaining references point at an archived permalink.
+
 ## [3.5.0] - 2026-10-11
 
 ### Added

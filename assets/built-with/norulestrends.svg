@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="NoRulesTrends">
+  <title>NoRulesTrends</title>
+  <!--
+    "The line that breaks rank."
+
+    Two rules sit straight and obedient. A third starts in line with them,
+    then lifts out of the stack and runs off the top right. That is the brand
+    argument in one gesture: the rules are the ordinary thing, and the one
+    that leaves is the point.
+
+    Replaces the swing tag, whose lime shape was a sunrise over a horizon —
+    a "paradise" pun that stopped meaning anything at the rebrand, and whose
+    tag silhouette read as retail. This is freedom of style, not a shop.
+
+    Why a fixed ink tile rather than a mark that floats on any background:
+    lime (#C9E85A, relative luminance 0.709) on oat (#FBF8F1, 0.811) is about
+    1.1:1 — the escaping stroke, the one element that must not vanish, would.
+    On ink the oat rules (~12.6:1) and the lime stroke (~12:1) both hold,
+    including at the 16px a browser tab actually renders.
+
+    Canonical source. app/icon.svg mirrors this geometry; the PNGs in this
+    directory are rendered from it by scripts/render-logo.mjs; assets.ts
+    inlines it via scripts/build-brand-type.py. Edit here.
+  -->
+  <rect width="64" height="64" rx="14" fill="#1C1A17" />
+
+  <!-- The one that leaves. Flat on the left so it reads as part of the stack
+       before it climbs; round caps so the exit is movement, not a cut. -->
+  <path
+    d="M15.8 28 Q37.5 28 48.5 17.3"
+    fill="none"
+    stroke="#C9E85A"
+    stroke-width="5.5"
+    stroke-linecap="round"
+  />
+
+  <!-- The ones that stay. Unequal lengths so the stack reads as written
+       rules rather than a menu icon. -->
+  <rect x="13" y="34.5" width="28.2" height="5.5" rx="2.75" fill="#FBF8F1" />
+  <rect x="13" y="44" width="22" height="5.5" rx="2.75" fill="#FBF8F1" />
+</svg>
