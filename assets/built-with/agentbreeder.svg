@@ -1,0 +1,24 @@
+<svg width="256" height="256" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark navy background with rounded corners -->
+  <rect width="100" height="100" rx="22" ry="22" fill="#0d1527"/>
+  <!-- Hexagon outline (flat-top: vertices at left/right) -->
+  <polygon
+    points="86,50 68,81 32,81 14,50 32,19 68,19"
+    fill="none"
+    stroke="#22c55e"
+    stroke-width="3.2"
+    stroke-linejoin="round"
+  />
+  <!-- Lines from center to satellite nodes -->
+  <line x1="50" y1="50" x2="33" y2="34" stroke="#22c55e" stroke-width="2.2"/>
+  <line x1="50" y1="50" x2="67" y2="34" stroke="#22c55e" stroke-width="2.2"/>
+  <line x1="50" y1="50" x2="33" y2="66" stroke="#22c55e" stroke-width="2.2"/>
+  <line x1="50" y1="50" x2="67" y2="66" stroke="#22c55e" stroke-width="2.2"/>
+  <!-- Center node -->
+  <circle cx="50" cy="50" r="7.5" fill="#22c55e"/>
+  <!-- Satellite nodes -->
+  <circle cx="33" cy="34" r="5.5" fill="#22c55e"/>
+  <circle cx="67" cy="34" r="5.5" fill="#22c55e"/>
+  <circle cx="33" cy="66" r="5.5" fill="#22c55e"/>
+  <circle cx="67" cy="66" r="5.5" fill="#22c55e"/>
+</svg>
