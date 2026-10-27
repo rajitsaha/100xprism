@@ -1236,6 +1236,7 @@ section h2{margin-top:0;border-bottom-color:var(--line)}
 @media(max-width:900px){.dashboard-shell{grid-template-columns:1fr}.side-panel{position:static;display:flex;overflow-x:auto;gap:6px}.side-title{display:none}.tabbtn{min-width:150px;margin:0;white-space:nowrap}}
 @media(max-width:760px){.cards2,.hero-grid,.economics-flow{grid-template-columns:1fr}.wide{grid-column:auto}.wrap{padding:18px 14px 40px}header{padding:14px}.cards{grid-template-columns:1fr 1fr;gap:10px}.card .val{font-size:22px}.flow{grid-template-columns:1fr 1fr}.tree-row,.tree-children .tree-row,.rec-head{grid-template-columns:1fr;gap:5px}.whatif,.tradeoffs{grid-template-columns:1fr}td,th{padding:7px 8px}}
 @media(max-width:430px){.cards{grid-template-columns:1fr}.sub{width:100%}}
+.history-summary{margin:0 0 20px;padding:12px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}.history-summary summary{cursor:pointer;font-weight:600;font-size:12px}.history-summary table{font-size:12px;margin-top:12px}.history-summary p{color:var(--muted);font-size:12px;margin:10px 0 0}
 .howto{margin:-4px 0 14px;font-size:13px;color:var(--muted)}
 .howto summary{cursor:pointer;color:var(--text);user-select:none}
 .howto ul{margin:10px 0 0;padding-left:18px;line-height:1.6}
@@ -1292,9 +1293,9 @@ const WINDOWS=[['1d','1 day',1],['7d','7 days',7],['30d','30 days',30],['90d','3
 let LAST_DATA=null;
 function tabId(id){return 'tab-'+id;}
 function activeTab(){const saved=localStorage.getItem('100xprism-tab')||'overview';return TABS.some(t=>t[0]===saved)?saved:'overview';}
-function activeWindow(){const saved=localStorage.getItem('100xprism-window')||'30d';return WINDOWS.some(w=>w[0]===saved)?saved:'30d';}
-function setWindow(id){if(!WINDOWS.some(w=>w[0]===id))id='30d';localStorage.setItem('100xprism-window',id);if(LAST_DATA)render(LAST_DATA);}
-function windowDef(id){return WINDOWS.find(w=>w[0]===id)||WINDOWS[2];}
+function activeWindow(){const saved=localStorage.getItem('100xprism-window')||'all';return WINDOWS.some(w=>w[0]===saved)?saved:'all';}
+function setWindow(id){if(!WINDOWS.some(w=>w[0]===id))id='all';localStorage.setItem('100xprism-window',id);if(LAST_DATA)render(LAST_DATA);}
+function windowDef(id){return WINDOWS.find(w=>w[0]===id)||WINDOWS[WINDOWS.length-1];}
 function meteredDays(d){return Object.keys((d||{}).by_day_model_cost||{}).sort();}
 function daySpan(days){
  if(!days.length)return 0;
@@ -1328,6 +1329,24 @@ function dayInWindow(day,current,allDays){
  const end=(dated.length?dated[dated.length-1]:new Date().toISOString().slice(0,10));
  const cutoff=new Date(end+'T00:00:00'); cutoff.setDate(cutoff.getDate()-def[2]+1);
  return day>=cutoff.toISOString().slice(0,10)&&day<=end;
+}
+function diagnosticDays(d,current){
+ const rows=(d.by_day||[]).filter(row=>/^\\d{4}-\\d{2}-\\d{2}$/.test(row[0]));
+ const days=rows.map(row=>row[0]).sort();
+ return rows.filter(row=>dayInWindow(row[0],current,days)).sort((a,b)=>b[0].localeCompare(a[0]));
+}
+function sourceHistory(d){
+ return Object.entries(d.tool_model_day_tokens||{}).sort(([a],[b])=>a.localeCompare(b)).map(([tool,models])=>{
+  const days=[...new Set(Object.values(models).flatMap(raw=>Object.keys(raw||{})))].filter(day=>/^\\d{4}-\\d{2}-\\d{2}$/.test(day)).sort();
+  return {tool,start:days[0]||null,end:days[days.length-1]||null,days:days.length};
+ });
+}
+function historyPanel(d){
+ const rows=sourceHistory(d);if(!rows.length)return '';
+ const label=tool=>({'claude-code':'Claude Code',codex:'Codex',pi:'Pi'}[tool]||tool);
+ return `<details class=history-summary><summary>Available history by tool</summary><div class=table-wrap><table><tr><th>Tool</th><th>First recorded usage</th><th>Latest recorded usage</th><th>Active days</th></tr>`+
+  rows.map(row=>`<tr><td>${esc(label(row.tool))}</td><td>${esc(row.start||'No dated usage')}</td><td>${esc(row.end||'—')}</td><td>${row.days}</td></tr>`).join('')+
+  `</table></div><p>Each tool has its own available history. Usage recorded in the local store is retained after source transcripts disappear; dates before the first collection may be unavailable.</p></details>`;
 }
 function sumWindowDaily(raw,current){
  const days=Object.keys(raw||{}).sort(); let total=0;
@@ -2161,23 +2180,24 @@ function render(d){
  for(const[name,v]of scopedModels){diagnostics+=`<tr><td>${esc(name)}</td><td>${bar(v)}</td>
    <td>${fmt(v.cache_read)}</td><td>${fmt(v.output)}</td></tr>`;}
  diagnostics+='</table>';
- const allDiagnosticDays=(d.by_day||[]).map(row=>row[0]).sort(), days=(d.by_day||[]).filter(row=>dayInWindow(row[0],win,allDiagnosticDays)).slice(-30).reverse();
- diagnostics+=`<h2>${esc(winLabel)} active days</h2><table><tr><th>day</th><th>mix</th><th>read</th><th>out</th></tr>`;
+ const days=diagnosticDays(d,win);
+ diagnostics+=`<h2>${esc(winLabel)} active days <span class=muted>(${days.length})</span></h2><div class=table-wrap><table><tr><th>day</th><th>mix</th><th>read</th><th>out</th></tr>`;
  for(const[day,v]of days){diagnostics+=`<tr><td>${esc(day)}</td><td>${bar(v)}</td>
    <td>${fmt(v.cache_read)}</td><td>${fmt(v.output)}</td></tr>`;}
- diagnostics+='</table>';
+ diagnostics+='</table></div>';
+ const cache=d.cache||{},cacheView=d.cache?`<div class=cards><div class=card><div class=lbl>Lifetime cached context</div><div class=val>${fmt(cache.cache_read||0)}</div><div class=note>${((cache.cache_hit_ratio||0)*100).toFixed(1)}% cache hit ratio · ${((cache.cached_context_share||0)*100).toFixed(1)}% cached-context share</div></div><div class=card><div class=lbl>Estimated lifetime cache savings</div><div class=val>${money2(cache.estimated_savings)}</div><div class=note>Cache-read priced at ordinary model input rates; catalog estimate</div></div></div>`:'';
  const h=`<div class=dashboard-shell>${sideTabs(current)}<main>
-   ${windowButtons(win,d)}
+   ${windowButtons(win,d)}${historyPanel(d)}
    ${pane('recommendations',recommendationPanel(d),current)}
    ${pane('overview',overview+budget,current)}
    ${pane('delivery',delivery,current)}
    ${pane('github',(PRISM_SECURE?'<p class=muted>Fetching insights uses gh and accesses GitHub when github.enabled is true.</p><button data-action=github>Fetch GitHub insights</button>':'')+githubPanel(d.github,win,d),current)}
-   ${pane('sessions',sessions,current)}
+   ${pane('sessions',cacheView+sessions,current)}
    ${pane('skills',skills,current)}
    ${pane('diagnostics',diagnostics,current)}
  </main></div>`;
- const cache=d.cache||{},cacheView=d.cache?`<div class=cards><div class=card><div class=lbl>Lifetime cached context</div><div class=val>${fmt(cache.cache_read||0)}</div><div class=note>${((cache.cache_hit_ratio||0)*100).toFixed(1)}% cache hit ratio · ${((cache.cached_context_share||0)*100).toFixed(1)}% cached-context share</div></div><div class=card><div class=lbl>Estimated lifetime cache savings</div><div class=val>${money2(cache.estimated_savings)}</div><div class=note>Cache-read priced at ordinary model input rates; catalog estimate</div></div></div>`:'';
- document.getElementById('app').innerHTML=coveragePanel(d)+(d.refreshing?scanStatus(d,true):'')+cacheView+h;
+
+ document.getElementById('app').innerHTML=coveragePanel(d)+(d.refreshing?scanStatus(d,true):'')+h;
  const newForm=document.getElementById('localSearchForm');if(oldSearch&&newForm){for(const[key,value]of Object.entries(oldSearch))if(newForm.elements.namedItem(key))newForm.elements.namedItem(key).value=value;document.getElementById('localSearchResults').innerHTML=oldResults||'';}
 }
 document.addEventListener('click',event=>{const b=event.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'theme':toggleTheme();break;case'refresh':refresh();break;case'github':fetchGithub();break;case'window':setWindow(b.dataset.window);break;case'tab':showTab(b.dataset.tab);break;case'copy':copyText(b.dataset.copy);break;}});

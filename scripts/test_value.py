@@ -301,6 +301,45 @@ class DeliveryEconomicsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), [True, False, True])
 
+    def test_diagnostics_show_every_day_in_selected_history(self):
+        script = td.PAGE.split("<script>", 1)[1].split("</script>", 1)[0]
+        pick = lambda prefix: next(l for l in script.splitlines() if l.startswith(prefix))
+        def helper(name):
+            start = script.index("function " + name + "(")
+            return script[start:script.index("\n}\n", start) + 3]
+        probe = "\n".join([pick("const WINDOWS="), pick("function windowDef("),
+            helper("dayInWindow"), helper("diagnosticDays"),
+            "const rows=Array.from({length:70},(_,i)=>"
+            "[new Date(Date.UTC(2026,5,1+i)).toISOString().slice(0,10),{}]);",
+            "const d={by_day:[...rows,['unknown',{}]]};",
+            "console.log(JSON.stringify(['30d','90d','all'].map(w=>"
+            "diagnosticDays(d,w).map(r=>r[0]))));"])
+        result = subprocess.run(["node", "-e", probe], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        recent, quarter, lifetime = json.loads(result.stdout)
+        self.assertEqual(len(recent), 30)
+        self.assertEqual(len(quarter), 70)
+        self.assertEqual(len(lifetime), 70)
+        self.assertEqual(lifetime[-1], "2026-06-01")
+        self.assertEqual(lifetime, sorted(lifetime, reverse=True))
+
+    def test_source_history_distinguishes_available_tool_ranges(self):
+        script = td.PAGE.split("<script>", 1)[1].split("</script>", 1)[0]
+        start = script.index("function sourceHistory(")
+        helper = script[start:script.index("\n}\n", start) + 3]
+        data = {"tool_model_day_tokens": {
+            "claude-code": {"sonnet": {"2026-09-11": 10, "unknown": 5}},
+            "codex": {"sol": {"2026-06-27": 1, "2026-10-11": 2},
+                      "luna": {"2026-06-27": 4}},
+        }}
+        result = subprocess.run(["node", "-e", helper + "\nconsole.log(JSON.stringify("
+            "sourceHistory(" + json.dumps(data) + ")));"], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [
+            {"tool": "claude-code", "start": "2026-09-11", "end": "2026-09-11", "days": 1},
+            {"tool": "codex", "start": "2026-06-27", "end": "2026-10-11", "days": 2},
+        ])
+
 
 class ScanHomeTest(unittest.TestCase):
     def test_mangle_path_non_alnum_to_dash(self):
