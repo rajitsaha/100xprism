@@ -524,6 +524,10 @@ The Economics view keeps three layers apart:
 not a performance score. Also shown: main-vs-subagent split, pair-loop run costs,
 lifetime cache savings, and ranked offline recommendations.
 
+The page defaults to a light theme matching the documentation site, with a
+persisted light/dark toggle; tables scroll horizontally on narrow screens and
+motion respects `prefers-reduced-motion`.
+
 ### Budgets
 
 Add to `~/.100xprism/config.json`; every key defaults to `null` (off):
