@@ -16,6 +16,12 @@ def line(n=10,session='one',text='hello'):
         'message':{'role':'assistant','model':'claude-sonnet-4-5','content':text,
         'usage':{'input_tokens':n,'output_tokens':1}}})+'\n'
 
+def assert_no_pending_wal(test,db):
+    # Some SQLite builds leave empty -wal/-shm files after close; only unflushed frames matter.
+    wal=Path(str(db)+'-wal')
+    test.assertTrue(not wal.exists() or wal.stat().st_size==0)
+
+
 class CollectorTests(unittest.TestCase):
     def setUp(self):
         self.discovery=patch.object(collector._value,'scan_home',return_value=({},{}))
@@ -358,8 +364,7 @@ class SubprocessIntegrationTests(unittest.TestCase):
             completed=subprocess.run([sys.executable,'-B',script,'--root',str(root),'--db',str(candidate_db),'--backup-from',str(db)],
                                      env=env,capture_output=True,text=True,timeout=20)
             self.assertEqual(completed.returncode,0,completed.stderr)
-            self.assertFalse(Path(str(candidate_db)+'-wal').exists())
-            self.assertFalse(Path(str(candidate_db)+'-shm').exists())
+            assert_no_pending_wal(self,candidate_db)
             cloned=TokenStore(candidate_db)
             self.assertEqual(cloned.summaries()[0]['totals']['input'],17)
             cloned.close()
@@ -408,7 +413,6 @@ class MaintenanceRaceTests(unittest.TestCase):
                 self.assertEqual(store.search('needle'),[])
                 self.assertFalse(store.conn.execute("SELECT name FROM sqlite_master WHERE name='session_content_fts'").fetchone())
                 store.close()
-                self.assertFalse(Path(str(db)+'-wal').exists())
-                self.assertFalse(Path(str(db)+'-shm').exists())
+                assert_no_pending_wal(self,db)
 
 if __name__=='__main__': unittest.main()
