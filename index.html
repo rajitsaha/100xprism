@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>100xPrism — Documentation · one config for Claude Code, Cursor, Codex, Hermes/OpenClaw &amp; Pi</title>
-  <meta name="description" content="The complete 100xPrism documentation hub: install, 28 slash commands, 40 auto-trigger skills, the full supported/unsupported matrix, context economics, and the offline token &amp; value dashboard." />
-  <meta name="keywords" content="100xprism, documentation, AI coding cost, token economics, value economics, Claude Code, Cursor, Codex, Hermes, OpenClaw, Pi, one config for AI coding tools, quality gates, agentic coding, offline AI dashboard, supported features" />
+  <meta name="description" content="100xPrism is the open-source workflow and context-efficiency layer for Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi. Ship with repeatable quality gates while loading less standing context." />
+  <meta name="keywords" content="100xprism, documentation, AI coding cost, token economics, value economics, Claude Code, Cursor, Codex, Hermes, OpenClaw, Pi, one config for AI coding tools, quality gates, agentic coding, local AI dashboard, supported features" />
   <link rel="canonical" href="https://rajitsaha.github.io/100xprism/" />
-  <meta property="og:title" content="100xPrism — Documentation" />
-  <meta property="og:description" content="One source of truth. 68 modules generate native config for Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi. Quality gates run on every commit. Complete docs, including exactly what is and isn't supported." />
+  <meta property="og:title" content="100xPrism — Workflow and context efficiency for AI coding tools" />
+  <meta property="og:description" content="One source of truth generates native workflows for five AI coding tools. Preserve reliable engineering gates while loading less standing context." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://rajitsaha.github.io/100xprism/" />
   <meta property="og:image" content="https://raw.githubusercontent.com/rajitsaha/100xprism/main/assets/100xprism-hero.svg" />
@@ -23,7 +23,7 @@
     "alternateName": "100xPrism",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "macOS, Linux, Windows (WSL)",
-    "description": "100xPrism keeps one source of truth for AI coding workflows and emits native config for Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi. It enforces quality gates on every commit and measures token cost against observable delivery, fully offline.",
+    "description": "100xPrism is an open-source workflow and context-efficiency layer for AI coding tools. It keeps one source of truth, emits native config for Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi, provides optional gate hooks and local reports that separate estimated token cost from observable delivery. Optional GitHub insights require network access.",
     "url": "https://rajitsaha.github.io/100xprism/",
     "downloadUrl": "https://www.npmjs.com/package/100xprism",
     "codeRepository": "https://github.com/rajitsaha/100xprism",
@@ -40,7 +40,7 @@
       {
         "@type": "Question",
         "name": "What is 100xPrism?",
-        "acceptedAnswer": { "@type": "Answer", "text": "100xPrism keeps one source of truth — 68 modules — and generates native configuration for Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi. It enforces a five-point quality gate on every commit and ships a fully offline dashboard that measures token cost against observable engineering delivery." }
+        "acceptedAnswer": { "@type": "Answer", "text": "100xPrism is an open-source workflow and context-efficiency layer for AI coding tools. Its 68-module source of truth generates native configuration for Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi. It provides quality-check workflows, optional gate hooks and a local dashboard that separates estimated token cost from observable engineering delivery." }
       },
       {
         "@type": "Question",
@@ -60,12 +60,12 @@
       {
         "@type": "Question",
         "name": "How does 100xPrism measure token cost?",
-        "acceptedAnswer": { "@type": "Answer", "text": "It reads local transcript files. Claude Code and Codex expose exact provider token counters. Cursor and Antigravity local formats expose no counters, so they contribute activity coverage but are never assigned an invented dollar cost. Pi is metered best-effort from rows that carry native usage fields. All computation is local — nothing is uploaded." }
+        "acceptedAnswer": { "@type": "Answer", "text": "It reads local transcript files. Claude Code and Codex expose exact provider token counters. Cursor and Antigravity local formats expose no counters, so they contribute activity coverage but are never assigned an invented dollar cost. Pi is metered best-effort from rows that carry native usage fields. Token-cost computation is local and does not upload transcripts; optional GitHub insights use authenticated network requests." }
       },
       {
         "@type": "Question",
         "name": "Does 100xPrism send my data anywhere?",
-        "acceptedAnswer": { "@type": "Answer", "text": "No. The token and value dashboards are fully offline. They read local files on your machine and serve a local URL. Optional GitHub CLI integration can fetch pull request metadata, but only if you enable it." }
+        "acceptedAnswer": { "@type": "Answer", "text": "Core usage collection and reporting run locally without uploading transcripts. Optional GitHub insights make authenticated GitHub API requests when enabled and invoked. Your AI coding tools have their own data-handling behavior." }
       },
       {
         "@type": "Question",
@@ -446,22 +446,22 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="pill"><b>v3.2</b> One source of truth · MIT · fully offline</div>
-      <h1>Stop vibe coding.<br><span class="grad">Ship production-grade software.</span></h1>
-      <p class="sub"><strong>68 modules</strong> generate native config for Claude&nbsp;Code, Cursor, Codex, Hermes/OpenClaw and Pi. A five-point quality gate runs on every commit. An offline dashboard shows what each session cost next to what it shipped.</p>
+      <div class="pill"><b>v3.5</b> Workflow + context efficiency for AI coding tools</div>
+      <h1>Bring repeatable checks to AI-assisted development.<br><span class="grad">Carry less standing context.</span></h1>
+      <p class="sub"><strong>100xPrism is an open-source workflow and context-efficiency layer.</strong> Its 68-module source of truth generates native skills, hooks and project guidance for Claude&nbsp;Code, Cursor, Codex, Hermes/OpenClaw and Pi. Engineers get a repeatable path from spec to release; specialist guidance loads only when the work needs it.</p>
       <div class="cta-row">
         <a class="btn btn-p" href="#install">Install →</a>
         <a class="btn btn-g" href="#support">What's supported?</a>
       </div>
       <p style="font-size:.82rem;color:var(--faint);margin-top:16px;font-family:var(--mono)">
-        This page is the complete documentation. The repo keeps only a README.
+        Full hosted documentation · source, architecture notes and release history stay in GitHub
       </p>
     </div>
 
     <!-- ============ DIAGRAM 1 · FAN-OUT ============ -->
     <figure class="anim narrow" data-anim style="margin:0">
       <div class="svgbox">
-      <svg viewBox="0 22 460 268" role="img" aria-label="One source of 68 modules fans out to five supported tools: Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi (Hermes/OpenClaw not pictured below — see the support table). Four removed adapters peel away.">
+      <svg viewBox="0 10 460 312" role="img" aria-label="One source of 68 modules fans out to five supported tools: Claude Code, Cursor, Codex, Hermes/OpenClaw and Pi. Four removed adapters peel away.">
         <defs>
           <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#38bdf8"/>
@@ -481,51 +481,56 @@
 
         <!-- branches -->
         <g fill="none" stroke-width="1.7" stroke-linecap="round">
-          <path class="flow" d="M134 140 C 190 140, 200 48, 268 48"  stroke="#10b981"/>
-          <path class="flow" d="M134 150 C 195 150, 205 105, 268 105" stroke="#14b8a6"/>
-          <path class="flow" d="M134 160 C 195 160, 205 162, 268 162" stroke="#0ea5e9"/>
-          <path class="flow" d="M134 170 C 190 170, 200 219, 268 219" stroke="#38bdf8"/>
+          <path class="flow" d="M134 128 C 190 128, 200 35, 268 35" stroke="#10b981"/>
+          <path class="flow" d="M134 140 C 195 140, 205 81, 268 81" stroke="#14b8a6"/>
+          <path class="flow" d="M134 151 C 195 151, 205 127, 268 127" stroke="#06b6d4"/>
+          <path class="flow" d="M134 162 C 195 162, 205 173, 268 173" stroke="#0ea5e9"/>
+          <path class="flow" d="M134 174 C 190 174, 200 219, 268 219" stroke="#38bdf8"/>
         </g>
 
         <!-- travelling packets -->
         <g class="pkt">
-          <circle r="4" fill="#10b981"><animateMotion dur="3.1s" repeatCount="indefinite" path="M134 140 C 190 140, 200 48, 268 48"/></circle>
-          <circle r="4" fill="#14b8a6"><animateMotion dur="3.1s" begin=".28s" repeatCount="indefinite" path="M134 150 C 195 150, 205 105, 268 105"/></circle>
-          <circle r="4" fill="#0ea5e9"><animateMotion dur="3.1s" begin=".56s" repeatCount="indefinite" path="M134 160 C 195 160, 205 162, 268 162"/></circle>
-          <circle r="4" fill="#38bdf8"><animateMotion dur="3.1s" begin=".84s" repeatCount="indefinite" path="M134 170 C 190 170, 200 219, 268 219"/></circle>
+          <circle r="4" fill="#10b981"><animateMotion dur="3.1s" repeatCount="indefinite" path="M134 128 C 190 128, 200 35, 268 35"/></circle>
+          <circle r="4" fill="#14b8a6"><animateMotion dur="3.1s" begin=".22s" repeatCount="indefinite" path="M134 140 C 195 140, 205 81, 268 81"/></circle>
+          <circle r="4" fill="#06b6d4"><animateMotion dur="3.1s" begin=".44s" repeatCount="indefinite" path="M134 151 C 195 151, 205 127, 268 127"/></circle>
+          <circle r="4" fill="#0ea5e9"><animateMotion dur="3.1s" begin=".66s" repeatCount="indefinite" path="M134 162 C 195 162, 205 173, 268 173"/></circle>
+          <circle r="4" fill="#38bdf8"><animateMotion dur="3.1s" begin=".88s" repeatCount="indefinite" path="M134 174 C 190 174, 200 219, 268 219"/></circle>
         </g>
 
         <!-- targets -->
         <g font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#1e293b">
           <g filter="url(#sft)">
-            <rect x="268" y="31" width="150" height="34" rx="10" fill="rgba(255,255,255,.9)" stroke="rgba(16,185,129,.4)"/>
-            <rect x="268" y="88" width="150" height="34" rx="10" fill="rgba(255,255,255,.9)" stroke="rgba(20,184,166,.4)"/>
-            <rect x="268" y="145" width="150" height="34" rx="10" fill="rgba(255,255,255,.9)" stroke="rgba(14,165,233,.4)"/>
-            <rect x="268" y="202" width="150" height="34" rx="10" fill="rgba(255,255,255,.9)" stroke="rgba(56,189,248,.4)"/>
+            <rect x="268" y="20" width="160" height="30" rx="9" fill="rgba(255,255,255,.9)" stroke="rgba(16,185,129,.4)"/>
+            <rect x="268" y="66" width="160" height="30" rx="9" fill="rgba(255,255,255,.9)" stroke="rgba(20,184,166,.4)"/>
+            <rect x="268" y="112" width="160" height="30" rx="9" fill="rgba(255,255,255,.9)" stroke="rgba(6,182,212,.4)"/>
+            <rect x="268" y="158" width="160" height="30" rx="9" fill="rgba(255,255,255,.9)" stroke="rgba(14,165,233,.4)"/>
+            <rect x="268" y="204" width="160" height="30" rx="9" fill="rgba(255,255,255,.9)" stroke="rgba(56,189,248,.4)"/>
           </g>
-          <text x="285" y="52">Claude Code</text>
-          <text x="285" y="109">Cursor</text>
-          <text x="285" y="166">Codex</text>
-          <text x="285" y="223">Pi</text>
+          <text x="285" y="39">Claude Code</text>
+          <text x="285" y="85">Cursor</text>
+          <text x="285" y="131">Codex</text>
+          <text x="285" y="177">Pi</text>
+          <text x="285" y="223">Hermes / OpenClaw</text>
           <g fill="none" stroke="#059669" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="26" class="tick">
-            <path d="M396 47 l4 4 l7-9"/><path d="M396 104 l4 4 l7-9"/>
-            <path d="M396 161 l4 4 l7-9"/><path d="M396 218 l4 4 l7-9"/>
+            <path d="M402 34 l4 4 l7-9"/><path d="M402 80 l4 4 l7-9"/>
+            <path d="M402 126 l4 4 l7-9"/><path d="M402 172 l4 4 l7-9"/>
+            <path d="M402 218 l4 4 l7-9"/>
           </g>
         </g>
 
         <!-- removed adapters peeling away -->
         <g class="peel">
-          <path d="M112 198 C 116 232, 128 244, 150 250" fill="none" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 4"/>
-          <rect x="150" y="230" width="200" height="46" rx="11" fill="rgba(248,250,252,.92)" stroke="rgba(203,213,225,.95)"/>
+          <path d="M112 198 C 116 248, 128 270, 150 276" fill="none" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 4"/>
+          <rect x="150" y="250" width="200" height="46" rx="11" fill="rgba(248,250,252,.92)" stroke="rgba(203,213,225,.95)"/>
           <g font-family="ui-monospace,monospace" font-size="9" fill="#94a3b8">
-            <text x="163" y="247">Windsurf · Copilot</text>
-            <text x="163" y="259">Gemini · Antigravity</text>
+            <text x="163" y="267">Windsurf · Copilot</text>
+            <text x="163" y="279">Gemini · Antigravity</text>
           </g>
-          <text x="163" y="271" font-family="ui-monospace,monospace" font-size="8" fill="#be123c" font-weight="650">removed in v3.0.0</text>
+          <text x="163" y="291" font-family="ui-monospace,monospace" font-size="8" fill="#be123c" font-weight="650">removed in v3.0.0</text>
         </g>
       </svg>
       </div>
-      <figcaption>One source of truth → Claude Code, Cursor, Codex and Pi shown; Hermes/OpenClaw is a fifth native emit target (see the support table below). Four other adapters were removed in v3.0.0.</figcaption>
+      <figcaption>One source of truth → five native emit targets. Four always-on concatenation adapters were removed in v3.0.0.</figcaption>
     </figure>
   </div>
 </header>
@@ -552,7 +557,7 @@ rajitsaha/100xprism/main/get.sh | bash</code></pre>
     </div>
   </div>
 
-  <p>Either way, <code>100xprism install</code> clones the toolkit to <code>~/100xprism</code> and provisions your AI tools. The npm package is a thin launcher — modules, hooks and plugins live in that clone, which <code>100xprism update</code> keeps current.</p>
+  <p>Either way, <code>100xprism install</code> clones the toolkit to <code>~/100xprism</code> and provisions your AI tools. The npm package is a thin launcher — modules, hooks and plugins live in that clone, which <code>100xprism update</code> keeps current. On macOS, an interactive install opens the token dashboard once the first scan finishes (<code>100xprism install --no-open</code> skips that). If <code>~/100xprism</code> has local changes, install refuses and touches nothing, listing the changed files with the <code>git stash -u</code> or discard command to run. No need to delete the clone.</p>
 
   <div class="note good">
     <p><strong>Install does not edit your shell rc files.</strong> It never touches <code>~/.zshrc</code>, <code>~/.bashrc</code> or <code>~/.bash_profile</code>. Before installing, it cleans legacy startup hooks, stale command links, and any old owned dashboard process. For optional aliases in the current terminal only, run <code>source ~/100xprism/shell/aliases.sh</code>.</p>
@@ -573,11 +578,15 @@ rajitsaha/100xprism/main/get.sh | bash</code></pre>
         <tr><td><code>100xprism check</code></td><td>Report what an update would change, without changing anything</td></tr>
         <tr><td><code>100xprism optimize</code></td><td>Narrow the always-on skill index (see <a href="#context">context economics</a>)</td></tr>
         <tr><td><code>100xprism slim</code></td><td>Compatibility alias for <code>optimize</code></td></tr>
-        <tr><td><code>100xprism audit</code></td><td>Standing-context estimate plus an inventory of skills, plugins and hooks</td></tr>
+        <tr><td><code>100xprism audit</code></td><td>Standing-context estimate, an inventory of skills, plugins and hooks, and any drift: dead hook paths, v1 leftovers, a missing catalog</td></tr>
+        <tr><td><code>100xprism audit --fix</code></td><td>Repair that drift; exits non-zero if the catalog rebuild fails</td></tr>
+        <tr><td><code>100xprism hermes</code></td><td>Install or refresh the Hermes/OpenClaw skills on demand</td></tr>
         <tr><td><code>100xprism tokens</code></td><td>Start the offline token dashboard</td></tr>
         <tr><td><code>100xprism dashboard</code></td><td>Alias for <code>tokens</code></td></tr>
         <tr><td><code>100xprism value</code></td><td>Delivery economics — cost joined to observable delivery</td></tr>
-        <tr><td><code>100xprism uninstall</code></td><td>Stop the dashboard, remove legacy shell entries and symlinks</td></tr>
+        <tr><td><code>100xprism uninstall</code></td><td>Remove everything 100xprism wrote at user scope: generated skills and aliases, managed hooks on every event, Hermes skills, the catalog and caches, shell entries and links. Your own skills, commands, hooks, settings and data are kept</td></tr>
+        <tr><td><code>100xprism uninstall --projects</code></td><td>…and the generated files in every tracked repo. A hand-written <code>AGENTS.md</code> and your own Codex hook groups are kept</td></tr>
+        <tr><td><code>100xprism uninstall --purge</code></td><td>…and all of <code>~/.100xprism</code>, including the <code>removed-artifacts</code> recovery copies</td></tr>
       </tbody>
     </table>
   </div>
@@ -591,9 +600,11 @@ rajitsaha/100xprism/main/get.sh | bash</code></pre>
 100xprism update --plugins-only     <span class="c-cmt"># refresh plugins only</span>
 100xprism update --no-slim          <span class="c-cmt"># skip the one-time always-on index slim</span>
 100xprism slim --dry-run            <span class="c-cmt"># preview what slimming would change</span>
+100xprism audit --fix               <span class="c-cmt"># repair drift: dead hook paths, v1 leftovers, missing catalog</span>
 npm install -g 100xprism@latest     <span class="c-cmt"># upgrade the launcher itself</span></code></pre>
 
   <p><code>install</code> and <code>update</code> are <strong>fully reconciling</strong>, not append-only. Every run <strong>adds</strong> newly shipped skills, slash commands and curated plugins; <strong>updates</strong> changed ones in place; and <strong>removes</strong> those deleted or merged upstream. Your own hand-authored skills and commands, and any plugins you enabled yourself, are never touched.</p>
+  <p><strong>Nothing is removed without proof that 100xprism wrote it</strong>: a generated marker, a manifest entry, a managed <code>/100xprism/hooks/</code> path, or the exact header of a known v1 file. Upgrading through npm only drops hooks that point into the package being replaced — skills, packs and your startup hooks survive an upgrade.</p>
 
   <h3 style="margin-top:26px">Multi-project setup</h3>
   <pre><code><span class="c-cmt"># every repo under ~/projects</span>
@@ -625,7 +636,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
   <div class="sec-head">
     <div class="eyebrow">How it works</div>
     <h2>The pipeline</h2>
-    <p class="lede">Every <code>/commit</code> and <code>/push</code> runs a five-point gate — tests, security, build, Docker, cloud. Enforcement is a <code>PreToolUse</code> hook, not a reminder, so broken work cannot reach <code>main</code>.</p>
+    <p class="lede">Commit and push workflows guide tests, security and build checks, with Docker and cloud checks when applicable. When enabled in supported tools, the <code>PreToolUse</code> gate hook blocks intercepted <code>git commit</code> and <code>git push</code> commands unless a pass is recorded for the current tree. Repository CI and branch protection provide separate enforcement.</p>
   </div>
 
   <!-- ============ DIAGRAM 2 · GATE ============ -->
@@ -703,7 +714,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
       <text x="566" y="72" font-family="ui-monospace,monospace" font-size="9" fill="#059669" font-weight="650">PASS ↗</text>
     </svg>
     </div>
-    <figcaption>Nothing reaches <code>main</code> without passing. A failing gate blocks the tool call and routes back to <code>/fix</code>.</figcaption>
+    <figcaption>With the hook enabled, intercepted commit and push commands require a recorded gate pass for the current tree. This does not guarantee defect-free software.</figcaption>
   </figure>
 
   <div class="cards g3">
@@ -736,7 +747,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
       <tbody>
         <tr><td><strong>Claude Code</strong></td><td><span class="st st-y">✓ Full</span></td><td><code>~/.claude/skills/&lt;slug&gt;/</code> + slash-command aliases + plugins + hooks</td><td>Yes — per description</td></tr>
         <tr><td><strong>Cursor</strong></td><td><span class="st st-y">✓ Full</span></td><td><code>.cursor/rules/&lt;slug&gt;.mdc</code>, one file per module</td><td>Yes — per description</td></tr>
-        <tr><td><strong>Codex</strong></td><td><span class="st st-y">✓ Full</span></td><td><code>AGENTS.md</code> + <code>.agents/skills/&lt;slug&gt;/</code> + <code>.codex/hooks.json</code></td><td>Yes — repo skills</td></tr>
+        <tr><td><strong>Codex</strong></td><td><span class="st st-y">✓ Full</span></td><td><code>AGENTS.md</code> + <code>.agents/skills/&lt;slug&gt;/</code> + <code>.codex/hooks.json</code>. A hand-written <code>AGENTS.md</code> is never overwritten</td><td>Yes — repo skills</td></tr>
         <tr><td><strong>Pi</strong></td><td><span class="st st-y">✓ Full</span></td><td><code>pi/skills/</code> + the <code>100xprism-catalog</code> package</td><td>Yes — per description</td></tr>
         <tr><td><strong>Hermes/OpenClaw</strong></td><td><span class="st st-y">✓ Full</span></td><td><code>~/.hermes/skills/100xprism/&lt;slug&gt;/SKILL.md</code>, global &amp; reconciling</td><td>Yes — description re-derived to fit Hermes's ~57-char always-on budget</td></tr>
         <tr><td>Windsurf</td><td><span class="st st-n">✗ Removed</span></td><td>—</td><td>Deleted in v3.0.0</td></tr>
@@ -802,7 +813,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
     <table>
       <thead><tr><th>Source</th><th>Measurement</th><th>Read from</th><th>Known limitation</th></tr></thead>
       <tbody>
-        <tr><td><strong>Claude Code</strong></td><td><span class="st st-y">exact</span></td><td><code>~/.claude/projects/**/*.jsonl</code></td><td>None</td></tr>
+        <tr><td><strong>Claude Code</strong></td><td><span class="st st-y">exact</span></td><td><code>~/.claude/projects/**/*.jsonl</code></td><td>Coverage depends on supported, readable records and available provider counters</td></tr>
         <tr><td><strong>Codex</strong></td><td><span class="st st-y">exact</span></td><td><code>~/.codex/sessions/**/rollout-*.jsonl</code></td><td>Cache-write counters unavailable</td></tr>
         <tr><td><strong>Cursor</strong></td><td><span class="st st-p">activity only</span></td><td><code>~/.cursor/projects/*/agent-transcripts/**/*.jsonl</code></td><td>Local transcripts expose no provider token counters</td></tr>
         <tr><td><strong>Antigravity</strong></td><td><span class="st st-p">activity only</span></td><td><code>~/.gemini/antigravity</code></td><td>Local protobuf schema exposes no provider token counters</td></tr>
@@ -917,7 +928,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
   <div class="tbl-wrap"><table>
     <thead><tr><th>Command</th><th>What it does</th></tr></thead>
     <tbody>
-      <tr><td><code>/gate</code></td><td><strong>Mandatory</strong> five-point gate — tests, security, build, Docker, cloud</td></tr>
+      <tr><td><code>/gate</code></td><td>Quality-check workflow — tests, security and build; Docker and cloud when applicable; hook enforcement is optional</td></tr>
       <tr><td><code>/test</code></td><td>Every test layer — unit, integration, E2E — looping until coverage clears threshold</td></tr>
       <tr><td><code>/lint</code></td><td>Auto-detect and fix lint errors: ESLint, TypeScript, ruff</td></tr>
       <tr><td><code>/security</code></td><td>Vulnerability and secret scan, auto-fixing what it can</td></tr>
@@ -1189,11 +1200,37 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
   </figure>
 
   <h3 style="margin-top:30px">Run it</h3>
-  <pre><code>100xprism tokens                  <span class="c-cmt"># offline dashboard, auto-refreshes every 30s</span>
+  <pre><code>100xprism tokens                  <span class="c-cmt"># local dashboard, auto-refreshes every 30s</span>
 100xprism value                   <span class="c-cmt"># delivery economics</span>
 100xprism tokens --json           <span class="c-cmt"># versioned provider-counter report</span>
 100xprism tokens --json --tool codex
 100xprism audit --json            <span class="c-cmt"># standing-context estimate</span></code></pre>
+
+  <h3 style="margin-top:30px">New in v3.5 · Background token economics on macOS</h3>
+  <p style="font-size:.9rem;color:var(--muted);margin-top:4px"><code>install</code> adds a LaunchAgent that runs once a minute and at login, collects new usage, then exits. The snapshot dashboard reads the latest committed collection results rather than rescanning all source transcripts when it opens. Core collection requires neither Docker nor network access.</p>
+  <div class="cards g3">
+    <div class="glass card">
+      <h3>Incremental, and it keeps history</h3>
+      <p>The first run scans supported transcript locations for Claude Code, Codex, Cursor, Antigravity and Pi into a local SQLite store under <code>~/.100xprism/token-economics/</code>, with restrictive filesystem permissions. Later runs incrementally process appended complete records; changed files may require reprocessing. Previously collected totals persist when source transcripts are deleted.</p>
+    </div>
+    <div class="glass card">
+      <h3>Subagents counted</h3>
+      <p>The collector includes supported Claude Code subagent files, which the earlier top-level scan omitted. Usage totals reflect records and provider counters successfully collected; coverage depends on the available transcript history and formats.</p>
+    </div>
+    <div class="glass card">
+      <h3>Local dashboard access controls</h3>
+      <p>The snapshot dashboard binds to <code>127.0.0.1</code>, requires a per-launch credential, checks CSRF tokens on protected mutation endpoints and shuts down after ten idle minutes. <code>100xprism tokens</code> opens the right URL.</p>
+    </div>
+  </div>
+  <pre><code>100xprism tokens --enable-content-search   <span class="c-cmt"># opt-in local FTS5 search over prompts and prose</span>
+100xprism tokens --disable-content-search  <span class="c-cmt"># remove indexed text</span>
+100xprism tokens --verify-history          <span class="c-cmt"># run the integrity pass by hand</span>
+100xprism uninstall                        <span class="c-cmt"># stop collecting, keep history</span>
+100xprism uninstall --purge                <span class="c-cmt"># …and delete it</span></code></pre>
+  <div class="note good">
+    <p><strong>Model-rate catalog refresh.</strong> The v3.5 catalog is dated Oct 11, 2026 and updates model-price mappings, including rates previously assigned to an older Opus tier. Cost figures remain list-price estimates; the impact of the update depends on each installation’s model mix.</p>
+  </div>
+  <p style="font-size:.85rem;color:var(--muted)">Opt-in search indexes supported user and assistant text locally with SQLite FTS5, without embeddings or network access. Structured tool-call and tool-result blocks are excluded; sensitive material pasted into prompts or repeated in responses may still be indexed. Linux and Windows compute reports on demand; background collection is currently macOS-only.</p>
 
   <h3 style="margin-top:30px">The four token purposes</h3>
   <p style="font-size:.9rem;color:var(--muted);margin-top:4px">Every observed token is classified into one of four purposes, then priced per model. Cache share matters because a high one means much of your context was served through prompt caching — it does <em>not</em> mean the work was free.</p>
@@ -1245,6 +1282,9 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
       <tr><td><strong>Total cost tree</strong></td><td>Expandable tool → model breakdown with proportional bars</td></tr>
       <tr><td><strong>All directories</strong></td><td>Selected-window spend joined to delivery evidence, per directory</td></tr>
       <tr><td><strong>Skill attribution</strong></td><td>Cost per skill and per invocation, tagged <code>exact</code> or <code>attributed</code> so heuristics are never mistaken for measurement</td></tr>
+      <tr><td><strong>Session context growth</strong></td><td>How each session's context grew over its lifetime <span style="color:var(--faint)">(v3.5)</span></td></tr>
+      <tr><td><strong>Estimated cache savings</strong></td><td>Modeled cost difference versus pricing observed cache-read tokens at catalog input rates, by session and model; not measured invoice savings <span style="color:var(--faint)">(v3.5)</span></td></tr>
+      <tr><td><strong>Source coverage</strong></td><td>Live coverage of each transcript source the collector reads <span style="color:var(--faint)">(v3.5)</span></td></tr>
       <tr><td><strong>Conversation composition</strong></td><td>Estimated split of code vs. files read vs. logs vs. chat</td></tr>
       <tr><td><strong>Pair-loop runs</strong></td><td>Per handoff run: rounds, coder spend, reviewer spend, total, outcome, PR</td></tr>
       <tr><td><strong>GitHub deep dive</strong></td><td>PRs fetched, comment-heavy PRs, docs PRs, deleted-file PRs, plus developer and repository breakdowns</td></tr>
@@ -1272,7 +1312,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
   </div>
 
   <div class="note good">
-    <p><strong>Fully offline.</strong> Everything is computed from local files and served on a local URL. Nothing is uploaded. It auto-refreshes every 30 seconds once started, and shell startup never starts it.</p>
+    <p><strong>Local collection and reporting.</strong> Core usage collection and reporting run locally without uploading transcripts. Optional GitHub insights make authenticated GitHub API requests when enabled and invoked. Your AI coding tools have their own data-handling behavior. The dashboard auto-refreshes every 30 seconds once started; shell startup does not open it.</p>
   </div>
 
   <div class="note warn">
@@ -1324,6 +1364,8 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
   <div class="tbl-wrap"><table>
     <thead><tr><th>Version</th><th>Removed or changed</th><th>Migration</th></tr></thead>
     <tbody>
+      <tr><td><strong>3.4</strong></td><td><code>100xprism uninstall</code> now removes everything 100xprism installed, not just the dashboard, shell entries and links</td><td>To remove only the launcher, use <code>npm uninstall -g 100xprism</code>. Add <code>--projects</code> or <code>--purge</code> to go further</td></tr>
+      <tr><td><strong>3.4</strong></td><td>v1 leftovers in <code>~/.claude/commands</code> (<code>_lib.md</code>, <code>db-engines/</code>, old command files) are swept on install and update</td><td>Automatic. Only files whose first line matches a shipped v1 header are removed; a same-named file you wrote is kept</td></tr>
       <tr><td><strong>3.1</strong></td><td><code>commit</code>, <code>push</code>, <code>branch</code> dropped from <code>tier: core</code> — no longer resident in Cursor's context</td><td>None. Still slash commands; gate enforcement now comes from the <code>gate-on-commit</code> hook rather than prompt residency</td></tr>
       <tr><td><strong>3.1</strong></td><td>Specialist modules leave the always-on skill index on your first <code>update</code></td><td>Automatic and announced once. Undo with <code>100xprism optimize --skills=all</code>; skip with <code>100xprism update --no-slim</code></td></tr>
       <tr><td><strong>3.1</strong></td><td>Project config moves out of <code>CLAUDE.md</code> into <code>.claude/100xprism.yml</code></td><td>None required — modules read the new file first and fall back to <code>CLAUDE.md</code>, so existing repos keep working</td></tr>
@@ -1339,7 +1381,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
   </table></div>
 
   <div class="note warn">
-    <p><strong>Removal deletes files inside your projects — and nothing is removed without a backup.</strong> Every deletion is copied to <code>~/.100xprism/removed-artifacts/&lt;timestamp&gt;/&lt;full-project-path&gt;/</code> first and removed only once that copy succeeds, and only if the file carries the <code>Generated by 100xprism</code> header in its first ten lines. A hand-written file of the same name is left alone. <strong>If you edited a generated file, it is still removed</strong> — but the backup exists, and these files are normally committed, so deletions show up in <code>git status</code> for review.</p>
+    <p><strong>Ownership proof is the invariant.</strong> Project cleanup only deletes artifacts that 100xprism can prove it generated: an exact generated header, a manifest entry, a managed hook path or a known legacy signature. Hand-written files are left alone. The v3.0 deprecated-adapter migration additionally copies each removed generated file to <code>~/.100xprism/removed-artifacts/&lt;timestamp&gt;/&lt;full-project-path&gt;/</code> before deletion. A general uninstall does not promise a new backup for every generated project artifact, so keep project files in version control and review <code>git status</code>. Plain uninstall preserves existing recovery copies; <code>--purge</code> removes them.</p>
   </div>
 </section>
 
@@ -1384,10 +1426,13 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
       <tr><td><code>SessionStart:startup</code> hook error</td><td>Legacy Claude startup hook — run <code>100xprism install</code>, or remove the 100xprism <code>SessionStart</code> hook from <code>~/.claude/settings.json</code></td></tr>
       <tr><td>Codex skill not appearing</td><td>Restart Codex, run <code>/skills</code>, and verify <code>.agents/skills/&lt;slug&gt;/SKILL.md</code> exists</td></tr>
       <tr><td>Codex hook not running</td><td>Run <code>/hooks</code> in Codex and trust the generated hook definition</td></tr>
-      <tr><td><code>/gate</code> hangs on the Docker check</td><td>Docker Desktop must be running, or set <code>SKIP_DOCKER=1</code></td></tr>
+      <tr><td><code>/gate</code> fails at the Docker step</td><td>The Docker gate runs when a <code>Dockerfile</code> exists — start Docker Desktop</td></tr>
+      <tr><td><code>install</code> refuses: <code>~/100xprism</code> has local changes</td><td>Keep them with <code>git -C ~/100xprism stash -u</code> (restore later with <code>stash pop</code>), or discard them with the command install prints, then rerun. Don't <code>rm -rf</code> the clone</td></tr>
+      <tr><td><code>install</code> seems stuck after “Restart Claude Code”</td><td>Before 3.5.2 it waited silently on the background collector's lock. Update: install now ends that pass (scans resume safely) and shows a spinner with elapsed time during the first scan</td></tr>
       <tr><td>Claude Code plugin not activating</td><td>Check <code>~/.claude/settings.json</code> → <code>enabledPlugins</code>, then restart</td></tr>
       <tr><td>Codex plugin not activating</td><td>Open Codex <code>/plugins</code>. Claude Code plugins are not Codex plugins.</td></tr>
-      <tr><td><code>/db</code> says “No engine file found”</td><td>Your <code>engine:</code> value is not one of the seven supported engines. See the <a href="#support">database matrix</a>.</td></tr>
+      <tr><td><code>/db</code> says “No engine file found”</td><td>Before 3.4, <code>/db</code> could miss engine files installed outside the clone — update. Otherwise your <code>engine:</code> value is not one of the seven supported engines. See the <a href="#support">database matrix</a>.</td></tr>
+      <tr><td>Every tool call blocked by a 100xprism hook after moving or reinstalling</td><td>A hook points at a script that no longer exists. Run <code>100xprism audit</code> to see it and <code>100xprism audit --fix</code> to remove it</td></tr>
     </tbody>
   </table></div>
 
@@ -1395,8 +1440,8 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
   <div class="cards g2">
     <div class="glass card"><h3>Does this work without an AI coding tool?</h3><p>No. Modules are instructions for AI tools. Without an AI reading them, they are just markdown.</p></div>
     <div class="glass card"><h3>Can I use only some modules?</h3><p>Yes — modules are independent. Run only the slash commands you need; auto-trigger skills activate only when relevant.</p></div>
-    <div class="glass card"><h3>Will this slow down my workflow?</h3><p>The gate adds checks before commits. Most runs finish in under two minutes, and catching issues locally beats debugging production.</p></div>
-    <div class="glass card"><h3>Does it send my data anywhere?</h3><p>No. Both dashboards are fully offline, reading local files and serving a local URL.</p></div>
+    <div class="glass card"><h3>Will this slow down my workflow?</h3><p>The gate adds checks before commits. Runtime depends on the repository and configured checks.</p></div>
+    <div class="glass card"><h3>Does it send my data anywhere?</h3><p>Core usage collection and reporting run locally without uploading transcripts. Optional GitHub insights make authenticated GitHub API requests when enabled and invoked. Your AI coding tools have their own data-handling behavior.</p></div>
     <div class="glass card"><h3>How do I add a database engine?</h3><p>Add a file to <code>modules/db/db-engines/&lt;engine&gt;.md</code> following an existing engine's pattern, then run <code>100xprism update</code>.</p></div>
     <div class="glass card"><h3>How do I contribute a module?</h3><p>Create <code>modules/&lt;slug&gt;/SKILL.md</code> with <code>name</code>, <code>description</code>, <code>category</code> and <code>tier</code> frontmatter, run <code>100xprism update</code>, and open a PR.</p></div>
     <div class="glass card"><h3>How do I contribute an adapter?</h3><p>Create <code>adapters/&lt;tool&gt;.sh</code>, call <code>adapters/lib/modules.py</code> with your tool name, add it to <code>install.sh</code>, and open a PR.</p></div>
@@ -1467,3 +1512,4 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
 </script>
 </body>
 </html>
+
