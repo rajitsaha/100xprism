@@ -485,6 +485,12 @@ Node 18+ (installs via `curl` without Node skip it until you install Node and re
   The first run scans all transcripts; later runs parse only newly appended records.
   Totals survive deleted transcripts.
 - The page shows the latest snapshot immediately and polls every 30 seconds.
+- The dashboard opens on **All time** unless you saved another window. Diagnostics
+  lists every active day in that window, and **Available history by tool** shows each
+  source's first and latest metered dates, so a shorter Claude history is
+  distinguishable from missing Codex history. Claude Code deletes transcripts after
+  30 days by default: anything already collected stays, but transcripts removed before
+  the first collection cannot be reconstructed.
 - The server needs a per-launch token (`100xprism tokens` opens the right URL), checks
   CSRF tokens on changes, and exits after 10 minutes without traffic.
 - `100xprism tokens --verify-history` runs the daily integrity pass by hand (at most

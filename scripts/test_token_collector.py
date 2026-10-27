@@ -76,6 +76,20 @@ class CollectorTests(unittest.TestCase):
         store=TokenStore(self.db)
         self.assertEqual(len(store.summaries()),1)
         store.close()
+
+    def test_old_daily_usage_survives_source_cleanup(self):
+        old=line(10).replace('2026-10-11T10:00:00Z','2025-01-01T10:00:00Z')
+        self.path.write_text(old+line(7))
+        self.collect()
+        self.path.unlink()
+        self.collect()
+        store=TokenStore(self.db)
+        try:
+            summary=store.summaries()[0]
+            self.assertEqual(summary['by_day']['2025-01-01']['input'],10)
+            self.assertEqual(summary['by_day']['2026-10-11']['input'],7)
+            self.assertEqual(store.latest_snapshot()['total'],17)
+        finally: store.close()
     def test_active_file_growth_defers_without_degrading(self):
         self.collect()
         real=collector.parse_source
