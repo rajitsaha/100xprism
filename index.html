@@ -1222,6 +1222,7 @@ cp ~/100xprism/github-actions/release.yml .github/workflows/release.yml</code></
       <p>The snapshot dashboard binds to <code>127.0.0.1</code>, requires a per-launch credential, checks CSRF tokens on protected mutation endpoints and shuts down after ten idle minutes. <code>100xprism tokens</code> opens the right URL.</p>
     </div>
   </div>
+  <p style="font-size:.9rem;color:var(--muted)">The dashboard opens on <strong>All time</strong> unless you saved another window, and Diagnostics lists every active day in it. <strong>Available history by tool</strong> shows each source's first and latest metered dates, so a shorter Claude Code history (it deletes transcripts after 30 days by default) is distinguishable from missing Codex data. Usage already collected stays; transcripts deleted before the first collection cannot be reconstructed.</p>
   <pre><code>100xprism tokens --enable-content-search   <span class="c-cmt"># opt-in local FTS5 search over prompts and prose</span>
 100xprism tokens --disable-content-search  <span class="c-cmt"># remove indexed text</span>
 100xprism tokens --verify-history          <span class="c-cmt"># run the integrity pass by hand</span>
