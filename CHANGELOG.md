@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [3.5.3] - 2026-10-27
+
+### Added
+
+- **Dashboard shows full metered history (#115).** It opens on All time unless another window was saved, Diagnostics lists every active day in the selected window instead of the last 30, and a new "Available history by tool" panel shows each source's first and latest metered dates, so Claude Code's 30-day transcript cleanup is distinguishable from missing Codex data. Lifetime cache cards moved into the Sessions tab.
+
+### Changed
+
+- **Dashboard restyled to match the documentation site (#118).** The default is now a light theme (dark stays a persisted toggle), with system fonts, a viewport meta, visible focus rings and horizontally scrolling tables on narrow screens. Decorative animations were removed.
+- **README documents 3.5.2 install behavior (#117):** the dashboard opening after an interactive macOS install, and the dirty-clone refusal with its stash/discard commands.
+
+### Fixed
+
+- **Install tolerates empty SQLite sidecars (#114).** Some SQLite builds leave empty `-wal`/`-shm` files after close and cannot open a WAL-mode file read-only without its `-wal`. Only a non-empty candidate WAL now blocks cutover, and the read-only schema probe falls back to an immutable open when no `-wal` exists.
+
 ## [3.5.2] - 2026-10-13
 
 ### Fixed
