@@ -1127,133 +1127,81 @@ def assemble_directories(mangled_by_label, tokens_by_label, by_project_day_cost,
 
 # ---------------------------------------------------------------- web UI
 
-PAGE = """<!doctype html><html><head><meta charset=utf-8>
+PAGE = """<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
 <title>100xPrism — AI Economics</title>
 <style>
-:root{--ink:#0E1116;--surface:#171B22;--line:#262C36;--text:#E6E9EF;--muted:#8A93A2;
---cost:#E8B24A;--value:#5BD0A6;--warn:#E5704B;
---in:#58a6ff;--out:#f778ba;--cr:#3fb950;--cw:#d29922;
---m1:#58a6ff;--m2:#a371f7;--m3:#5BD0A6;--m4:#E8B24A;--m5:#f778ba;--m6:#8A93A2;
---glow:rgba(91,208,166,.28);--shadow:rgba(0,0,0,.28)}
-[data-theme=light]{--ink:#F6F8FB;--surface:#FFFFFF;--line:#DCE3EE;--text:#111827;--muted:#64748B;
---cost:#B7791F;--value:#047857;--warn:#C2410C;--in:#2563EB;--out:#BE185D;--cr:#16A34A;--cw:#CA8A04;
---glow:rgba(37,99,235,.18);--shadow:rgba(15,23,42,.12)}
+:root{color-scheme:light;--ink:#fff;--surface:rgba(255,255,255,.78);--line:rgba(15,40,70,.12);--text:#0b1220;--muted:#5b6b80;
+--cost:#0284c7;--value:#059669;--warn:#b45309;--in:#0284c7;--out:#be185d;--cr:#059669;--cw:#b45309;
+--m1:#0284c7;--m2:#7c3aed;--m3:#059669;--m4:#b45309;--m5:#be185d;--m6:#5b6b80;
+--header:rgba(255,255,255,.86);--track:#e8eff3;--tint:rgba(16,185,129,.07);--shadow:rgba(9,30,60,.07);
+--sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+[data-theme=dark]{color-scheme:dark;--ink:#0b1220;--surface:rgba(20,32,49,.88);--line:rgba(148,163,184,.2);--text:#edf5fa;--muted:#a5b6c8;
+--cost:#38bdf8;--value:#34d399;--warn:#fbbf24;--in:#38bdf8;--out:#f9a8d4;--cr:#34d399;--cw:#fbbf24;
+--m1:#38bdf8;--m2:#c4b5fd;--m3:#34d399;--m4:#fbbf24;--m5:#f9a8d4;--m6:#a5b6c8;
+--header:rgba(11,18,32,.9);--track:#24364b;--tint:rgba(52,211,153,.09);--shadow:rgba(0,0,0,.18)}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% -10%,#18263a 0,transparent 34%) no-repeat,var(--ink);color:var(--text);
-font:14px/1.55 'IBM Plex Sans',-apple-system,Segoe UI,Roboto,sans-serif;transition:background .35s ease,color .25s ease}
-body[data-theme=light]{background:radial-gradient(circle at 20% -10%,#DCEBFF 0,transparent 34%) no-repeat,var(--ink)}
-.num,td.n,.money{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-header{padding:18px 28px;border-bottom:1px solid var(--line);display:flex;background:rgba(14,17,22,.88);
-align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
-body[data-theme=light] header{background:rgba(255,255,255,.84)}
-h1{font-size:18px;margin:0}.sub{color:var(--muted);font-size:13px}
-.wrap{padding:24px 28px 60px;max-width:1180px;margin:0 auto}
-.dashboard-shell{display:grid;grid-template-columns:210px minmax(0,1fr);gap:18px;align-items:start}
-.side-panel{position:sticky;top:82px;background:color-mix(in srgb,var(--surface),transparent 5%);
-border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 18px 50px var(--shadow)}
-.side-title{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:4px 6px 8px}
-.tabbtn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;margin:4px 0;border-radius:10px;
-background:transparent}.tabbtn.active{border-color:var(--value);background:linear-gradient(90deg,rgba(91,208,166,.16),transparent)}
-.tabbtn small{display:block;color:var(--muted);font-size:11px}.tabpane{display:none}.tabpane.active{display:block;animation:riseIn .22s ease both}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;
-transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.card:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--in),var(--line) 45%);box-shadow:0 14px 34px var(--shadow)}
-.card .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
-.card .val{font-size:26px;font-weight:600;margin-top:4px}
-.card .note{color:var(--muted);font-size:12px;margin-top:6px}
-.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(91,208,166,.14),rgba(88,166,255,.1) 42%,rgba(232,178,74,.08));
-border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 24px 80px var(--shadow);
-animation:riseIn .45s ease both}
-.hero:before{content:"";position:absolute;right:-100px;top:-120px;width:320px;height:320px;border-radius:50%;
-background:radial-gradient(circle,var(--glow),transparent 64%);animation:drift 9s ease-in-out infinite alternate}
-.hero h2{font-size:24px;text-transform:none;letter-spacing:0;color:var(--text);border:0;margin:0 0 8px;padding:0}
-.hero p{max-width:760px;margin:0;color:var(--muted)}
-.hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:center;position:relative}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.chip{border:1px solid var(--line);border-radius:999px;padding:5px 9px;background:rgba(23,27,34,.72);font-size:12px;color:var(--muted)}
-.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.flow .step{background:color-mix(in srgb,var(--surface),transparent 18%);border:1px solid var(--line);border-radius:12px;padding:12px;
-animation:riseIn .45s ease both}.flow .step:nth-child(2){animation-delay:.05s}.flow .step:nth-child(3){animation-delay:.1s}.flow .step:nth-child(4){animation-delay:.15s}
-.flow .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.flow .v{font-size:20px;font-weight:650;margin-top:4px}
-.economics-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 0;position:relative}
-.economics-stage{background:color-mix(in srgb,var(--surface),transparent 12%);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+html{scroll-padding-top:84px}
+body{margin:0;min-height:100vh;background:var(--ink);color:var(--text);font:14px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(700px 500px at 10% 0,rgba(16,185,129,.08),transparent 65%),radial-gradient(800px 600px at 90% 10%,rgba(56,189,248,.10),transparent 65%),linear-gradient(transparent 55px,rgba(15,40,70,.018) 56px),linear-gradient(90deg,transparent 55px,rgba(15,40,70,.018) 56px);background-size:auto,auto,56px 56px,56px 56px}
+.num,td.n,.money{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header{min-height:64px;padding:12px max(24px,calc((100vw - 1180px)/2));border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;flex-wrap:wrap;position:sticky;top:0;z-index:10;background:var(--header);backdrop-filter:blur(18px)}
+.brand{display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none;font-size:18px;font-weight:800;letter-spacing:-.035em;white-space:nowrap}
+.brand-dot{width:10px;height:10px;background:linear-gradient(135deg,#10b981,#38bdf8);border-radius:50%;box-shadow:0 0 0 4px rgba(16,185,129,.12)}
+.header-actions{display:flex;gap:8px;margin-left:auto}.sub{color:var(--muted);font-size:12px}
+.wrap{padding:28px 26px 64px;max-width:1232px;margin:0 auto}
+.dashboard-shell{display:grid;grid-template-columns:174px minmax(0,1fr);gap:28px;align-items:start}
+.dashboard-shell>*,.cards>*,.cards2>*,.economics-flow>*{min-width:0}
+.side-panel{position:sticky;top:90px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:10px;backdrop-filter:blur(16px);box-shadow:0 2px 4px var(--shadow),0 12px 34px var(--shadow)}
+.side-title{color:var(--muted);font-size:12px;font-weight:600;margin:5px 8px 10px}
+.tabbtn{display:flex;align-items:center;width:100%;text-align:left;margin:4px 0;background:transparent;border-color:transparent;border-radius:10px;padding:10px;font-weight:650}
+.tabbtn.active{border-color:color-mix(in srgb,var(--value),transparent 65%);background:linear-gradient(100deg,var(--tint),rgba(56,189,248,.08));color:var(--value)}
+.tabbtn small{display:block;color:var(--muted);font-size:11px;font-weight:400}.tabpane{display:none}.tabpane.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:24px}
+.card,section{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 2px 4px var(--shadow),0 10px 30px var(--shadow);backdrop-filter:blur(12px)}
+.card .lbl{color:var(--muted);font-size:12px;font-weight:600}.card .val{font-size:27px;font-weight:750;letter-spacing:-.03em;margin-top:5px;font-variant-numeric:tabular-nums}.card .note{color:var(--muted);font-size:12px;margin-top:6px}
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--surface),var(--tint));border:1px solid var(--line);border-radius:24px;padding:28px;margin-bottom:20px;box-shadow:0 4px 8px var(--shadow),0 24px 64px var(--shadow)}
+.hero h2{font-size:clamp(26px,3vw,38px);font-weight:800;line-height:1.16;letter-spacing:-.04em;color:var(--text);border:0;margin:0 0 12px;padding:0}
+.hero p{max-width:700px;margin:0;color:var(--muted);font-size:14px}.hero .hero-caption{font-weight:650;color:var(--value);margin-bottom:8px}.hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.chip,.rec-pill{border:1px solid var(--line);border-radius:999px;padding:4px 9px;background:var(--surface);font-size:11px;color:var(--muted)}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.flow .step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}.flow .k{color:var(--muted);font-size:11px}.flow .v{font-size:20px;font-weight:700;margin-top:4px}
+.economics-flow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+.economics-stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
 .economics-stage.cost{border-top:3px solid var(--cost)}.economics-stage.delivery{border-top:3px solid var(--value)}.economics-stage.value{border-top:3px solid var(--muted)}
-.economics-stage .stage-title{font-weight:650}.economics-stage .stage-value{font:650 22px/1.25 'IBM Plex Mono',ui-monospace,monospace;margin:6px 0 3px}
-.coverage{height:8px;background:#21262d;border-radius:99px;overflow:hidden;margin:8px 0 5px}.coverage span{display:block;height:100%;background:var(--value)}
-.status-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;color:var(--muted);white-space:nowrap}
-.status-pill.merged{color:var(--value);border-color:color-mix(in srgb,var(--value),var(--line) 55%)}
-.status-pill.open{color:var(--in);border-color:color-mix(in srgb,var(--in),var(--line) 55%)}
-.insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px}
-.insight{background:linear-gradient(180deg,color-mix(in srgb,var(--surface),transparent 2%),color-mix(in srgb,var(--surface),transparent 14%));border:1px solid var(--line);border-radius:12px;padding:14px 16px;
-animation:riseIn .38s ease both;transition:transform .18s ease,border-color .18s ease}.insight:hover{transform:translateY(-2px);border-color:var(--value)}
-.insight .big{font-size:23px;font-weight:650}.insight .caption{color:var(--muted);font-size:12px;margin-top:4px}
-.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
-h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
-margin:28px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px}
-table{width:100%;border-collapse:collapse}
-td,th{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
-th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase}
-td:first-child,th:first-child{text-align:left}
-.bar{height:9px;border-radius:5px;display:flex;overflow:hidden;background:#21262d;min-width:120px}
-.bar span{display:block;height:100%}
-.meter{background:#21262d;border-radius:6px;height:22px;position:relative;overflow:hidden;max-width:520px}
-.meter b{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
-.meter em{position:absolute;left:10px;top:0;line-height:22px;font-style:normal;font-size:12px}
-.scan-status{margin-bottom:18px;border-color:color-mix(in srgb,var(--value),var(--line) 55%)}
-.scan-status .cards{margin:14px 0 0}.scan-detail{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
-.legend{font-size:12px;color:var(--muted);margin:10px 0}.legend span{margin-right:16px}
-button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;
-padding:6px 12px;cursor:pointer;font-size:13px}button:hover{border-color:var(--in)}
-.muted{color:var(--muted)}
-section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
-section{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}section:hover{border-color:color-mix(in srgb,var(--value),var(--line) 55%);box-shadow:0 12px 36px var(--shadow)}
-section h2{margin-top:0;border-bottom-color:var(--line)}
-.cards2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:8px 0 24px}
-.wide{grid-column:1/-1}.table-wrap{overflow-x:auto}
-.quality{display:flex;gap:10px 24px;flex-wrap:wrap;padding:12px 0 20px;color:var(--muted);font-size:12px}
-.quality b{color:var(--text);font-weight:600}.rec{border:1px solid var(--line);border-radius:12px;margin:12px 0;background:color-mix(in srgb,var(--surface),transparent 8%);overflow:hidden}
-.rec summary{cursor:pointer;list-style:none}.rec summary::-webkit-details-marker{display:none}
-.rec-head{display:grid;grid-template-columns:112px minmax(0,1fr) 110px;gap:14px;align-items:center;padding:14px}
-.rank{color:var(--cost);font:650 16px/1.2 'IBM Plex Mono',ui-monospace,monospace}.rec strong{font-size:15px}.action{color:var(--value);margin-top:3px}
-.rec-body{border-top:1px solid var(--line);padding:14px}.whatif{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
-.whatif .option{border:1px solid var(--line);border-radius:10px;padding:10px;background:color-mix(in srgb,var(--surface),transparent 14%)}
-.whatif .option b{display:block;color:var(--cost);font-size:16px}.tradeoffs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
-.tradeoffs div{border-left:3px solid var(--line);padding-left:10px}.tradeoffs b{display:block;color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
-.examples{margin:10px 0 0;padding-left:18px}.examples li{margin:4px 0}.rec-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:12px}
-.snippet{border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden;background:color-mix(in srgb,var(--ink),#000 12%)}
-.snippet-head{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}
-.snippet pre{margin:0;padding:12px;overflow:auto;font:12px/1.45 'IBM Plex Mono',ui-monospace,monospace;color:var(--text)}
-.snippet button{padding:4px 8px;font-size:12px}
-.windowbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px}
-.windowbar .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-right:2px}
-.windowbtn{border-radius:999px;padding:6px 10px}.windowbtn.active{border-color:var(--cost);background:rgba(232,178,74,.14);color:var(--text)}
-.windowbtn.limited{border-style:dashed;color:var(--muted)}.window-note{color:var(--muted);font-size:12px;margin-left:4px}
-.cost-tree{display:grid;gap:10px;margin-top:12px}.tree-node{border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--surface),transparent 8%);overflow:hidden}
-.tree-node summary{cursor:pointer;list-style:none}.tree-node summary::-webkit-details-marker{display:none}
-.tree-row{display:grid;grid-template-columns:150px minmax(160px,1fr) 92px 90px;gap:12px;align-items:center;padding:11px 13px}
-.tree-row:hover{background:color-mix(in srgb,var(--surface),var(--ink) 16%)}.tree-name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tree-meta{color:var(--muted);font-size:12px}.tree-bar{height:11px;border-radius:999px;background:#21262d;overflow:hidden;position:relative}.tree-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cost),var(--value))}
-.tree-children{border-top:1px solid var(--line);padding:4px 0}.tree-children .tree-row{grid-template-columns:150px minmax(160px,1fr) 92px 90px;padding:8px 13px 8px 30px}.tree-empty{padding:12px 13px;color:var(--muted)}
-@media(max-width:900px){.dashboard-shell{grid-template-columns:1fr}.side-panel{position:static;display:flex;overflow-x:auto;gap:6px}.side-title{display:none}.tabbtn{min-width:150px;margin:0;white-space:nowrap}}
-@media(max-width:760px){.cards2,.hero-grid,.economics-flow{grid-template-columns:1fr}.wide{grid-column:auto}.wrap{padding:18px 14px 40px}header{padding:14px}.cards{grid-template-columns:1fr 1fr;gap:10px}.card .val{font-size:22px}.flow{grid-template-columns:1fr 1fr}.tree-row,.tree-children .tree-row,.rec-head{grid-template-columns:1fr;gap:5px}.whatif,.tradeoffs{grid-template-columns:1fr}td,th{padding:7px 8px}}
-@media(max-width:430px){.cards{grid-template-columns:1fr}.sub{width:100%}}
-.history-summary{margin:0 0 20px;padding:12px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}.history-summary summary{cursor:pointer;font-weight:600;font-size:12px}.history-summary table{font-size:12px;margin-top:12px}.history-summary p{color:var(--muted);font-size:12px;margin:10px 0 0}
-.howto{margin:-4px 0 14px;font-size:13px;color:var(--muted)}
-.howto summary{cursor:pointer;color:var(--text);user-select:none}
-.howto ul{margin:10px 0 0;padding-left:18px;line-height:1.6}
-.howto code{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px}
-.badge{display:inline-block;font:600 10px/1 'IBM Plex Mono',ui-monospace,monospace;
-padding:3px 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
-#tip{position:fixed;z-index:1000;pointer-events:none;display:none;background:var(--surface);
-border:1px solid var(--line);border-radius:6px;padding:6px 9px;font:12px/1.3 'IBM Plex Mono',ui-monospace,monospace;
-color:var(--text);max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
-@keyframes riseIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-28px,34px,0) scale(1.08)}}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
-</style></head><body data-theme=dark>
+.economics-stage .stage-title{font-weight:650}.economics-stage .stage-value{font:750 23px/1.3 var(--sans);letter-spacing:-.035em;margin:8px 0 5px;font-variant-numeric:tabular-nums}
+.coverage{height:6px;background:var(--track);border-radius:99px;overflow:hidden;margin:12px 0 6px}.coverage span{display:block;height:100%;background:linear-gradient(90deg,var(--value),var(--in))}
+.status-pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;color:var(--muted);white-space:nowrap}.status-pill.merged{color:var(--value)}.status-pill.open{color:var(--in)}
+.insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:24px}.insight{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}.insight .big{font-size:24px;font-weight:750}.insight .caption{color:var(--muted);font-size:12px;margin-top:4px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+h2{font-size:18px;font-weight:750;letter-spacing:-.025em;color:var(--text);margin:28px 0 14px;border-bottom:1px solid var(--line);padding-bottom:10px}
+section h2{margin-top:0}table{width:100%;border-collapse:collapse}td,th{padding:10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}th{color:var(--muted);font-weight:650;font-size:12px}td:first-child,th:first-child{text-align:left}tbody tr:hover{background:var(--tint)}
+.bar{height:8px;border-radius:5px;display:flex;overflow:hidden;background:var(--track);min-width:100px}.bar span{display:block;height:100%}
+.meter{background:var(--track);border-radius:6px;height:22px;position:relative;overflow:hidden;max-width:520px}.meter b{position:absolute;left:0;top:0;bottom:0;border-radius:6px}.meter em{position:absolute;left:10px;top:0;line-height:22px;font-style:normal;font-size:12px;color:var(--text)}
+.scan-status{margin-bottom:18px}.scan-status .cards{margin:14px 0 0}.scan-detail,.legend{font-size:12px;color:var(--muted)}.scan-detail{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px}.legend{margin:10px 0}.legend span{margin-right:16px}
+button{font:600 12px/1.4 var(--sans);background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;transition:background .15s ease,border-color .15s ease}button:hover{border-color:var(--value);background:var(--tint)}
+button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--in);outline-offset:3px}
+button[data-action=refresh]{background:linear-gradient(110deg,#059669,#0284c7);border-color:transparent;color:white;box-shadow:0 4px 14px rgba(5,150,105,.18)}
+input,select{font:inherit;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);padding:8px;max-width:100%}.muted{color:var(--muted)}a{color:var(--in)}
+.cards2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:8px 0 24px}.wide{grid-column:1/-1}.table-wrap{overflow-x:auto}.table-wrap table{min-width:480px}
+.quality{display:flex;gap:10px 22px;flex-wrap:wrap;padding:0 0 22px;color:var(--muted);font-size:12px}.quality b{color:var(--text);font-weight:650}
+.rec{border:1px solid var(--line);border-radius:16px;margin:14px 0;background:var(--surface);overflow:hidden}.rec summary{cursor:pointer;list-style:none}.rec summary::-webkit-details-marker{display:none}.rec-head{display:grid;grid-template-columns:112px minmax(0,1fr) 110px;gap:14px;align-items:center;padding:18px}.rank{color:var(--cost);font:700 16px/1.2 var(--sans)}.rec strong{font-size:15px}.action{color:var(--value);margin-top:3px}.rec-body{border-top:1px solid var(--line);padding:18px}
+.whatif,.tradeoffs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.whatif .option{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--tint)}.whatif .option b{display:block;color:var(--cost);font-size:16px}.tradeoffs div{border-left:3px solid var(--line);padding-left:10px}.tradeoffs b{display:block;color:var(--text);font-size:12px}.examples{margin:10px 0 0;padding-left:18px}.examples li{margin:4px 0}
+.snippet{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--tint)}.snippet-head{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}.snippet pre{margin:0;padding:14px;overflow:auto;font:12px/1.6 var(--mono);color:var(--text)}.snippet button{padding:4px 8px;font-size:12px}
+.windowbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0 0 18px}.windowbar .label{color:var(--muted);font-size:12px;font-weight:600;margin-right:3px}.windowbtn{border-radius:999px;padding:7px 11px}.windowbtn.active{border-color:var(--value);background:var(--tint);color:var(--value)}.windowbtn.limited{border-style:dashed}.window-note{flex-basis:100%;color:var(--muted);font-size:12px;margin-top:4px}
+.history-summary{margin:0 0 20px;padding:12px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.history-summary summary{cursor:pointer;font-weight:600;font-size:12px}.history-summary table{font-size:12px;margin-top:12px}.history-summary p{color:var(--muted);font-size:12px;margin:10px 0 0}
+.cost-tree{display:grid;gap:10px;margin-top:12px}.tree-node{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}.tree-node summary{cursor:pointer;list-style:none}.tree-node summary::-webkit-details-marker{display:none}.tree-row{display:grid;grid-template-columns:150px minmax(130px,1fr) 92px 90px;gap:12px;align-items:center;padding:11px 13px}.tree-row:hover{background:var(--tint)}.tree-name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tree-meta{color:var(--muted);font-size:12px}.tree-bar{height:10px;border-radius:999px;background:var(--track);overflow:hidden}.tree-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--value),var(--in))}.tree-children{border-top:1px solid var(--line);padding:4px 0}.tree-children .tree-row{grid-template-columns:150px minmax(130px,1fr) 92px 90px;padding:8px 13px 8px 30px}.tree-empty{padding:12px 13px;color:var(--muted)}
+.howto{margin:0 0 20px;font-size:12px;color:var(--muted)}.howto summary{cursor:pointer;color:var(--muted);user-select:none}.howto ul{margin:10px 0 0;padding-left:18px}.howto code{background:var(--tint);border:1px solid var(--line);border-radius:4px;padding:0 4px}.badge{display:inline-block;font:600 10px/1 var(--mono);padding:4px 6px;border:1px solid var(--line);border-radius:5px;color:var(--muted)}
+#tip{position:fixed;z-index:1000;pointer-events:none;display:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:12px/1.4 var(--sans);color:var(--text);max-width:300px;box-shadow:0 8px 24px var(--shadow)}
+@media(max-width:960px){.dashboard-shell{grid-template-columns:1fr;gap:18px}.side-panel{position:static;display:flex;overflow-x:auto;gap:6px;padding:7px}.side-title{display:none}.tabbtn{width:auto;flex-shrink:0;margin:0;white-space:nowrap}.tabbtn small{display:none}.header-actions{margin-left:auto}.sub{order:3;flex-basis:100%}}
+@media(max-width:760px){.cards2,.hero-grid,.economics-flow{grid-template-columns:1fr}.wide{grid-column:auto}.wrap{padding:20px 16px 40px}header{padding:12px 20px}.hero{padding:22px}.cards{grid-template-columns:1fr 1fr;gap:10px}.card{padding:16px}.card .val{font-size:24px}.flow{grid-template-columns:1fr 1fr}.tree-row,.tree-children .tree-row,.rec-head{grid-template-columns:1fr;gap:5px}.whatif,.tradeoffs{grid-template-columns:1fr}.history-summary{overflow:hidden}}
+@media(max-width:430px){.cards{grid-template-columns:1fr}.windowbar{gap:6px}.windowbtn{padding:6px 9px}.header-actions button{padding:7px 9px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+</style></head><body data-theme=light>
 <div id=tip role=tooltip></div>
-<header><h1>100xPrism · AI Economics</h1>
+<header><a class=brand href=/ aria-label="100xPrism dashboard"><span class=brand-dot aria-hidden=true></span>100xPrism</a>
 <span class=sub id=meta></span>
-<span style=margin-left:auto><button id=themeToggle data-action=theme>☾ Dark</button> <button data-action=refresh>↻ Rescan</button></span></header>
+<span class=header-actions><button id=themeToggle data-action=theme>☀ Light</button><button data-action=refresh>Refresh data</button></span></header>
 <div class=wrap id=app><p class=muted>Loading…</p></div>
 <script>
 const PRISM_SECURE = false;
@@ -1267,7 +1215,7 @@ const SESSION_READY=PRISM_SECURE?(async()=>{
 const C={input:'var(--in)',output:'var(--out)',cache_read:'var(--cr)',cache_write:'var(--cw)'};
 function applyTheme(theme){document.body.dataset.theme=theme;const b=document.getElementById('themeToggle');if(b)b.textContent=theme==='light'?'☀ Light':'☾ Dark';}
 function toggleTheme(){const next=document.body.dataset.theme==='light'?'dark':'light';localStorage.setItem('100xprism-theme',next);applyTheme(next);}
-applyTheme(localStorage.getItem('100xprism-theme')||'dark');
+applyTheme(localStorage.getItem('100xprism-theme')||'light');
 function fmt(n){n=+n;for(const[u,d]of[['B',1e9],['M',1e6],['K',1e3]])if(Math.abs(n)>=d)return(n/d).toFixed(1)+u;return''+Math.round(n);}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function copyText(id){const el=document.getElementById(id);if(!el)return;const text=el.textContent||'';navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(text):null;}
@@ -1442,7 +1390,7 @@ function deliveryScoreboard(d,current){
  const maxCost=Math.max(...rows.map(r=>r.window_cost||0),1);
  const maxOut=Math.max(...rows.map(r=>(r.window_value.prs||0)*3+(r.window_value.commits||0)),1);
  let h='<p class=muted style="margin-top:0">Read this row by row: spend and git delivery follow the global selected time window. Lower delivery cost is directional, not business ROI.</p>';
- h+='<table><tr><th>directory</th><th>spend</th><th>observable delivery</th><th>churn</th><th>delivery unit cost</th></tr>';
+ h+='<div class=table-wrap><table><tr><th>directory</th><th>spend</th><th>observable delivery</th><th>churn</th><th>delivery unit cost</th></tr>';
  for(const r of rows){
   const v=r.window_value||{}, outcomes=(v.prs||0)*3+(v.commits||0);
   const costW=100*(r.window_cost||0)/maxCost, outW=100*outcomes/maxOut;
@@ -1452,7 +1400,7 @@ function deliveryScoreboard(d,current){
      `<td><div class=bar data-tip="${esc(shipped)}"><span style="width:${outW}%;background:var(--value)"></span></div><span class=muted>${esc(shipped)}</span></td>`+
      `<td class=n>+${fmt(v.insertions||0)} / -${fmt(v.deletions||0)}</td><td class=money>${esc(unit)}</td></tr>`;
  }
- return h+'</table>';
+ return h+'</table></div>';
 }
 function costOverTime(d){
  const bpd=d.by_project_day_cost||{}; const days=[...new Set(Object.values(bpd).flatMap(o=>Object.keys(o)))].sort();
@@ -1618,22 +1566,22 @@ function scopedSessions(rows,current,d){
 function sessionsTable(rows,current,d){
  const scoped=scopedSessions(rows,current,d).sort((a,b)=>b.window_cost-a.window_cost);
  if(!scoped.length) return emptyState(`No sessions in the selected window (${windowDef(current)[1]}).`);
- let h='<table><tr><th>session</th><th>project</th><th>tool</th><th>msgs</th><th>cost</th><th>lifetime tokens</th><th>context growth</th><th>lifetime cache savings</th></tr>';
+ let h='<div class=table-wrap><table><tr><th>session</th><th>project</th><th>tool</th><th>msgs</th><th>cost</th><th>lifetime tokens</th><th>context growth</th><th>lifetime cache savings</th></tr>';
  for(const r of scoped.slice(0,20)){
   h+=`<tr><td class=muted>${esc(r.session_id.slice(0,8))}</td><td>${esc(r.project)}</td>`+
      `<td>${toolBadge(r.tool)}</td><td class=n>${r.msgs}</td><td class=money>$${r.window_cost.toFixed(2)}</td><td>${fmt(Object.values(r.tokens||{}).reduce((sum,n)=>sum+n,0))}${r.historical?' · historical':''}</td><td>${r.context_growth?`${fmt(r.context_growth.first_context_tokens)} → ${fmt(r.context_growth.last_context_tokens)}${r.context_growth.growth_ratio?' · '+(+r.context_growth.growth_ratio).toFixed(1)+'×':''}`:'unavailable'}</td><td>${money2((r.cache||{}).estimated_savings)}<div class=muted>${(((r.cache||{}).cache_hit_ratio||0)*100).toFixed(1)}% hits</div></td></tr>`;
  }
- return h+'</table>';
+ return h+'</table></div>';
 }
 function contextGrowthTable(rows,current,d){
  const scoped=scopedSessions(rows,current,d).filter(r=>r.context_growth&&r.context_growth.delta_tokens>0).sort((a,b)=>b.context_growth.delta_tokens-a.context_growth.delta_tokens).slice(0,10);
  if(!scoped.length)return emptyState('No observed context growth in the selected sessions.');
- return '<p class=muted>Lifetime growth in per-turn context, ranked by added tokens. Cumulative session usage is excluded.</p><table><tr><th>session</th><th>project</th><th>tool</th><th>first → last context</th><th>added tokens</th><th>largest observed context</th></tr>'+scoped.map(r=>`<tr><td>${esc(r.session_id.slice(0,8))}</td><td>${esc(r.project)}</td><td>${toolBadge(r.tool)}</td><td>${fmt(r.context_growth.first_context_tokens)} → ${fmt(r.context_growth.last_context_tokens)}</td><td>${fmt(r.context_growth.delta_tokens)}</td><td>${fmt(r.context_growth.max_context_tokens)}</td></tr>`).join('')+'</table>';
+ return '<p class=muted>Lifetime growth in per-turn context, ranked by added tokens. Cumulative session usage is excluded.</p><div class=table-wrap><table><tr><th>session</th><th>project</th><th>tool</th><th>first → last context</th><th>added tokens</th><th>largest observed context</th></tr>'+scoped.map(r=>`<tr><td>${esc(r.session_id.slice(0,8))}</td><td>${esc(r.project)}</td><td>${toolBadge(r.tool)}</td><td>${fmt(r.context_growth.first_context_tokens)} → ${fmt(r.context_growth.last_context_tokens)}</td><td>${fmt(r.context_growth.delta_tokens)}</td><td>${fmt(r.context_growth.max_context_tokens)}</td></tr>`).join('')+'</table></div>';
 }
 function cacheModelTable(d){
  const rows=Object.entries(d.cache_by_model||{}).sort((a,b)=>b[1].estimated_savings-a[1].estimated_savings);
  if(!rows.length)return '';
- return '<details><summary>Lifetime cache economics by model</summary><table><tr><th>model</th><th>cache-read tokens</th><th>hit ratio</th><th>cached-context share</th><th>estimated savings</th></tr>'+rows.map(([model,c])=>`<tr><td>${esc(model)}</td><td>${fmt(c.cache_read)}</td><td>${(c.cache_hit_ratio*100).toFixed(1)}%</td><td>${(c.cached_context_share*100).toFixed(1)}%</td><td>${money2(c.estimated_savings)}</td></tr>`).join('')+'</table></details>';
+ return '<details><summary>Lifetime cache economics by model</summary><div class=table-wrap><table><tr><th>model</th><th>cache-read tokens</th><th>hit ratio</th><th>cached-context share</th><th>estimated savings</th></tr>'+rows.map(([model,c])=>`<tr><td>${esc(model)}</td><td>${fmt(c.cache_read)}</td><td>${(c.cache_hit_ratio*100).toFixed(1)}%</td><td>${(c.cached_context_share*100).toFixed(1)}%</td><td>${money2(c.estimated_savings)}</td></tr>`).join('')+'</table></div></details>';
 }
 function selectedSkills(d,current){
  const raw=d.skill_by_day||{}, days=Object.keys(raw).sort(), base=Object.fromEntries((d.by_skill||[]).map(row=>[row.skill,row]));
@@ -1655,7 +1603,7 @@ function listLabel(values,limit=2){
 function skillsTable(rows,current,d){
  rows=selectedSkills(d,current);
  if(!rows.length) return emptyState('No skill attribution yet.');
- let h='<table><tr><th>skill</th><th>agent</th><th>directory</th><th>model</th><th>invocations</th><th>cost</th><th>$/invocation</th><th></th></tr>';
+ let h='<div class=table-wrap><table><tr><th>skill</th><th>agent</th><th>directory</th><th>model</th><th>invocations</th><th>cost</th><th>$/invocation</th><th></th></tr>';
  for(const r of rows.slice(0,20)){
   const perInv=r.cost/(r.invocations||1);
   const agents=(r.tools||[]).map(toolBadge).join(' · '), modelEntries=(r.models||[]).map(model=>({label:modelDisplay(model.model).label,tip:modelDisplay(model.model).tip})), models=modelEntries.map(model=>model.label);
@@ -1665,19 +1613,19 @@ function skillsTable(rows,current,d){
      `<td class=n>${r.invocations}</td><td class=money>$${r.cost.toFixed(2)}</td>`+
      `<td class=money>$${perInv.toFixed(3)}</td><td>${r.exact?'<span class=badge title="exact — native Claude Code attribution">exact</span>':'<span class=badge title="attributed — heuristic segmentation">attr.</span>'}</td></tr>`;
  }
- return h+'</table>';
+ return h+'</table></div>';
 }
 function handoffTable(rows,current,d){
  const days=meteredDays(d), scoped=(rows||[]).filter(row=>!row.day||dayInWindow(row.day,current,days));
  if(!scoped.length) return '';
- let h='<h2>Pair-loop handoff runs</h2><table><tr><th>run</th><th>rounds</th><th>coder $</th><th>reviewer $</th><th>total $</th><th>outcome</th><th>PR</th></tr>';
+ let h='<h2>Pair-loop handoff runs</h2><div class=table-wrap><table><tr><th>run</th><th>rounds</th><th>coder $</th><th>reviewer $</th><th>total $</th><th>outcome</th><th>PR</th></tr>';
  for(const r of scoped){
   h+=`<tr><td class=muted>${esc(r.task||r.run_id)}</td><td class=n>${r.rounds}</td>`+
      `<td class=money>$${r.coder_cost.toFixed(2)}</td><td class=money>$${r.reviewer_cost.toFixed(2)}</td>`+
      `<td class=money>$${r.total_cost.toFixed(2)}</td><td>${esc(r.outcome||'—')}</td>`+
      `<td>${r.pr?('#'+r.pr):'—'}</td></tr>`;
  }
- return h+'</table>';
+ return h+'</table></div>';
 }
 function suggestionsCard(rows,scale,scopeLabel){
  if(!rows.length) return '';
@@ -2126,7 +2074,8 @@ function render(d){
  const current=activeTab();
  const de=selectedDelivery(d,win), deSpend=de.spend||{}, deOutcomes=de.outcomes||{}, deUnit=de.delivery_unit_cost||{};
  const overview=`<div class=hero>
-   <h2>Token cost → observable delivery → business value</h2>
+   <h2>Understand your AI spend.</h2>
+   <p class=hero-caption>Token cost → observable delivery → business value</p>
    <p>This dashboard measures the first two layers separately. Token counters establish estimated cost; Git establishes delivery evidence. Business or human value remains explicitly unmeasured until an outcome source is connected.</p>
    ${outcomeFlow(d,win)}
    <div class=chips><span class=chip>no cloud upload</span><span class=chip>list-price estimate</span><span class=chip>observable delivery</span><span class=chip>no synthetic value score</span></div>
