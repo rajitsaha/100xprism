@@ -33,6 +33,8 @@ curl -fsSL https://raw.githubusercontent.com/rajitsaha/100xprism/main/get.sh | b
 Both clone the toolkit to `~/100xprism`, set up Claude Code, and let you toggle
 components (modules, plugins, templates, enforcing hooks).
 The npm package is a thin launcher; modules, hooks and plugins live in that clone.
+On macOS, an interactive install opens the token dashboard when the first scan
+finishes (`--no-open` skips it).
 
 **2. Set up a project (once per repo).**
 
@@ -222,6 +224,10 @@ npm install -g 100xprism@latest   # (optional) update the launcher itself
 removes ones that were deleted or merged upstream — in `~/.claude` and in every project
 you ran `init` in (listed in `~/.100xprism/tracked-projects`). Restart Claude Code after
 updating.
+
+If `~/100xprism` has local changes, `install` and `update` refuse and change nothing.
+They list the files and print the `git -C ~/100xprism stash -u` (keep) or reset (discard)
+command to run, so there is no need to delete the clone.
 
 **What 100xPrism will and won't delete.** It removes only files it can prove it wrote: a
 generated marker, a manifest entry, a `/100xprism/hooks/` path, or an exact v1 file
