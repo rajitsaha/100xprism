@@ -124,7 +124,8 @@ class TokenStore:
         self.root=next((p for p in path.parents if p.name=='token-economics'),path.parent.parent)
         # Probe in read-only mode before any journal/permission mutation.
         if path.exists():
-            probe = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)
+            # Some SQLite builds cannot open a WAL-mode file read-only without its -wal; with none present nothing is pending, so immutable reads are exact.
+            probe = sqlite3.connect(path.as_uri() + ('?mode=ro' if Path(self.path+'-wal').exists() else '?mode=ro&immutable=1'), uri=True)
             try:
                 version=probe.execute('PRAGMA user_version').fetchone()[0]
                 if version > SCHEMA_VERSION:
@@ -337,7 +338,7 @@ class TokenStore:
         for suffix in ('-wal','-shm'):
             path=Path(self.path+suffix)
             if path.exists():
-                if path.stat().st_size: raise RuntimeError('content cleanup left nonempty SQLite sidecar')
+                if suffix=='-wal' and path.stat().st_size: raise RuntimeError('content cleanup left nonempty SQLite sidecar')
                 path.unlink()
 
     def search_fenced(self):

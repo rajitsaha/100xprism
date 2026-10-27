@@ -106,6 +106,8 @@ if not db.execute('SELECT COUNT(*) FROM history').fetchone()[0]: db.execute("INS
 db.commit(); db.close()
 if a.validate and pathlib.Path(__file__).with_name('fail-validation').exists(): sys.exit(17)
 if a.validate and pathlib.Path(__file__).with_name('leave-wal').exists(): pathlib.Path(a.db+'-wal').write_bytes(b'frames')
+if a.validate and pathlib.Path(__file__).with_name('leave-empty-wal').exists():
+  for suffix in ('-wal','-shm'): pathlib.Path(a.db+suffix).write_bytes(b'')
 if not a.lock_held and pathlib.Path(__file__).with_name('fail-runtime').exists(): sys.exit(18)
 `
   fs.writeFileSync(path.join(source,'scripts','token-collector.py'),collector)
@@ -157,6 +159,12 @@ test('remaining candidate WAL prevents atomic cutover', () => {
   fs.writeFileSync(path.join(source,'scripts','leave-wal'),'')
   assert.throws(()=>api.update(source),/sidecars remain/)
   assert.equal(api.active(),first.generation)
+})
+test('empty candidate sidecars left by some SQLite builds do not block cutover', () => {
+  const {source,api}=realFixture(); api.install(source)
+  fs.writeFileSync(path.join(source,'scripts','leave-empty-wal'),'')
+  const second=api.update(source)
+  assert.equal(api.active(),second.generation)
 })
 test('missing interpreter unloads owned job and preserves its file for repair', () => {
   const {source,api,home}=realFixture(); api.install(source)
